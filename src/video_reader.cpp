@@ -4,7 +4,7 @@
  * \brief Video file reader implementations
  */
 
-#include "video_reader.h"
+#include <decord/video_reader.h>
 
 namespace decord {
 bool VideoReader::open(std::string& filename) {

@@ -32,6 +32,8 @@ class VideoReader {
     std::string filename_;
     /*! \brief backend used to decode video */
     Backend backend_;
+    /*! \brief Pointer to backend handle */
+    void *hdl_ptr_;
     /*! \brief open status */
     bool is_open_;
     /*! \brief open file for read and decode */
