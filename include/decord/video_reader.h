@@ -10,36 +10,19 @@
 #include "base.h"
 #include "video_stream.h"
 #include <string>
+#include <memory>
 
 namespace decord {
 
+// Video Reader is an abtract class defining the reader interfaces
 class VideoReader {
  public:
-    /*! \brief default constructor */
-    VideoReader(std::string& filename) : backend_(Backend::FFMPEG()), is_open_(false) {
-         this->open(filename); 
-    }
-    /*! \brief constructor with filename and backend type */
-    VideoReader(std::string& filename, Backend::BackendType type) 
-        : backend_(type), is_open_(false) { this->open(filename); }
-    /*! \brief destructor */
-    ~VideoReader() { this->close(); }
     /*! \brief check if video file successfully opened */
-    bool is_open() { return is_open_; }
+    virtual VideoStream SetVideoStream(uint32_t idx = 0) = 0;
+    /*! \brief destructor */
+    virtual ~VideoReader() = default;
+};  // class VideoReader
 
- private:
-    /*! \brief video file name */
-    std::string filename_;
-    /*! \brief backend used to decode video */
-    Backend backend_;
-    /*! \brief Pointer to backend handle */
-    void *hdl_ptr_;
-    /*! \brief open status */
-    bool is_open_;
-    /*! \brief open file for read and decode */
-    bool open(std::string& filename);
-    /*! \brief close file */
-    void close();
-};  // struct VideoReader
+std::shared_ptr<VideoReader> GetVideoReader(std::string& fn, Backend be = Backend::FFMPEG());
 }  // namespace decord
 #endif // DECORD_VIDEO_READER_H_

@@ -39,6 +39,15 @@ struct Backend {
   Backend(BackendType type) : be_type(type) {}
   /*! \brief default FFMPEG backend */
   inline static Backend FFMPEG();
+
+  /*!
+   * \brief check if current context equals another one
+   * \param b another context to compare
+   * \return whether dev mask and id are same
+   */
+  inline bool operator==(const Backend &b) const {
+    return be_type == b.be_type;
+  }
 }; // struct Backend
 
 struct Context {
@@ -94,6 +103,11 @@ struct Context {
   inline bool operator!=(const Context &b) const {
     return !(*this == b);
   }
+
+  /*! \brief the maximal device type */
+  static const int32_t kMaxDevType = 6;
+  /*! \brief the maximal device index */
+  static const int32_t kMaxDevID = 16;
 
   /*!
    * \brief Create a new context.

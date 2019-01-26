@@ -5,12 +5,14 @@
  */
 
 #include <decord/video_reader.h>
+#include "backend/ffmpeg.h"
 
 namespace decord {
-bool VideoReader::open(std::string& filename) {
-    
-    filename_ = filename;
-    is_open_ = true;
-    return is_open_;
+std::shared_ptr<VideoReader> GetVideoReader(std::string& fn, Backend be = Backend::FFMPEG()) {
+    if (be == Backend::FFMPEG()) {
+        auto ptr = std::make_shared<ffmpeg::FFMPEGVideoReader>(fn);
+    } else {
+        LOG(FATAL) << "Not supported backend type " << be;
+    }
 }
 }  // namespace decord
