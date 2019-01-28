@@ -1,0 +1,3 @@
+[submodule "3rdparty/dmlc-core"]
+	path = 3rdparty/dmlc-core
+	url = https://github.com/dmlc/dmlc-core
