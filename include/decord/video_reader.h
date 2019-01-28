@@ -18,7 +18,7 @@ namespace decord {
 class VideoReader {
  public:
     /*! \brief check if video file successfully opened */
-    virtual VideoStream SetVideoStream(uint32_t idx = 0) = 0;
+    virtual void SetVideoStream(uint32_t idx = 0) = 0;
     /*! \brief destructor */
     virtual ~VideoReader() = default;
 };  // class VideoReader
