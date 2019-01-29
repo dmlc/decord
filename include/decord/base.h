@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <string>
+#include <ostream>
 
 /*! \brief major version */
 #define DECORD_MAJOR 0
@@ -47,6 +48,23 @@ struct Backend {
    */
   inline bool operator==(const Backend &b) const {
     return be_type == b.be_type;
+  }
+
+  /*!
+   * \brief Type to stream conversion.
+   * \param os OStream
+   * \param be backend instance
+   * \return Same OStream as input
+   */ 
+  friend std::ostream& operator<< (std::ostream& os, const Backend& be) {
+    if (be.be_type == BackendType::kFFMPEG) {
+      os << " [FFMPEG] ";
+    } else if (be.be_type == BackendType::kNVDEC) {
+      os << " [NVDEC] ";
+    } else {
+      os << " [Unknown]";
+    }
+    return os;
   }
 }; // struct Backend
 
