@@ -26,8 +26,11 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string& fn, uint32_t vstream_idx) : pt
         LOG(FATAL) << "ERROR getting stream info of file" << fn;
     }
     
-    // iterate streams and set video stream properly
-    
+    // iterate streams and set video stream index properly
+    // note that vstream_idx does not count for audio streams
+    // say this video has 4 streams (0:a, 1:v, 2:a, 3:v) 
+    // with vstream_idx = 1(the second video stream), the real stream selected is 3:v
+
 }
 
 }  // namespace ffmpeg
