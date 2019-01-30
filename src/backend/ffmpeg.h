@@ -18,16 +18,17 @@ namespace decord {
 namespace ffmpeg {
 class FFMPEGVideoReader : public VideoReader {
   public:
-      FFMPEGVideoReader(std::string& fn, uint32_t vstream_idx = 0);
+      FFMPEGVideoReader(std::string& fn);
       void SetVideoStream(uint32_t idx = 0);
-      size_t GetNumVideoStream();
+      size_t QueryVideoStreams();
   private:
-      /*! \brief Video Streams in original videos */
-      std::vector<VideoStream> vstreams_;
+      /*! \brief Video Streams Codecs in original videos */
+      std::vector<std::pair<AVStream*, AVCodec*> > vstreams_;
       /*! \brief Currently selected video stream index */
-      uint32_t vstream_idx_;
+      AVStream* active_vstream_;
       /*! \brief AV format context holder */
-      AVFormatContext *ptr_fmt_context_;
+      AVFormatContext *ptr_fmt_ctx_;
+      AVCodecContext *ptr_codec_ctx_;
 
 };  // class FFMPEGVideoReader
 }  // namespace ffmpeg
