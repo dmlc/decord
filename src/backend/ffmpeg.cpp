@@ -11,89 +11,85 @@ namespace decord {
 namespace ffmpeg {
 
 FFMPEGVideoReader::FFMPEGVideoReader(std::string& fn)
-     : ptr_fmt_ctx_(NULL), ptr_codec_ctx_(NULL) {
+     : fmt_ctx_(NULL), dec_ctx_(NULL), actv_stm_idx_(-1) {
     // allocate format context
-    ptr_fmt_ctx_ = avformat_alloc_context();
-    if (!ptr_fmt_ctx_) {
+    fmt_ctx_ = avformat_alloc_context();
+    if (!fmt_ctx_) {
         LOG(FATAL) << "ERROR allocating memory for Format Context";
     }
     // open file
-    if(avformat_open_input(&ptr_fmt_ctx_, fn.c_str(), NULL, NULL) != 0 ) {
+    if(avformat_open_input(&fmt_ctx_, fn.c_str(), NULL, NULL) != 0 ) {
         LOG(FATAL) << "ERROR opening file: " << fn;
     }
 
     // find stream info
-    if (avformat_find_stream_info(ptr_fmt_ctx_,  NULL) < 0) {
+    if (avformat_find_stream_info(fmt_ctx_,  NULL) < 0) {
         LOG(FATAL) << "ERROR getting stream info of file" << fn;
     }
 
     // initialize all video streams and store codecs info
-    bool vstream_set = false;
-    vstreams_.clear();
-    for (uint32_t i = 0; i < ptr_fmt_ctx_->nb_streams; ++i) {
-        AVStream *st = ptr_fmt_ctx_->streams[i];
-        // LOG(INFO) << "AVStream->avg_frame_rate: " 
-        //     << st->avg_frame_rate.num
-        //     << "/" << st->avg_frame_rate.den;
+    for (uint32_t i = 0; i < fmt_ctx_->nb_streams; ++i) {
+        AVStream *st = fmt_ctx_->streams[i];
         AVCodec *local_codec = avcodec_find_decoder(st->codecpar->codec_id);
         if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             // store video stream codecs only
-            vstreams_.emplace_back(std::make_pair(st, local_codec));
-            if (!vstream_set) {
-                SetVideoStream(i);
-                vstream_set = true;
-            }
+            codecs_.emplace_back(local_codec);
+        } else {
+            // audio, subtitle... skip
+            codecs_.emplace_back(NULL);
         }
     }
-    CHECK(vstream_set) << "No active video stream available!";
+    // find best video stream (-1 means auto, relay on FFMPEG)
+    SetVideoStream(-1);
 }
 
-void FFMPEGVideoReader::SetVideoStream(uint32_t vstream_idx) {
-    // iterate streams and set video stream index properly
-    // note that vstream_idx does not count for audio streams
-    // say this video has 4 streams (0:a, 1:v, 2:a, 3:v) 
-    // with vstream_idx = 1(the second video stream), the real stream selected is 3:v
-    CHECK(ptr_fmt_ctx_ != NULL);
-    CHECK_LT(vstream_idx, vstreams_.size()) 
-        << "vstream_idx " << vstream_idx << " out of bound " << vstreams_.size();
-    CHECK(vstreams_[vstream_idx].second != NULL) 
-        << "Video Stream [" << vstream_idx << "] format not supported";
-    active_vstream_ = vstreams_[vstream_idx].first;
+void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
+    CHECK(fmt_ctx_ != NULL);
+    int st_nb = av_find_best_stream(fmt_ctx_, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    CHECK_GE(st_nb, 0) << "ERROR cannot find video stream with wanted index: " << stream_nb;
     // initialize the mem for codec context
-    ptr_codec_ctx_ = avcodec_alloc_context3(vstreams_[vstream_idx].second);
-    CHECK(ptr_codec_ctx_) << "ERROR allocating memory for AVCodecContext";
+    dec_ctx_ = avcodec_alloc_context3(codecs_[st_nb]);
+    CHECK(dec_ctx_) << "ERROR allocating memory for AVCodecContext";
     // copy codec parameters to context
-    CHECK_GE(avcodec_parameters_to_context(ptr_codec_ctx_, active_vstream_->codecpar), 0)
+    CHECK_GE(avcodec_parameters_to_context(dec_ctx_, fmt_ctx_->streams[st_nb]->codecpar), 0)
         << "ERROR copying codec parameters to context";
     // initialize AVCodecContext to use given AVCodec
-    CHECK_GE(avcodec_open2(ptr_codec_ctx_, vstreams_[vstream_idx].second, NULL), 0)
+    CHECK_GE(avcodec_open2(dec_ctx_, codecs_[st_nb], NULL), 0)
         << "ERROR open codec through avcodec_open2";
+    actv_stm_idx_ = st_nb;
 }
 
-size_t FFMPEGVideoReader::QueryVideoStreams() {
-    CHECK(ptr_fmt_ctx_ != NULL);
-    for (size_t i = 0; i < vstreams_.size(); ++i) {
-        // iterate and print video stream info
+unsigned int FFMPEGVideoReader::QueryStreams() {
+    CHECK(fmt_ctx_ != NULL);
+    for (unsigned int i = 0; i < fmt_ctx_->nb_streams; ++i) {
+        // iterate and print stream info
         // feel free to add more if needed
-        AVStream *st = vstreams_[i].first;
-        AVCodec *codec = vstreams_[i].second;
-        LOG(INFO) << "Video Stream [" << i << "]:"
-        << " Average FPS: " 
-        << static_cast<float>(st->avg_frame_rate.num) / st->avg_frame_rate.den
-        << " Start time: "
-        << st->start_time
-        << " Duration: "
-        << st->duration
-        << " Codec Type: "
-        << codec->name
-        << " ID: "
-        << codec->id
-        << " bit_rate: "
-        << st->codecpar->bit_rate
-        << " Resolution: "
-        << st->codecpar->width << "x" << st->codecpar->height;
+        AVStream *st = fmt_ctx_->streams[i];
+        AVCodec *codec = codecs_[i];
+        if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            LOG(INFO) << "Video Stream [" << i << "]:"
+                << " Average FPS: " 
+                << static_cast<float>(st->avg_frame_rate.num) / st->avg_frame_rate.den
+                << " Start time: "
+                << st->start_time
+                << " Duration: "
+                << st->duration
+                << " Codec Type: "
+                << codec->name
+                << " ID: "
+                << codec->id
+                << " bit_rate: "
+                << st->codecpar->bit_rate
+                << " Resolution: "
+                << st->codecpar->width << "x" << st->codecpar->height;
+        } else {
+            const char *codec_type = av_get_media_type_string(st->codecpar->codec_type);
+            codec_type = codec_type? codec_type : "unknown type";
+            LOG(INFO) << codec_type << " Stream [" << i << "]:";
+        }
+        
     }
-    return vstreams_.size();
+    return fmt_ctx_->nb_streams;
 }
 
 }  // namespace ffmpeg

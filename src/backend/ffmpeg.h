@@ -9,26 +9,35 @@
 
 #include <decord/video_reader.h>
 #include <decord/video_stream.h>
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
 #include <string>
 #include <vector>
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#ifdef __cplusplus
+}
+#endif
+
 
 namespace decord {
 namespace ffmpeg {
 class FFMPEGVideoReader : public VideoReader {
   public:
       FFMPEGVideoReader(std::string& fn);
-      void SetVideoStream(uint32_t idx = 0);
-      size_t QueryVideoStreams();
+      ~FFMPEGVideoReader();
+      void SetVideoStream(int stream_nb = -1);
+      unsigned int QueryStreams();
   private:
       /*! \brief Video Streams Codecs in original videos */
-      std::vector<std::pair<AVStream*, AVCodec*> > vstreams_;
-      /*! \brief Currently selected video stream index */
-      AVStream* active_vstream_;
+      std::vector<AVCodec*> codecs_;
+      /*! \brief Currently active video stream index */
+      int actv_stm_idx_;
       /*! \brief AV format context holder */
-      AVFormatContext *ptr_fmt_ctx_;
-      AVCodecContext *ptr_codec_ctx_;
+      AVFormatContext *fmt_ctx_;
+      /*! \brief AV dodec context for decoding related info */
+      AVCodecContext *dec_ctx_;
 
 };  // class FFMPEGVideoReader
 }  // namespace ffmpeg
