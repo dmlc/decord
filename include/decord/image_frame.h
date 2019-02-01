@@ -7,10 +7,16 @@
 #ifndef DECORD_IMAGE_FRAME_H_
 #define DECORD_IMAGE_FRAME_H_
 
+#include "base.h"
+
 namespace decord {
 class ImageFrame {
     public:
+    
         
+    private:
+        void *ptr_;
+        Backend be_;
 }; 
 }  // namespace decord
 
