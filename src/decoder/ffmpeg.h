@@ -7,10 +7,9 @@
 #ifndef DECORD_BACKEND_FFMPEG_H_
 #define DECORD_BACKEND_FFMPEG_H_
 
-#include <decord/video_reader.h>
-#include <decord/video_stream.h>
 #include <string>
 #include <vector>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -19,6 +18,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+#include <decord/video_reader.h>
 
 
 namespace decord {
@@ -26,9 +26,17 @@ namespace ffmpeg {
 class FFMPEGVideoReader : public VideoReader {
   public:
       FFMPEGVideoReader(std::string& fn);
-      ~FFMPEGVideoReader();
+      /*! \brief Destructor, note that FFMPEG resources has to be managed manually to avoid resource leak */
+      ~FFMPEGVideoReader() {
+          avformat_close_input(&fmt_ctx_);
+          avformat_free_context(fmt_ctx_);
+          av_packet_free(&pkt_);
+          av_frame_free(&frame_);
+          avcodec_free_context(&dec_ctx_);
+      }
       void SetVideoStream(int stream_nb = -1);
       unsigned int QueryStreams();
+      bool NextFrame(NDArray* arr);
   private:
       /*! \brief Video Streams Codecs in original videos */
       std::vector<AVCodec*> codecs_;
@@ -36,6 +44,10 @@ class FFMPEGVideoReader : public VideoReader {
       int actv_stm_idx_;
       /*! \brief AV format context holder */
       AVFormatContext *fmt_ctx_;
+      /*! \brief AVPacket buffer */
+      AVPacket *pkt_;
+      /*! \brief AVFrame buffer */
+      AVFrame *frame_;
       /*! \brief AV dodec context for decoding related info */
       AVCodecContext *dec_ctx_;
 

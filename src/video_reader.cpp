@@ -3,18 +3,18 @@
  * \file video_reader.h
  * \brief Video file reader implementations
  */
-
-#include <decord/video_reader.h>
-#include "backend/ffmpeg.h"
 #include <dmlc/logging.h>
+#include <decord/video_reader.h>
+#include "decoder/ffmpeg.h"
+
 
 namespace decord {
-std::shared_ptr<VideoReader> GetVideoReader(std::string& fn, Backend be = Backend::FFMPEG()) {
+std::shared_ptr<VideoReader> GetVideoReader(std::string& fn, Decoder be = Decoder::FFMPEG()) {
     std::shared_ptr<VideoReader> ptr;
-    if (be == Backend::FFMPEG()) {
+    if (be == Decoder::FFMPEG()) {
         ptr = std::make_shared<ffmpeg::FFMPEGVideoReader>(fn);
     } else {
-        LOG(FATAL) << "Not supported backend type " << be;
+        LOG(FATAL) << "Not supported Decoder type " << be;
     }
     return ptr;
 }

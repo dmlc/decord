@@ -5,11 +5,13 @@
  */
 
 #include "ffmpeg.h"
+
 #include <dmlc/logging.h>
 
 namespace decord {
 namespace ffmpeg {
 
+// Constructor
 FFMPEGVideoReader::FFMPEGVideoReader(std::string& fn)
      : fmt_ctx_(NULL), dec_ctx_(NULL), actv_stm_idx_(-1) {
     // allocate format context
@@ -41,6 +43,14 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string& fn)
     }
     // find best video stream (-1 means auto, relay on FFMPEG)
     SetVideoStream(-1);
+
+    // allocate AVFrame buffer
+    frame_ = av_frame_alloc();
+    CHECK(frame_) << "ERROR failed to allocated memory for AVFrame";
+
+    // allocate AVPacket buffer
+    pkt_ = av_packet_alloc();
+    CHECK(pkt_) << "ERROR failed to allocated memory for AVPacket";
 }
 
 void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
@@ -90,6 +100,22 @@ unsigned int FFMPEGVideoReader::QueryStreams() {
         
     }
     return fmt_ctx_->nb_streams;
+}
+
+bool FFMPEGVideoReader::NextFrame(NDArray* arr) {
+    // read next packet which belongs to the desired stream
+    while (av_read_frame(fmt_ctx_, pkt_) >= 0) {
+        if (pkt_->stream_index == actv_stm_idx_) {
+            int got_picture;
+            // decode frame from packet
+            avcodec_decode_video2(dec_ctx_, frame_, &got_picture, pkt_);
+            if (got_picture) {
+                // convert raw image(e.g. YUV420, YUV422) to RGB image
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 }  // namespace ffmpeg
