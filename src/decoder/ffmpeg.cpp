@@ -102,7 +102,7 @@ unsigned int FFMPEGVideoReader::QueryStreams() {
     return fmt_ctx_->nb_streams;
 }
 
-bool FFMPEGVideoReader::NextFrame(NDArray* arr) {
+bool FFMPEGVideoReader::NextFrame(NDArray* arr, DLDataType dtype) {
     // read next packet which belongs to the desired stream
     while (av_read_frame(fmt_ctx_, pkt_) >= 0) {
         if (pkt_->stream_index == actv_stm_idx_) {
@@ -118,5 +118,19 @@ bool FFMPEGVideoReader::NextFrame(NDArray* arr) {
     return false;
 }
 
+bool ToNDArray(AVFrame *frame, NDArray *arr, DLDataType dtype) {
+    struct SwsContext *sws_ctx = NULL;
+    // sws_ctx = sws_getContext(pCodecCtx->width,
+    //                         pCodecCtx->height,
+    //                         pCodecCtx->pix_fmt,
+    //                         pCodecCtx->width,
+    //                         pCodecCtx->height,
+    //                         PIX_FMT_RGB24,
+    //                         SWS_BILINEAR,
+    //                         NULL,
+    //                         NULL,
+    //                         NULL
+    //                         );
+}
 }  // namespace ffmpeg
 }  // namespace decord

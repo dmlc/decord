@@ -10,10 +10,17 @@
 #include <string>
 #include <ostream>
 
+#include <dlpack/dlpack.h>
+
 /*! \brief DECORD version */
 #define DECORD_VERSION "0.0.1"
 
 namespace decord {
+
+// common data types
+static const DLDataType kUInt8 = { kDLUInt, 8U, 1U };
+static const DLDataType kUInt16 = { kDLUInt, 16U, 1U };
+static const DLDataType kFloat32 = { kDLFloat, 32U, 1U };
 
 /*! \brief Type of Decoder support */
 enum DecoderType {

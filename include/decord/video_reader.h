@@ -27,7 +27,7 @@ class VideoReader {
     * If NULL pointer is used, new NDArray will be created
     * If NDArray shape does not match desired frame shape, it will raise Error
     * */
-    virtual bool NextFrame(NDArray* arr) = 0;
+    virtual bool NextFrame(NDArray* arr, DLDataType dtype = kUInt8) = 0;
     /*! \brief destructor */
     virtual ~VideoReader() = default;
 };  // class VideoReader

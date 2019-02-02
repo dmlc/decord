@@ -36,7 +36,7 @@ class FFMPEGVideoReader : public VideoReader {
       }
       void SetVideoStream(int stream_nb = -1);
       unsigned int QueryStreams();
-      bool NextFrame(NDArray* arr);
+      bool NextFrame(NDArray* arr, DLDataType dtype);
   private:
       /*! \brief Video Streams Codecs in original videos */
       std::vector<AVCodec*> codecs_;
@@ -52,6 +52,9 @@ class FFMPEGVideoReader : public VideoReader {
       AVCodecContext *dec_ctx_;
 
 };  // class FFMPEGVideoReader
+
+/*! \brief Convert from raw AVFrame to NDArray with type */
+bool ToNDArray(AVFrame *frame, NDArray *arr, DLDataType dtype);
 }  // namespace ffmpeg
 }  // namespace decord
 

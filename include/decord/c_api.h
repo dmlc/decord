@@ -82,6 +82,7 @@ typedef enum {
  *   - float: type_code = 2, bits = 32, lanes=1
  *   - float4(vectorized 4 float): type_code = 2, bits = 32, lanes=4
  *   - int8: type_code = 0, bits = 8, lanes=1
+ *   - uint16: type_code = 1, bits = 16, lanes=1
  *
  * \note Arguments DECORD API function always takes bits=64 and lanes=1
  */
