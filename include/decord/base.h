@@ -20,7 +20,15 @@ namespace decord {
 // common data types
 static const DLDataType kUInt8 = { kDLUInt, 8U, 1U };
 static const DLDataType kUInt16 = { kDLUInt, 16U, 1U };
+static const DLDataType kFloat16 = { kDLFloat, 16U, 1U };
 static const DLDataType kFloat32 = { kDLFloat, 32U, 1U };
+
+/*! \brief check if current date type equals another one */
+inline bool operator== (const DLDataType &d1, const DLDataType &d2) {
+  return (d1.bits == d2.bits && d1.code == d2.code && d1.lanes == d2.lanes);
+}
+
+static const DLContext kCPU = {kDLCPU, 0};
 
 /*! \brief Type of Decoder support */
 enum DecoderType {
@@ -44,9 +52,9 @@ struct Decoder {
   inline static Decoder NVDEC() { return Decoder(kNVDEC); };
 
   /*!
-   * \brief check if current context equals another one
-   * \param b another context to compare
-   * \return whether dev mask and id are same
+   * \brief check if current decoder equals another one
+   * \param b another decoder to compare
+   * \return whether decoders are same
    */
   inline bool operator==(const Decoder &b) const {
     return dec_type == b.dec_type;

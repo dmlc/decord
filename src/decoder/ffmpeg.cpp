@@ -11,6 +11,25 @@
 namespace decord {
 namespace ffmpeg {
 
+FrameTransform::FrameTransform(DLDataType dtype, uint32_t h, uint32_t w, uint32_t c, int interp) 
+        : height(h), width(w), channel(c), interp(interp) {
+    CHECK(c == 3 || c == 1)
+        << "Only 3 channel RGB or 1 channel Gray image format supported";
+    if (dtype == kUInt8) {
+        fmt = c == 3 ? AV_PIX_FMT_RGB24: AV_PIX_FMT_GRAY8;
+    } else if (dtype == kUInt16) {
+        fmt = c == 3 ? AV_PIX_FMT_RGB48: AV_PIX_FMT_GRAY16;
+    } else if (dtype == kFloat16) {
+        // FFMPEG has no native support of float formats
+        // use fp16 and cast later
+        fmt = c == 3 ? AV_PIX_FMT_RGB48: AV_PIX_FMT_GRAY16;
+    } else {
+        LOG(FATAL) << "Unsupported data type [" 
+            << dtype.code << " " << dtype.bits << " " << dtype.lanes
+            << " and channel combination: " << channel;
+    }
+};
+
 // Constructor
 FFMPEGVideoReader::FFMPEGVideoReader(std::string& fn)
      : fmt_ctx_(NULL), dec_ctx_(NULL), actv_stm_idx_(-1) {
@@ -103,6 +122,11 @@ unsigned int FFMPEGVideoReader::QueryStreams() {
 }
 
 bool FFMPEGVideoReader::NextFrame(NDArray* arr, DLDataType dtype) {
+    if (arr == NULL) {
+        // Create NDArray with frame shape and default dtype
+        auto ndarray = NDArray::Empty({dec_ctx_->height, dec_ctx_->width, dec_ctx_->channels}, kUInt8, kCPU);
+        arr = &ndarray;
+    }
     // read next packet which belongs to the desired stream
     while (av_read_frame(fmt_ctx_, pkt_) >= 0) {
         if (pkt_->stream_index == actv_stm_idx_) {
@@ -111,6 +135,8 @@ bool FFMPEGVideoReader::NextFrame(NDArray* arr, DLDataType dtype) {
             avcodec_decode_video2(dec_ctx_, frame_, &got_picture, pkt_);
             if (got_picture) {
                 // convert raw image(e.g. YUV420, YUV422) to RGB image
+                out_fmt = 
+                struct SwsContext *sws_ctx = GetSwsContext(out_fmt);
                 return true;
             }
         }
@@ -118,19 +144,32 @@ bool FFMPEGVideoReader::NextFrame(NDArray* arr, DLDataType dtype) {
     return false;
 }
 
+struct SwsContext* FFMPEGVideoReader::GetSwsContext(FrameTransform out_fmt) {
+    auto sws_ctx = sws_ctx_map_.find(out_fmt);
+    if ( sws_ctx == sws_ctx_map_.end()) {
+        // already initialized sws context
+        return sws_ctx->second;
+    } else {
+        // create new sws context
+        struct SwsContext *ctx = sws_getContext(dec_ctx_->width,
+                                                dec_ctx_->height,
+                                                dec_ctx_->pix_fmt,
+                                                out_fmt.width,
+                                                out_fmt.height,
+                                                out_fmt.fmt,
+                                                out_fmt.interp,
+                                                NULL,
+                                                NULL,
+                                                NULL
+                                                );
+        sws_ctx_map_[out_fmt] = ctx;
+        return ctx;
+    }
+}
+
 bool ToNDArray(AVFrame *frame, NDArray *arr, DLDataType dtype) {
     struct SwsContext *sws_ctx = NULL;
-    // sws_ctx = sws_getContext(pCodecCtx->width,
-    //                         pCodecCtx->height,
-    //                         pCodecCtx->pix_fmt,
-    //                         pCodecCtx->width,
-    //                         pCodecCtx->height,
-    //                         PIX_FMT_RGB24,
-    //                         SWS_BILINEAR,
-    //                         NULL,
-    //                         NULL,
-    //                         NULL
-    //                         );
+    
 }
 }  // namespace ffmpeg
 }  // namespace decord

@@ -149,8 +149,8 @@ class NDArray {
    * \return The created Array
    */
   DECORD_DLL static NDArray Empty(std::vector<int64_t> shape,
-                               DLDataType dtype,
-                               DLContext ctx);
+                                  DLDataType dtype,
+                                  DLContext ctx);
   /*!
    * \brief Create a NDArray backed by a dlpack tensor.
    *
