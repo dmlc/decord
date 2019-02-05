@@ -60,8 +60,6 @@ class FFMPEGVideoReader : public VideoReader {
   private:
       /*! \brief Get or Create SwsContext by dtype */
       struct SwsContext* GetSwsContext(FrameTransform out_fmt);
-      /*! \brief Convert from raw AVFrame to NDArray with type */
-      bool ToNDArray(AVFrame *frame, NDArray *arr);
 
       /*! \brief Video Streams Codecs in original videos */
       std::vector<AVCodec*> codecs_;
