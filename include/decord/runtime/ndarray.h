@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2017 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file decord/runtime/ndarray.h
  * \brief Abstract device memory management API
  */

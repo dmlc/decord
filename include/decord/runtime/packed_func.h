@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2017 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file decord/runtime/packed_func.h
  * \brief Type-erased function used across DECORD API.
  */

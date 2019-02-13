@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2017 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file decord/runtime/serializer.h
  * \brief Serializer extension to support DECORD data types
  *  Include this file to enable serialization of DLDataType, DLContext

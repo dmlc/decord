@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2017 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file decord/runtime/registry.h
  * \brief This file defines the DECORD global function registry.
  *

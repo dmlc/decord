@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2017 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file thread_pool.cc
  * \brief Threadpool for multi-threading runtime.
  */

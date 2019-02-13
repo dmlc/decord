@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2018 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file decord/runtime/threading_backend.h
  * \brief Utilities for manipulating thread pool threads.
  */

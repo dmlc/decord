@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2016 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file decord/runtime/device_api.h
  * \brief Abstract device memory management API
  */
