@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file base.h
- * \brief configuration of DECORD and basic data structure.
+ * \brief configuration of decord and basic data structure.
  */
 #ifndef DECORD_BASE_H_
 #define DECORD_BASE_H_

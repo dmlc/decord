@@ -3,16 +3,17 @@
  * \file ndarray.cc
  * \brief NDArray container infratructure.
  */
-#include <decord/ndarray.h>
-
 #include <dmlc/logging.h>
-#include <decord/c_api.h>
-#include <decord/device_api.h>
+#include <decord/runtime/ndarray.h>
+#include <decord/runtime/c_runtime_api.h>
+#include <decord/runtime/device_api.h>
+#include "runtime_base.h"
 
 // deleter for arrays used by DLPack exporter
 extern "C" void NDArrayDLPackDeleter(DLManagedTensor* tensor);
 
-namespace DECORD {
+namespace decord {
+namespace runtime {
 
 inline void VerifyDataType(DLDataType dtype) {
   CHECK_GE(dtype.lanes, 1);
@@ -35,11 +36,11 @@ inline size_t GetDataAlignment(const DLTensor& arr) {
 struct NDArray::Internal {
   // Default deleter for the container
   static void DefaultDeleter(NDArray::Container* ptr) {
-    using DECORD::runtime::NDArray;
+    using decord::runtime::NDArray;
     if (ptr->manager_ctx != nullptr) {
       static_cast<NDArray::Container*>(ptr->manager_ctx)->DecRef();
     } else if (ptr->dl_tensor.data != nullptr) {
-      DECORD::runtime::DeviceAPI::Get(ptr->dl_tensor.ctx)->FreeDataSpace(
+      decord::runtime::DeviceAPI::Get(ptr->dl_tensor.ctx)->FreeDataSpace(
           ptr->dl_tensor.ctx, ptr->dl_tensor.data);
     }
     delete ptr;
@@ -164,16 +165,17 @@ void NDArray::CopyFromTo(DLTensor* from,
     from_size, from->ctx, to->ctx, from->dtype, stream);
 }
 
-}  // namespace DECORD
+}  // namespace runtime
+}  // namespace decord
 
-using namespace DECORD::runtime;
+using namespace decord::runtime;
 
 void NDArrayDLPackDeleter(DLManagedTensor* tensor) {
   static_cast<NDArray::Container*>(tensor->manager_ctx)->DecRef();
   delete tensor;
 }
 
-int DECORDArrayAlloc(const DECORD_index_t* shape,
+int DECORDArrayAlloc(const decord_index_t* shape,
                   int ndim,
                   int dtype_code,
                   int dtype_bits,

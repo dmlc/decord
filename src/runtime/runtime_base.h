@@ -3,10 +3,10 @@
  * \file runtime_base.h
  * \brief Base of all C APIs
  */
-#ifndef DECORD_C_API_ERROR_H_
-#define DECORD_C_API_ERROR_H_
+#ifndef DECORD_RUNTIME_RUNTIME_BASE_H_
+#define DECORD_RUNTIME_RUNTIME_BASE_H_
 
-#include <decord/c_api.h>
+#include <decord/runtime/c_runtime_api.h>
 #include <stdexcept>
 
 /*! \brief  macro to guard beginning and end section of all functions */
@@ -31,4 +31,4 @@ inline int DECORDAPIHandleException(const std::runtime_error &e) {
   return -1;
 }
 
-#endif  // DECORD_C_API_ERROR_H_
+#endif  // DECORD_RUNTIME_RUNTIME_BASE_H_

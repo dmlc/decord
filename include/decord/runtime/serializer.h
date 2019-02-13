@@ -1,15 +1,15 @@
 /*!
  *  Copyright (c) 2017 by Contributors
- * \file DECORD/runtime/serializer.h
+ * \file decord/runtime/serializer.h
  * \brief Serializer extension to support DECORD data types
  *  Include this file to enable serialization of DLDataType, DLContext
  */
-#ifndef DECORD_SERIALIZER_H_
-#define DECORD_SERIALIZER_H_
+#ifndef DECORD_RUNTIME_SERIALIZER_H_
+#define DECORD_RUNTIME_SERIALIZER_H_
 
 #include <dmlc/io.h>
 #include <dmlc/serializer.h>
-#include "c_api.h"
+#include "c_runtime_api.h"
 #include "ndarray.h"
 
 namespace dmlc {
@@ -48,4 +48,4 @@ struct Handler<DLContext> {
 
 }  // namespace serializer
 }  // namespace dmlc
-#endif  // DECORD_SERIALIZER_H_
+#endif  // DECORD_RUNTIME_SERIALIZER_H_

@@ -1,20 +1,19 @@
 /*!
- *  Copyright (c) 2019 by Contributors
- * \file image_frame.h
- * \brief Image Frame Definition
+ *  Copyright (c) 2017 by Contributors
+ * \file decord/runtime/ndarray.h
+ * \brief Abstract device memory management API
  */
-
-#ifndef DECORD_NDARRAY_H_
-#define DECORD_NDARRAY_H_
+#ifndef DECORD_RUNTIME_NDARRAY_H_
+#define DECORD_RUNTIME_NDARRAY_H_
 
 #include <atomic>
 #include <vector>
 #include <utility>
-
-#include "c_api.h"
+#include "c_runtime_api.h"
 #include "serializer.h"
 
 namespace decord {
+namespace runtime {
 /*!
  * \brief Managed NDArray.
  *  The array is backed by reference counted blocks.
@@ -149,8 +148,8 @@ class NDArray {
    * \return The created Array
    */
   DECORD_DLL static NDArray Empty(std::vector<int64_t> shape,
-                                  DLDataType dtype,
-                                  DLContext ctx);
+                               DLDataType dtype,
+                               DLContext ctx);
   /*!
    * \brief Create a NDArray backed by a dlpack tensor.
    *
@@ -291,7 +290,7 @@ inline void NDArray::reset() {
  */
 inline size_t GetDataSize(const DLTensor& arr) {
   size_t size = 1;
-  for (dd_index_t i = 0; i < arr.ndim; ++i) {
+  for (decord_index_t i = 0; i < arr.ndim; ++i) {
     size *= static_cast<size_t>(arr.shape[i]);
   }
   size *= (arr.dtype.bits * arr.dtype.lanes + 7) / 8;
@@ -438,6 +437,6 @@ inline bool NDArray::Load(dmlc::Stream* strm) {
   return true;
 }
 
+}  // namespace runtime
 }  // namespace decord
-
-#endif  // DECORD_IMAGE_FRAME_H_
+#endif  // DECORD_RUNTIME_NDARRAY_H_

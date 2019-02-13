@@ -11,7 +11,7 @@
 #include <memory>
 
 #include "base.h"
-#include "ndarray.h"
+#include "runtime/ndarray.h"
 
 namespace decord {
 
