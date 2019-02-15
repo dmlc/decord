@@ -15,23 +15,54 @@
 
 namespace decord {
 
+enum AccessType {
+    kVideoReaderRandomAccess = 0U,
+    kVideoReaderSequential = 1U,
+};
+
+enum InterpolationType {
+    kInterpolationLinear = 0U,
+    kInterpolationBicubic = 1U,
+    kInterpolationArea = 2U,
+};
+
+struct Size {
+    uint32_t width;
+    uint32_t height;
+};
+
+struct FrameProperty {
+    uint32_t width;
+    uint32_t height;
+    uint32_t channel;
+    DLDataType dtype;
+    InterpolationType itype;
+};
+
+class VideoReaderInterface;
+typedef std::shared_ptr<VideoReaderInterface> VideoReaderPtr;
+
 // Video Reader is an abtract class defining the reader interfaces
-class VideoReader {
+class VideoReaderInterface {
  public:
+    /*! \brief open video, return true if success */
+    virtual bool Open(std::string& fname, AccessType acc_type, FrameProperty prop) = 0;
     /*! \brief query stream info in video */
-    virtual unsigned int QueryStreams() = 0;
+    virtual unsigned int QueryStreams() const = 0;
     /*! \brief check if video file successfully opened */
     virtual void SetVideoStream(int stream_nb = -1) = 0;
-    /*! \brief read the next frame, return true if successful, false otherwise
-    * Note that if NDArray is valid and has same shape, the memory will be reused
-    * If NULL pointer is used, new NDArray will be created
-    * If NDArray shape does not match desired frame shape, it will raise Error
-    * */
-    virtual bool NextFrame(NDArray* arr, DLDataType dtype = kUInt8) = 0;
+    /*! \brief read the next frame, return NDArray */
+    virtual runtime::NDArray NextFrame() = 0;
     /*! \brief destructor */
-    virtual ~VideoReader() = default;
+    virtual ~VideoReaderInterface() = default;
+
+    // The following APIs have perf concerns, use with caucious
+    /*! \brief seek to position, this will clear all buffer and queue */
+    virtual runtime::NDArray Seek(uint64_t pos) = 0;
+    /*! \brief seek and read frame at position p */
+    virtual runtime::NDArray GetFrame(uint64_t pos) = 0;
 };  // class VideoReader
 
-std::shared_ptr<VideoReader> GetVideoReader(std::string& fn, Decoder dec = Decoder::FFMPEG());
+VideoReaderPtr GetVideoReader(std::string& fname, Decoder dec = Decoder::FFMPEG());
 }  // namespace decord
 #endif // DECORD_VIDEO_READER_H_

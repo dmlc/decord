@@ -30,6 +30,33 @@ inline bool operator== (const DLDataType &d1, const DLDataType &d2) {
 
 static const DLContext kCPU = {kDLCPU, 0};
 
+// seek flags
+enum {
+    SEEK_FAST,
+    SEEK_PRECISELY,
+    SEEK_STEP,
+};
+
+// Decoder parameters, used to pass in and store video information
+// notation: r - read only, w - write only, rw - read/write 
+typedef struct {
+    int video_vwidth;             // r  video actual width
+    int video_vheight;            // r  video actual height
+    int video_rs_width;           // w  video resize width (before rotate)
+    int video_rs_height;          // w  video resize height (before rotate)
+    int video_owidth;             // r  video output width  (after rotate)
+    int video_oheight;            // r  video output height (after rotate)
+    int video_frame_rate;         // r  FPS
+    int video_stream_total;       // r  total # video streams
+    int video_stream_cur;         // wr current video stream index
+    int video_thread_count;       // wr decoder thread count
+    int video_hwaccel;            // wr hardware accelerated decoding
+    int video_deinterlace;        // wr video deinterlace 
+    int video_rotate;             // wr video rotate angle
+
+    int init_timeout;             // w  timeout in ms，to avoid open failure for streaming video sources
+} DecoderParams;
+
 /*! \brief Type of Decoder support */
 enum DecoderType {
   kFFMPEG = 0U,
