@@ -246,6 +246,7 @@ void FFMPEGThreadedDecoder::DecodePacket(PacketQueuePtr pkt_queue, FrameQueuePtr
         avcodec_decode_video2(dec_ctx_.ptr.get(), frame.ptr.get(), &got_picture, pkt.ptr.get());
         if (got_picture) {
             // convert raw image(e.g. YUV420, YUV422) to RGB image
+            // use npp_scale or sws_scale
             // out_fmt = 
             // struct SwsContext *sws_ctx = GetSwsContext(out_fmt);
             // return true;
