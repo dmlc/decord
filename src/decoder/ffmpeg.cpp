@@ -180,13 +180,24 @@ void FFMPEGVideoDecoder::Reset() {
 }
 
 FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : run_(false) {
-    Start()
+    pkt_queue_ = std::make_unique<PacketQueue>();
+    frame_queue_ = std::make_unique<FrameQueue>();
+    Start();
+}
+
+void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx) {
+    bool running = run_.load();
+    Stop();
+    dec_ctx_ = dec_ctx;
+    if (running) {
+        Start();
+    }
 }
 
 void FFMPEGThreadedDecoder::Start() {
     if (!run_.load()) {
         run_.store(true);
-        t_ = std::thread(FFMPEGThreadedDecoder::DecodePacket, std::ref(pkt_queue_), std::ref(frame_queue_));
+        t_ = std::thread(FFMPEGThreadedDecoder::DecodePacket, pkt_queue_, frame_queue_, std::ref(run_));
     }
 }
 
@@ -194,19 +205,51 @@ void FFMPEGThreadedDecoder::Stop() {
     if (run_.load()) {
         run_.store(false);
     }
+    if (t_.joinable) {
+        t_.join();
+    }
 }
 
 void FFMPEGThreadedDecoder::Clear() {
     Stop();
-    pkt_queue_.SignalForKill();
-    frame_queue_.SignalForKill();
+    pkt_queue_->SignalForKill();
+    frame_queue_->SignalForKill();
+    pkt_queue_ = std::make_unique<PacketQueue>();
+    frame_queue_ = std::make_unique<FrameQueue>();
 }
 
-void FFMPEGThreadedDecoder::DecodePacket(PacketQueue& pkt_queue, FrameQueue& frame_queue,  std::atomic_bool& run) {
+void FFMPEGThreadedDecoder::Push(AVPacket_ pkt) {
+    pkt_queue_->Push(pkt);
+}
+
+bool FFMPEGThreadedDecoder::Pull(AVFrame_ *frame) {
+    // Pop is blocking operation
+    // unblock and return false if queue has been destroyed.
+    return frame_queue_->Pop(frame);
+}
+
+FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
+    Stop();
+    pkt_queue_->SignalForKill();
+    frame_queue_->SignalForKill();
+}
+
+void FFMPEGThreadedDecoder::DecodePacket(PacketQueuePtr pkt_queue, FrameQueuePtr frame_queue, std::atomic<bool>& run) {
     while (run.load()) {
-        AVPacket_ pkt = NULL;
-        bool ret = pkt_queue.Pop(&pkt);
+        AVPacket_ pkt;
+        AVFrame_ frame;
+        int got_picture;
+        bool ret = pkt_queue->Pop(&pkt);
         if (!ret) return;
+        // decode frame from packet
+        frame.Alloc();
+        avcodec_decode_video2(dec_ctx_.ptr.get(), frame.ptr.get(), &got_picture, pkt.ptr.get());
+        if (got_picture) {
+            // convert raw image(e.g. YUV420, YUV422) to RGB image
+            // out_fmt = 
+            // struct SwsContext *sws_ctx = GetSwsContext(out_fmt);
+            // return true;
+        }
     }
 }
 

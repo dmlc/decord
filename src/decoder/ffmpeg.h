@@ -44,23 +44,41 @@ namespace ffmpeg {
 
 // AVPacket wrapper with smart pointer 
 struct AVPacket_ {
-    AVPacket_() { ptr = std::shared_ptr<AVPacket>(av_packet_alloc(), &Deleter);}
+    AVPacket_() : ptr(nullptr) {}
     AVPacket_(AVPacket *p) { ptr = std::shared_ptr<AVPacket>(p, &Deleter); }
     AVPacket_(const AVPacket_& other) { ptr = other.ptr; }
     AVPacket_(AVPacket_&& other) { std::swap(ptr, other.ptr); }
-    void *Deleter(AVPacket_ *self) { AVPacket *p = self->ptr.get(); av_packet_free(&p); ptr = nullptr; };
+    void Alloc() { ptr = std::shared_ptr<AVPacket>(av_packet_alloc(), &Deleter); }
+    void *Deleter(AVPacket_ *self) { if (!ptr) return; AVPacket *p = self->ptr.get(); av_packet_free(&p); ptr = nullptr; }
     std::shared_ptr<AVPacket> ptr;
 }; // struct AVPacket_
 
 // AVFrame wrapper with smart pointer 
 struct AVFrame_ {
-    AVFrame_() { ptr = std::shared_ptr<AVFrame>(av_frame_alloc(), &Deleter); }
+    AVFrame_() : ptr(nullptr) {}
     AVFrame_(AVFrame *p) { ptr = std::shared_ptr<AVFrame>(p, &Deleter); }
     AVFrame_(const AVFrame_& other) { ptr = other.ptr; }
     AVFrame_(AVFrame_&& other) { std::swap(ptr, other.ptr); }
-    void *Deleter(AVFrame_ *self) { AVFrame *p = self->ptr.get(); av_frame_free(&p); ptr = nullptr; };
+    void Alloc() { ptr = std::shared_ptr<AVFrame>(av_frame_alloc(), &Deleter); }
+    void *Deleter(AVFrame_ *self) { if (!ptr) return; AVFrame *p = self->ptr.get(); av_frame_free(&p); ptr = nullptr; }
     std::shared_ptr<AVFrame> ptr;
 }; // struct AVFrame_
+
+// AVCodecContext wrapper with smart pointer
+struct AVCodecContext_ {
+    AVCodecContext_() : ptr(nullptr) {}
+    AVCodecContext_(AVCodecContext *p) { ptr = std::shared_ptr<AVCodecContext>(p, &Deleter); }
+    void *Deleter(AVCodecContext_ *self) { if (!ptr) return; AVCodecContext *p = self->ptr.get(); avcodec_free_context(&p); ptr = nullptr; }
+    std::shared_ptr<AVCodecContext> ptr;
+};  // AVCodecContext_
+
+// SwsContext wrapper
+struct SwsContext_ {
+    SwsContext_() : ptr(nullptr) {}
+    SwsContext_(SwsContext *p) { ptr = std::shared_ptr<SwsContext>(p, &Deleter); }
+    void *Deleter(SwsContext_ *self) { if (!ptr) return; sws_freeContext(self->ptr.get()); }
+    std::shared_ptr<SwsContext> ptr;
+};  // SwsContext_
 
 class FFMPEGVideoDecoder;
 class FFMPEGVideoReader;
@@ -91,25 +109,29 @@ class FFMPEGPacketDispatcher {
 
 class FFMPEGThreadedDecoder {
     using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacket_>;
+    using PacketQueuePtr = std::unique_ptr<PacketQueue>;
     using FrameQueue = dmlc::ConcurrentBlockingQueue<AVFrame_>;
+    using FrameQueuePtr = std::unique_ptr<FrameQueue>;
     public:
         FFMPEGThreadedDecoder();
+        void SetCodecContext(AVCodecContext *dec_ctx);
         void Start();
         void Stop();
         void Clear();
-        void Push(AVPacket *pkt);
+        // void Push(AVPacket *pkt);
         void Push(AVPacket_ pkt);
-        bool Pull(AVFrame *frame);
-        bool Pull(AVFrame_ frame);
+        // bool Pull(AVFrame *frame);
+        bool Pull(AVFrame_ *frame);
         ~FFMPEGThreadedDecoder();
     protected:
-        AVCodecContext *dec_ctx_;
+        AVCodecContext_ dec_ctx_;
+        SwsContext_ sws_ctx_;
     private:
-        void DecodePacket(PacketQueue& pkt_queue, FrameQueue& frame_queue, std::atomic_bool& run);
-        PacketQueue pkt_queue_;
-        FrameQueue frame_queue_;
+        void DecodePacket(PacketQueuePtr pkt_queue, FrameQueuePtr frame_queue, std::atomic<bool>& run);
+        PacketQueuePtr pkt_queue_;
+        FrameQueuePtr frame_queue_;
         std::thread t_;
-        std::atomic_bool run_;
+        std::atomic<bool> run_;
 };
 
 class FFMPEGVideoDecoder {
