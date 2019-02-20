@@ -189,6 +189,8 @@ void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx) {
     bool running = run_.load();
     Stop();
     dec_ctx_ = dec_ctx;
+    std::string descr = "";
+    filter_graph_ = std::make_unique<FFMPEGFilterGraph>(descr, dec_ctx);
     if (running) {
         Start();
     }
@@ -197,7 +199,8 @@ void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx) {
 void FFMPEGThreadedDecoder::Start() {
     if (!run_.load()) {
         run_.store(true);
-        t_ = std::thread(FFMPEGThreadedDecoder::DecodePacket, pkt_queue_, frame_queue_, std::ref(run_));
+        t_ = std::thread(FFMPEGThreadedDecoder::WorkerThread, 
+                         pkt_queue_, frame_queue_, filter_graph_, std::ref(run_));
     }
 }
 
@@ -222,7 +225,7 @@ void FFMPEGThreadedDecoder::Push(AVPacket_ pkt) {
     pkt_queue_->Push(pkt);
 }
 
-bool FFMPEGThreadedDecoder::Pull(AVFrame_ *frame) {
+bool FFMPEGThreadedDecoder::Pop(AVFrame_ *frame) {
     // Pop is blocking operation
     // unblock and return false if queue has been destroyed.
     return frame_queue_->Pop(frame);
@@ -234,8 +237,10 @@ FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
     frame_queue_->SignalForKill();
 }
 
-void FFMPEGThreadedDecoder::DecodePacket(PacketQueuePtr pkt_queue, FrameQueuePtr frame_queue, std::atomic<bool>& run) {
+void FFMPEGThreadedDecoder::WorkerThread(PacketQueuePtr pkt_queue, FrameQueuePtr frame_queue,
+                                         FFMPEGFilterGraphPtr filter_graph, std::atomic<bool>& run) {
     while (run.load()) {
+        CHECK(filter_graph) << "FilterGraph not initialized.";
         AVPacket_ pkt;
         AVFrame_ frame;
         int got_picture;
@@ -243,13 +248,14 @@ void FFMPEGThreadedDecoder::DecodePacket(PacketQueuePtr pkt_queue, FrameQueuePtr
         if (!ret) return;
         // decode frame from packet
         frame.Alloc();
-        avcodec_decode_video2(dec_ctx_.ptr.get(), frame.ptr.get(), &got_picture, pkt.ptr.get());
+        avcodec_decode_video2(dec_ctx_.ptr.get(), frame.Get(), &got_picture, pkt.Get());
         if (got_picture) {
-            // convert raw image(e.g. YUV420, YUV422) to RGB image
-            // use npp_scale or sws_scale
-            // out_fmt = 
-            // struct SwsContext *sws_ctx = GetSwsContext(out_fmt);
-            // return true;
+            // filter image frame (format conversion, scaling...)
+            filter_graph->Push(frame);
+            CHECK(filter_graph->Pop(&frame)) << "Error fetch filtered frame.";
+            frame_queue->Push(frame);
+        } else {
+            LOG(FATAL) << "Error decoding frame.";
         }
     }
 }
@@ -306,15 +312,15 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 
 void FFMPEGFilterGraph::Push(AVFrame_ frame) {
     // push decoded frame into filter graph
-    CHECK_GE(av_buffersrc_add_frame_flags(buffersrc_ctx_, frame.get(), 0), 0) 
+    CHECK_GE(av_buffersrc_add_frame_flags(buffersrc_ctx_, frame.Get(), 0), 0) 
         << "Error while feeding the filter graph";
     ++count_;
 }
 
 bool FFMPEGFilterGraph::Pop(AVFrame_ *frame) {
     if (!count_.load()) return false;
-    if (!frame->get()) frame->Alloc();
-    int ret = av_buffersink_get_frame(buffersink_ctx_, frame->get());
+    if (!frame->Get()) frame->Alloc();
+    int ret = av_buffersink_get_frame(buffersink_ctx_, frame->Get());
     return ret > 0;
 }
 

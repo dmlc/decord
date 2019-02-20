@@ -13,6 +13,7 @@
 #include <vector>
 #include <unordered_map>
 #include <thread>
+#include <condition_variable>
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,6 +54,7 @@ struct AVPacket_ {
     AVPacket_(AVPacket *p) { ptr = std::shared_ptr<AVPacket>(p, &Deleter); }
     AVPacket_(const AVPacket_& other) { ptr = other.ptr; }
     AVPacket_(AVPacket_&& other) { std::swap(ptr, other.ptr); }
+    AVPacket* Get() { return ptr.get(); }
     void Alloc() { ptr = std::shared_ptr<AVPacket>(av_packet_alloc(), &Deleter); }
     void *Deleter(AVPacket_ *self) { if (!ptr) return; AVPacket *p = self->ptr.get(); av_packet_free(&p); ptr = nullptr; }
     std::shared_ptr<AVPacket> ptr;
@@ -64,7 +66,7 @@ struct AVFrame_ {
     AVFrame_(AVFrame *p) { ptr = std::shared_ptr<AVFrame>(p, &Deleter); }
     AVFrame_(const AVFrame_& other) { ptr = other.ptr; }
     AVFrame_(AVFrame_&& other) { std::swap(ptr, other.ptr); }
-    AVFrame* get() { return ptr.get(); }
+    AVFrame* Get() { return ptr.get(); }
     void Alloc() { ptr = std::shared_ptr<AVFrame>(av_frame_alloc(), &Deleter); }
     void *Deleter(AVFrame_ *self) { if (!ptr) return; AVFrame *p = self->ptr.get(); av_frame_free(&p); ptr = nullptr; }
     std::shared_ptr<AVFrame> ptr;
@@ -106,40 +108,6 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         FFMPEGVideoDecoder dec_;
 };
 
-class FFMPEGPacketDispatcher {
-    public:
-
-    private:
-        dmlc::ConcurrentBlockingQueue<AVPacket_> pkt_queue_;
-};
-
-class FFMPEGThreadedDecoder {
-    using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacket_>;
-    using PacketQueuePtr = std::unique_ptr<PacketQueue>;
-    using FrameQueue = dmlc::ConcurrentBlockingQueue<AVFrame_>;
-    using FrameQueuePtr = std::unique_ptr<FrameQueue>;
-    public:
-        FFMPEGThreadedDecoder();
-        void SetCodecContext(AVCodecContext *dec_ctx);
-        void Start();
-        void Stop();
-        void Clear();
-        // void Push(AVPacket *pkt);
-        void Push(AVPacket_ pkt);
-        // bool Pull(AVFrame *frame);
-        bool Pull(AVFrame_ *frame);
-        ~FFMPEGThreadedDecoder();
-    protected:
-        AVCodecContext_ dec_ctx_;
-        SwsContext_ sws_ctx_;
-    private:
-        void DecodePacket(PacketQueuePtr pkt_queue, FrameQueuePtr frame_queue, std::atomic<bool>& run);
-        PacketQueuePtr pkt_queue_;
-        FrameQueuePtr frame_queue_;
-        std::thread t_;
-        std::atomic<bool> run_;
-};
-
 class FFMPEGFilterGraph {
     public:
         FFMPEGFilterGraph(std::string filter_desc, AVCodecContext *dec_ctx);
@@ -152,7 +120,43 @@ class FFMPEGFilterGraph {
         AVFilterContext *buffersrc_ctx_;
         AVFilterGraph *filter_graph_;
         std::atomic<int> count_;
+
+    DISALLOW_COPY_AND_ASSIGN(FFMPEGFilterGraph);
 };  // FFMPEGFilterGraph
+
+class FFMPEGThreadedDecoder {
+    using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacket_>;
+    using PacketQueuePtr = std::unique_ptr<PacketQueue>;
+    using FrameQueue = dmlc::ConcurrentBlockingQueue<AVFrame_>;
+    using FrameQueuePtr = std::unique_ptr<FrameQueue>;
+    using FFMPEGFilterGraphPtr = std::unique_ptr<FFMPEGFilterGraph>;
+    public:
+        FFMPEGThreadedDecoder();
+        void SetCodecContext(AVCodecContext *dec_ctx);
+        void Start();
+        void Stop();
+        void Clear();
+        // void Push(AVPacket *pkt);
+        void Push(AVPacket_ pkt);
+        // bool Pull(AVFrame *frame);
+        bool Pop(AVFrame_ *frame);
+        ~FFMPEGThreadedDecoder();
+    protected:
+        AVCodecContext_ dec_ctx_;
+        // SwsContext_ sws_ctx_;
+    private:
+        void WorkerThread(PacketQueuePtr pkt_queue, FrameQueuePtr frame_queue, FFMPEGFilterGraphPtr filter_graph, std::atomic<bool>& run);
+        // void FetcherThread(std::condition_variable& cv, FrameQueuePtr frame_queue);
+        PacketQueuePtr pkt_queue_;
+        FrameQueuePtr frame_queue_;
+        std::thread t_;
+        // std::thread fetcher_;
+        // std::condition_variable cv_;
+        std::atomic<bool> run_;
+        FFMPEGFilterGraphPtr filter_graph_;
+
+    DISALLOW_COPY_AND_ASSIGN(FFMPEGThreadedDecoder);
+};
 
 class FFMPEGVideoDecoder {
     public:
