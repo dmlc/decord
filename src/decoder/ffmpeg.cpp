@@ -5,7 +5,7 @@
  */
 
 #include "ffmpeg.h"
-
+#include <cstdio>
 #include <dmlc/logging.h>
 
 namespace decord {
@@ -252,6 +252,76 @@ void FFMPEGThreadedDecoder::DecodePacket(PacketQueuePtr pkt_queue, FrameQueuePtr
             // return true;
         }
     }
+}
+
+FFMPEGFilterGraph::FFMPEGFilterGraph(std::string filters_descr, AVCodecContext *dec_ctx) : count_(0) {
+    Init(filters_descr, dec_ctx);
+}
+
+void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx) {
+    char args[512];
+    const AVFilter *buffersrc  = avfilter_get_by_name("buffer");
+	const AVFilter *buffersink = avfilter_get_by_name("ffbuffersink");
+    AVFilterInOut *outputs = avfilter_inout_alloc();
+	AVFilterInOut *inputs  = avfilter_inout_alloc();
+	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE };
+	AVBufferSinkParams *buffersink_params;
+ 
+	filter_graph_ = avfilter_graph_alloc();
+    /* buffer video source: the decoded frames from the decoder will be inserted here. */
+	std::snprintf(args, sizeof(args),
+		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
+		dec_ctx->width, dec_ctx->height, dec_ctx->pix_fmt,
+		dec_ctx->time_base.num, dec_ctx->time_base.den,
+		dec_ctx->sample_aspect_ratio.num, dec_ctx->sample_aspect_ratio.den);
+    
+    CHECK_GE(avfilter_graph_create_filter(&buffersrc_ctx_, buffersrc, "in",
+		args, NULL, filter_graph_), 0) << "Cannot create buffer source";
+
+    /* buffer video sink: to terminate the filter chain. */
+	buffersink_params = av_buffersink_params_alloc();
+	buffersink_params->pixel_fmts = pix_fmts;
+	CHECK_GE(avfilter_graph_create_filter(&buffersink_ctx_, buffersink, "out",
+		NULL, buffersink_params, filter_graph_), 0) << "Cannot create buffer sink";
+	av_free(buffersink_params);
+
+    /* Endpoints for the filter graph. */
+	outputs->name       = av_strdup("in");
+	outputs->filter_ctx = buffersrc_ctx_;
+	outputs->pad_idx    = 0;
+	outputs->next       = NULL;
+ 
+	inputs->name       = av_strdup("out");
+	inputs->filter_ctx = buffersink_ctx_;
+	inputs->pad_idx    = 0;
+	inputs->next       = NULL;
+
+    /* Parse filter description */
+    CHECK_GE(avfilter_graph_parse_ptr(filter_graph_, filters_descr.c_str(),
+		&inputs, &outputs, NULL), 0) << "Failed to parse filters description.";
+
+    /* Config filter graph */
+    CHECK_GE(avfilter_graph_config(filter_graph_, NULL), 0) << "Failed to config filter graph";
+}
+
+void FFMPEGFilterGraph::Push(AVFrame_ frame) {
+    // push decoded frame into filter graph
+    CHECK_GE(av_buffersrc_add_frame_flags(buffersrc_ctx_, frame.get(), 0), 0) 
+        << "Error while feeding the filter graph";
+    ++count_;
+}
+
+bool FFMPEGFilterGraph::Pop(AVFrame_ *frame) {
+    if (!count_.load()) return false;
+    if (!frame->get()) frame->Alloc();
+    int ret = av_buffersink_get_frame(buffersink_ctx_, frame->get());
+    return ret > 0;
+}
+
+FFMPEGFilterGraph::~FFMPEGFilterGraph() {
+    // avfilter_free(buffersink_ctx_);
+    // avfilter_free(buffersrc_ctx_);
+    avfilter_graph_free(&filter_graph_);
 }
 
 

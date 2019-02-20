@@ -19,7 +19,12 @@ extern "C" {
 #endif
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavfilter/avfilter.h>
+#include <libavfilter/buffersink.h>
+#include <libavfilter/buffersrc.h>
 #include <libswscale/swscale.h>
+#include <libavutil/avutil.h>
+#include <libavutil/pixfmt.h>
 #ifdef __cplusplus
 }
 #endif
@@ -59,6 +64,7 @@ struct AVFrame_ {
     AVFrame_(AVFrame *p) { ptr = std::shared_ptr<AVFrame>(p, &Deleter); }
     AVFrame_(const AVFrame_& other) { ptr = other.ptr; }
     AVFrame_(AVFrame_&& other) { std::swap(ptr, other.ptr); }
+    AVFrame* get() { return ptr.get(); }
     void Alloc() { ptr = std::shared_ptr<AVFrame>(av_frame_alloc(), &Deleter); }
     void *Deleter(AVFrame_ *self) { if (!ptr) return; AVFrame *p = self->ptr.get(); av_frame_free(&p); ptr = nullptr; }
     std::shared_ptr<AVFrame> ptr;
@@ -133,6 +139,20 @@ class FFMPEGThreadedDecoder {
         std::thread t_;
         std::atomic<bool> run_;
 };
+
+class FFMPEGFilterGraph {
+    public:
+        FFMPEGFilterGraph(std::string filter_desc, AVCodecContext *dec_ctx);
+        void Push(AVFrame_ frame);
+        bool Pop(AVFrame_ *frame);
+        ~FFMPEGFilterGraph();
+    private:
+        void Init(std::string filter_desc, AVCodecContext *dec_ctx);
+        AVFilterContext *buffersink_ctx_;
+        AVFilterContext *buffersrc_ctx_;
+        AVFilterGraph *filter_graph_;
+        std::atomic<int> count_;
+};  // FFMPEGFilterGraph
 
 class FFMPEGVideoDecoder {
     public:
