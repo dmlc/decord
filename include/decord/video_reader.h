@@ -63,6 +63,6 @@ class VideoReaderInterface {
     // virtual runtime::NDArray GetFrame(uint64_t pos) = 0;
 };  // class VideoReader
 
-VideoReaderPtr GetVideoReader(std::string& fname, Decoder dec = Decoder::FFMPEG());
+VideoReaderPtr GetVideoReader(std::string fname, Decoder dec = Decoder::FFMPEG());
 }  // namespace decord
 #endif // DECORD_VIDEO_READER_H_

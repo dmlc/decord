@@ -77,3 +77,9 @@ target_link_libraries(decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS}
 
 # Installation rules
 install(TARGETS decord DESTINATION lib${LIB_SUFFIX})
+
+# Tests
+set(TEST_EXECS "")
+file(GLOB TEST_SRCS tests/cpp/video/*.cc)
+add_library(decord_test ${TEST_SRCS})
+target_link_libraries(decord_test ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS} ${FFMPEG_LIBRARIES})

@@ -12,8 +12,6 @@
 
 #include <dlpack/dlpack.h>
 
-/*! \brief DECORD version */
-#define DECORD_VERSION "0.0.1"
 
 namespace decord {
 

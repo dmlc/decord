@@ -9,8 +9,8 @@
 
 
 namespace decord {
-std::shared_ptr<VideoReader> GetVideoReader(std::string& fn, Decoder be = Decoder::FFMPEG()) {
-    std::shared_ptr<VideoReader> ptr;
+std::shared_ptr<VideoReaderInterface> GetVideoReader(std::string fn, Decoder be = Decoder::FFMPEG()) {
+    std::shared_ptr<VideoReaderInterface> ptr;
     if (be == Decoder::FFMPEG()) {
         ptr = std::make_shared<ffmpeg::FFMPEGVideoReader>(fn);
     } else {

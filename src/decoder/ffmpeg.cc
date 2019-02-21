@@ -6,6 +6,7 @@
 
 #include "ffmpeg.h"
 #include <cstdio>
+#include <memory>
 #include <dmlc/logging.h>
 
 namespace decord {
@@ -54,7 +55,7 @@ FrameTransform::FrameTransform(DLDataType dtype, uint32_t h, uint32_t w, uint32_
 
 // Constructor
 FFMPEGVideoReader::FFMPEGVideoReader(std::string& fn)
-     : fmt_ctx_(NULL), actv_stm_idx_(-1) {
+     : actv_stm_idx_(-1), fmt_ctx_(NULL)  {
     // allocate format context
     fmt_ctx_ = avformat_alloc_context();
     if (!fmt_ctx_) {
@@ -79,7 +80,7 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string& fn)
             codecs_.emplace_back(local_codec);
         } else {
             // audio, subtitle... skip
-            codecs_.emplace_back(NULL);
+            codecs_.emplace_back(static_cast<void*>(NULL));
         }
     }
     // find best video stream (-1 means auto, relay on FFMPEG)
@@ -188,8 +189,8 @@ runtime::NDArray FFMPEGVideoReader::NextFrame() {
 // }
 
 FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : run_(false) {
-    pkt_queue_ = std::make_unique<PacketQueue>();
-    frame_queue_ = std::make_unique<FrameQueue>();
+    pkt_queue_ = PacketQueuePtr(new PacketQueue());
+    frame_queue_ = FrameQueuePtr(new FrameQueue());
     Start();
 }
 
@@ -198,7 +199,7 @@ void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx) {
     Stop();
     dec_ctx_ = dec_ctx;
     std::string descr = "scale=320:240";
-    filter_graph_ = std::make_unique<FFMPEGFilterGraph>(descr, dec_ctx);
+    filter_graph_ = FFMPEGFilterGraphPtr(new FFMPEGFilterGraph(descr, dec_ctx));
     if (running) {
         Start();
     }
@@ -216,7 +217,7 @@ void FFMPEGThreadedDecoder::Stop() {
     if (run_.load()) {
         run_.store(false);
     }
-    if (t_.joinable) {
+    if (t_.joinable()) {
         t_.join();
     }
 }
@@ -225,8 +226,8 @@ void FFMPEGThreadedDecoder::Clear() {
     Stop();
     pkt_queue_->SignalForKill();
     frame_queue_->SignalForKill();
-    pkt_queue_ = std::make_unique<PacketQueue>();
-    frame_queue_ = std::make_unique<FrameQueue>();
+    pkt_queue_ = PacketQueuePtr(new PacketQueue());
+    frame_queue_ = FrameQueuePtr(new FrameQueue());
 }
 
 void FFMPEGThreadedDecoder::Push(AVPacket_ pkt) {
@@ -246,7 +247,8 @@ FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
 }
 
 void FFMPEGThreadedDecoder::WorkerThread(PacketQueuePtr pkt_queue, FrameQueuePtr frame_queue, 
-                                         FFMPEGFilterGraphPtr filter_graph, std::atomic<bool>& run) {
+                                         FFMPEGFilterGraphPtr filter_graph, AVCodecContext_& dec_ctx,
+                                         std::atomic<bool>& run) {
     while (run.load()) {
         CHECK(filter_graph) << "FilterGraph not initialized.";
         AVPacket_ pkt;
@@ -256,7 +258,7 @@ void FFMPEGThreadedDecoder::WorkerThread(PacketQueuePtr pkt_queue, FrameQueuePtr
         if (!ret) return;
         // decode frame from packet
         frame.Alloc();
-        avcodec_decode_video2(dec_ctx_.ptr.get(), frame.Get(), &got_picture, pkt.Get());
+        avcodec_decode_video2(dec_ctx.ptr.get(), frame.Get(), &got_picture, pkt.Get());
         if (got_picture) {
             // filter image frame (format conversion, scaling...)
             filter_graph->Push(frame);
