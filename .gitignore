@@ -1,5 +1,6 @@
 # Custom ignored
 .vscode
+build/*
 
 # Prerequisites
 *.d

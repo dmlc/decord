@@ -69,13 +69,16 @@ struct AVFrame_ {
     AVFrame* Get() { return ptr.get(); }
     void Alloc() { ptr = std::shared_ptr<AVFrame>(av_frame_alloc(), &Deleter); }
     void *Deleter(AVFrame_ *self) { if (!ptr) return; AVFrame *p = self->ptr.get(); av_frame_free(&p); ptr = nullptr; }
+    DLTensor ToDLTensor();
     std::shared_ptr<AVFrame> ptr;
+    int64_t shape[3];
 }; // struct AVFrame_
 
 // AVCodecContext wrapper with smart pointer
 struct AVCodecContext_ {
     AVCodecContext_() : ptr(nullptr) {}
     AVCodecContext_(AVCodecContext *p) { ptr = std::shared_ptr<AVCodecContext>(p, &Deleter); }
+    AVCodecContext* Get() { return ptr.get(); }
     void *Deleter(AVCodecContext_ *self) { if (!ptr) return; AVCodecContext *p = self->ptr.get(); avcodec_free_context(&p); ptr = nullptr; }
     std::shared_ptr<AVCodecContext> ptr;
 };  // AVCodecContext_
@@ -101,12 +104,6 @@ struct FrameTransform {
     explicit FrameTransform(DLDataType dtype, uint32_t h, uint32_t w, uint32_t c, int interp);
 };  // struct FrameTransform
 
-class FFMPEGVideoReader : public VideoReaderInterface {
-    public:
-
-    private:
-        FFMPEGVideoDecoder dec_;
-};
 
 class FFMPEGFilterGraph {
     public:
@@ -142,6 +139,7 @@ class FFMPEGThreadedDecoder {
         bool Pop(AVFrame_ *frame);
         ~FFMPEGThreadedDecoder();
     protected:
+        friend class FFMPEGVideoReader;
         AVCodecContext_ dec_ctx_;
         // SwsContext_ sws_ctx_;
     private:
@@ -158,20 +156,20 @@ class FFMPEGThreadedDecoder {
     DISALLOW_COPY_AND_ASSIGN(FFMPEGThreadedDecoder);
 };
 
-class FFMPEGVideoDecoder {
+class FFMPEGVideoReader : public VideoReaderInterface {
+    using FFMPEGThreadedDecoderPtr = std::unique_ptr<FFMPEGThreadedDecoder>;
     public:
-        FFMPEGVideoDecoder(std::string& fn);
+        FFMPEGVideoReader(std::string& fn);
         /*! \brief Destructor, note that FFMPEG resources has to be managed manually to avoid resource leak */
-        ~FFMPEGVideoDecoder();
+        ~FFMPEGVideoReader();
         void SetVideoStream(int stream_nb = -1);
         unsigned int QueryStreams() const;
         runtime::NDArray NextFrame();
     protected:
-        friend class FFMPEGVideoReader;
-        void Reset();
+        // void Reset();
     private:
         /*! \brief Get or Create SwsContext by dtype */
-        struct SwsContext* GetSwsContext(FrameTransform out_fmt);
+        // struct SwsContext* GetSwsContext(FrameTransform out_fmt);
         /*! \brief Video Streams Codecs in original videos */
         std::vector<AVCodec*> codecs_;
         /*! \brief Currently active video stream index */
@@ -179,13 +177,14 @@ class FFMPEGVideoDecoder {
         /*! \brief AV format context holder */
         AVFormatContext *fmt_ctx_;
         /*! \brief AVPacket buffer */
-        AVPacket *pkt_;
+        // AVPacket *pkt_;
         /*! \brief AVFrame buffer */
-        AVFrame *frame_;
+        // AVFrame *frame_;
         /*! \brief AV dodec context for decoding related info */
-        AVCodecContext *dec_ctx_;
+        // AVCodecContext *dec_ctx_;
         /*! \brief Container for various FFMPEG swsContext */
-        std::unordered_map<FrameTransform, struct SwsContext*> sws_ctx_map_;
+        // std::unordered_map<FrameTransform, struct SwsContext*> sws_ctx_map_;
+        FFMPEGThreadedDecoderPtr decoder_;
 
 };  // class FFMPEGVideoReader
 

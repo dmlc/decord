@@ -58,9 +58,9 @@ class VideoReaderInterface {
 
     // The following APIs have perf concerns, use with caucious
     /*! \brief seek to position, this will clear all buffer and queue */
-    virtual runtime::NDArray Seek(uint64_t pos) = 0;
+    // virtual runtime::NDArray Seek(uint64_t pos) = 0;
     /*! \brief seek and read frame at position p */
-    virtual runtime::NDArray GetFrame(uint64_t pos) = 0;
+    // virtual runtime::NDArray GetFrame(uint64_t pos) = 0;
 };  // class VideoReader
 
 VideoReaderPtr GetVideoReader(std::string& fname, Decoder dec = Decoder::FFMPEG());
