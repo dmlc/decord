@@ -46,7 +46,7 @@ typedef std::shared_ptr<VideoReaderInterface> VideoReaderPtr;
 class VideoReaderInterface {
  public:
     /*! \brief open video, return true if success */
-    virtual bool Open(std::string& fname, AccessType acc_type, FrameProperty prop) = 0;
+    // virtual bool Open(std::string& fname, AccessType acc_type, FrameProperty prop) = 0;
     /*! \brief query stream info in video */
     virtual unsigned int QueryStreams() const = 0;
     /*! \brief check if video file successfully opened */

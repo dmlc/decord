@@ -51,7 +51,7 @@ else(MSVC)
 endif(MSVC)
 
 include(FindFFmpeg)
-#find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE REQUIRED)
+#find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE AVFILTER REQUIRED)
 
 if(FFMPEG_FOUND)
     #  FFMPEG_INCLUDE_DIRS  - Include directory necessary for using the required components headers.
@@ -67,6 +67,7 @@ endif()
 
 # Source file lists
 file(GLOB CORE_SRCS src/decoder/*.cc src/*.cc)
+message("CORE_SRCS = ${CORE_SRCS}")
 
 file(GLOB RUNTIME_SRCS src/runtime/*.cc)
 
@@ -81,5 +82,5 @@ install(TARGETS decord DESTINATION lib${LIB_SUFFIX})
 # Tests
 set(TEST_EXECS "")
 file(GLOB TEST_SRCS tests/cpp/video/*.cc)
-add_library(decord_test ${TEST_SRCS})
-target_link_libraries(decord_test ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS} ${FFMPEG_LIBRARIES})
+add_executable(test_decord ${TEST_SRCS})
+target_link_libraries(test_decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS} ${FFMPEG_LIBRARIES} decord)
