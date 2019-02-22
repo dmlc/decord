@@ -139,18 +139,17 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     CHECK(codecs_[st_nb] != NULL) << "Codecs of " << st_nb << " is NULL";
     LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
     decoder_ = std::unique_ptr<FFMPEGThreadedDecoder>(new FFMPEGThreadedDecoder());
-    decoder_->SetCodecContext(avcodec_alloc_context3(codecs_[st_nb]));
-    LOG(INFO) << decoder_->dec_ctx_;
-    CHECK(decoder_->dec_ctx_) << "ERROR allocating memory for AVCodecContext";
-    LOG(INFO) << "dec ctx alloc.";
+    auto dec_ctx = avcodec_alloc_context3(codecs_[st_nb]);
+    CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0) << "Error: copy parameters to codec context.";
     // copy codec parameters to context
-    CHECK_GE(avcodec_parameters_to_context(decoder_->dec_ctx_, fmt_ctx_->streams[st_nb]->codecpar), 0)
+    CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0)
         << "ERROR copying codec parameters to context";
     // initialize AVCodecContext to use given AVCodec
-    CHECK_GE(avcodec_open2(decoder_->dec_ctx_, codecs_[st_nb], NULL), 0)
+    CHECK_GE(avcodec_open2(dec_ctx, codecs_[st_nb], NULL), 0)
         << "ERROR open codec through avcodec_open2";
     LOG(INFO) << "codecs opened.";
     actv_stm_idx_ = st_nb;
+    decoder_->SetCodecContext(dec_ctx);
 }
 
 unsigned int FFMPEGVideoReader::QueryStreams() const {
@@ -234,15 +233,14 @@ FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : run_(false) {
     LOG(INFO) << "ThreadedDecoder ctor: " << run_.load();
     pkt_queue_ = PacketQueuePtr(new PacketQueue());
     frame_queue_ = FrameQueuePtr(new FrameQueue());
-    Start();
+    // Start();
 }
 
 void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx) {
     LOG(INFO) << "Enter setcontext";
-    bool running = run_.load();
-    LOG(INFO) << "Running" << run_.load();
     Stop();
     dec_ctx_ = dec_ctx;
+    LOG(INFO) << dec_ctx->width << " x " << dec_ctx->height << " : " << dec_ctx->time_base.num << " , " << dec_ctx->time_base.den;
     std::string descr = "scale=320:240";
     filter_graph_ = FFMPEGFilterGraphPtr(new FFMPEGFilterGraph(descr, dec_ctx));
     if (running) {
@@ -294,7 +292,8 @@ FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
 
 void FFMPEGThreadedDecoder::WorkerThread() {
     while (run_.load()) {
-        CHECK(filter_graph_) << "FilterGraph not initialized.";
+        // CHECK(filter_graph_) << "FilterGraph not initialized.";
+        if (!filter_graph_) return;
         AVPacket *pkt;
         AVFrame *frame;
         int got_picture;
@@ -324,7 +323,9 @@ FFMPEGFilterGraph::FFMPEGFilterGraph(std::string filters_descr, AVCodecContext *
 void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx) {
     char args[512];
     const AVFilter *buffersrc  = avfilter_get_by_name("buffer");
-	const AVFilter *buffersink = avfilter_get_by_name("ffbuffersink");
+	const AVFilter *buffersink = avfilter_get_by_name("buffersink");
+    CHECK(buffersrc) << "Error no buffersrc";
+    CHECK(buffersink) << "Error no buffersink";
     AVFilterInOut *outputs = avfilter_inout_alloc();
 	AVFilterInOut *inputs  = avfilter_inout_alloc();
 	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE };
@@ -332,11 +333,13 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
  
 	filter_graph_ = avfilter_graph_alloc();
     /* buffer video source: the decoded frames from the decoder will be inserted here. */
-	std::snprintf(args, sizeof(args),
-		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
-		dec_ctx->width, dec_ctx->height, dec_ctx->pix_fmt,
-		dec_ctx->time_base.num, dec_ctx->time_base.den,
-		dec_ctx->sample_aspect_ratio.num, dec_ctx->sample_aspect_ratio.den);
+	snprintf(args, sizeof(args),
+            "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
+            dec_ctx->width, dec_ctx->height, dec_ctx->pix_fmt,
+            dec_ctx->time_base.num, dec_ctx->time_base.den,
+            dec_ctx->sample_aspect_ratio.num, dec_ctx->sample_aspect_ratio.den);
+    
+    LOG(INFO) << "filter args: " << args;
     
     CHECK_GE(avfilter_graph_create_filter(&buffersrc_ctx_, buffersrc, "in",
 		args, NULL, filter_graph_), 0) << "Cannot create buffer source";
