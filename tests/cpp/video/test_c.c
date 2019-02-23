@@ -113,7 +113,6 @@ static int init_filters(const char *filters_descr)
             time_base.num, time_base.den,
             dec_ctx->sample_aspect_ratio.num, dec_ctx->sample_aspect_ratio.den);
     printf("%s\n", args);
-    exit(0);
 
     ret = avfilter_graph_create_filter(&buffersrc_ctx, buffersrc, "in",
                                        args, NULL, filter_graph);
@@ -239,6 +238,7 @@ int main(int argc, char **argv)
             break;
 
         if (packet.stream_index == video_stream_index) {
+            printf("%d/%d\n", packet.stream_index, video_stream_index);
             ret = avcodec_send_packet(dec_ctx, &packet);
             if (ret < 0) {
                 av_log(NULL, AV_LOG_ERROR, "Error while sending a packet to the decoder\n");
@@ -274,6 +274,9 @@ int main(int argc, char **argv)
                 }
                 av_frame_unref(frame);
             }
+        }
+        else {
+           printf("%d/%d\n", packet.stream_index, video_stream_index);
         }
         av_packet_unref(&packet);
     }

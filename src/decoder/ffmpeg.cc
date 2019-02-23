@@ -164,7 +164,7 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
         AVStream *st = fmt_ctx_->streams[i];
         AVCodec *codec = codecs_[i];
         if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-            LOG(INFO) << "Video Stream [" << i << "]:"
+            LOG(INFO) << "video stream [" << i << "]:"
                 << " Average FPS: " 
                 << static_cast<float>(st->avg_frame_rate.num) / st->avg_frame_rate.den
                 << " Start time: "
@@ -182,7 +182,7 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
         } else {
             const char *codec_type = av_get_media_type_string(st->codecpar->codec_type);
             codec_type = codec_type? codec_type : "unknown type";
-            LOG(INFO) << codec_type << " Stream [" << i << "]:";
+            LOG(INFO) << codec_type << " stream [" << i << "].";
         }
         
     }
@@ -191,10 +191,29 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
 
 void FFMPEGVideoReader::PushNext() {
     AVPacket *packet = av_packet_alloc();
-    int ret;
-    ret = av_read_frame(fmt_ctx_, packet);
-    if (ret < 0) return;
+    int ret = -1;
+    while (ret <= 0) {
+        ret = av_read_frame(fmt_ctx_, packet);
+        if (ret < 0) {
+            if (ret == AVERROR(EAGAIN)) {
+                LOG(INFO) << "EAGAIN";
+            } else if (ret == AVERROR_EOF) {
+                LOG(FATAL) << "End of read file";
+            } else {
+                LOG(FATAL) << "Other error";
+            }
+            
+            return;
+        }
+        if (packet->stream_index != actv_stm_idx_) {
+            // LOG(INFO) << "Packet index: " << packet->stream_index << " vs. " << actv_stm_idx_;
+            ret = -1;
+            av_packet_unref(packet);
+        }
+    }
+    LOG(INFO) << "Successfully load packet";
     decoder_->Push(packet);
+    LOG(INFO) << "Pushed packet to decoder.";
 }
 
 NDArray FFMPEGVideoReader::NextFrame() {
@@ -243,7 +262,7 @@ NDArray FFMPEGVideoReader::NextFrame() {
 //     sws_ctx_map_.clear();
 // }
 
-FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), run_(false) {
+FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), run_(false){
     LOG(INFO) << "ThreadedDecoder ctor: " << run_.load();
     pkt_queue_ = PacketQueuePtr(new PacketQueue());
     frame_queue_ = FrameQueuePtr(new FrameQueue());
@@ -291,6 +310,7 @@ void FFMPEGThreadedDecoder::Clear() {
 
 void FFMPEGThreadedDecoder::Push(AVPacket *pkt) {
     pkt_queue_->Push(pkt);
+    // LOG(INFO) << "Pushed pkt to pkt_queue";
 }
 
 bool FFMPEGThreadedDecoder::Pop(AVFrame **frame) {
@@ -321,20 +341,24 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         int got_picture;
         bool ret = pkt_queue_->Pop(&pkt);
         if (!ret) return;
+        LOG(INFO) << "Thread worker: packet received.";
         // decode frame from packet
         // frame.Alloc();
         frame = av_frame_alloc();
-        CHECK_GE(avcodec_send_packet(dec_ctx_, pkt), 0) << "Error sending packet.";
+        CHECK_GE(avcodec_send_packet(dec_ctx_, pkt), 0) << "Thread worker: Error sending packet.";
         got_picture = avcodec_receive_frame(dec_ctx_, frame);
         // avcodec_decode_video2(dec_ctx_.ptr.get(), frame.Get(), &got_picture, pkt.Get());
         if (got_picture) {
+            LOG(INFO) << "Thread worker: Frame decoded successfully!";
             // filter image frame (format conversion, scaling...)
             filter_graph_->Push(frame);
+            LOG(INFO) << "Thread worker: Pushed frame to filterGraph";
             CHECK(filter_graph_->Pop(&frame)) << "Error fetch filtered frame.";
             frame_queue_->Push(frame);
+            LOG(INFO) << "Thread worker: Pushed filtered frame to frame queue";
             ++frame_count_;
         } else {
-            LOG(FATAL) << "Error decoding frame.";
+            LOG(FATAL) << "Thread worker: Error decoding frame.";
         }
     }
 }
