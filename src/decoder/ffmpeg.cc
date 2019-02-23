@@ -116,6 +116,7 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string fn)
     // find best video stream (-1 means auto, relay on FFMPEG)
     SetVideoStream(-1);
     LOG(INFO) << "Set video stream";
+    decoder_->Start();
 
     // // allocate AVFrame buffer
     // frame_ = av_frame_alloc();
@@ -140,7 +141,8 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
     decoder_ = std::unique_ptr<FFMPEGThreadedDecoder>(new FFMPEGThreadedDecoder());
     auto dec_ctx = avcodec_alloc_context3(codecs_[st_nb]);
-    CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0) << "Error: copy parameters to codec context.";
+    // CHECK_GE(avcodec_copy_context(dec_ctx, fmt_ctx_->streams[stream_nb]->codec), 0) << "Error: copy context";
+    // CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0) << "Error: copy parameters to codec context.";
     // copy codec parameters to context
     CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0)
         << "ERROR copying codec parameters to context";
@@ -149,6 +151,8 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
         << "ERROR open codec through avcodec_open2";
     LOG(INFO) << "codecs opened.";
     actv_stm_idx_ = st_nb;
+    LOG(INFO) << "time base: " << fmt_ctx_->streams[st_nb]->time_base.num << " / " << fmt_ctx_->streams[st_nb]->time_base.den;
+    dec_ctx->time_base = fmt_ctx_->streams[st_nb]->time_base;
     decoder_->SetCodecContext(dec_ctx);
 }
 
@@ -185,8 +189,18 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
     return fmt_ctx_->nb_streams;
 }
 
-runtime::NDArray FFMPEGVideoReader::NextFrame() {
+void FFMPEGVideoReader::PushNext() {
+    AVPacket *packet = av_packet_alloc();
+    int ret;
+    ret = av_read_frame(fmt_ctx_, packet);
+    if (ret < 0) return;
+    decoder_->Push(packet);
+}
+
+NDArray FFMPEGVideoReader::NextFrame() {
     AVFrame *frame;
+    decoder_->Start();
+    PushNext();
     CHECK(decoder_->Pop(&frame)) << "Error getting next frame.";
     // DLTensor dlt = copytondarray(frame);
     // runtime::ndarray arr;
@@ -229,7 +243,7 @@ runtime::NDArray FFMPEGVideoReader::NextFrame() {
 //     sws_ctx_map_.clear();
 // }
 
-FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : run_(false) {
+FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), run_(false) {
     LOG(INFO) << "ThreadedDecoder ctor: " << run_.load();
     pkt_queue_ = PacketQueuePtr(new PacketQueue());
     frame_queue_ = FrameQueuePtr(new FrameQueue());
@@ -238,6 +252,7 @@ FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : run_(false) {
 
 void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx) {
     LOG(INFO) << "Enter setcontext";
+    bool running = run_.load();
     Stop();
     dec_ctx_ = dec_ctx;
     LOG(INFO) << dec_ctx->width << " x " << dec_ctx->height << " : " << dec_ctx->time_base.num << " , " << dec_ctx->time_base.den;
@@ -281,7 +296,14 @@ void FFMPEGThreadedDecoder::Push(AVPacket *pkt) {
 bool FFMPEGThreadedDecoder::Pop(AVFrame **frame) {
     // Pop is blocking operation
     // unblock and return false if queue has been destroyed.
-    return frame_queue_->Pop(frame);
+    if (!frame_count_.load()) {
+        return false;
+    }
+    bool ret = frame_queue_->Pop(frame);
+    if (ret){
+        --frame_count_;
+    }
+    return ret;
 }
 
 FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
@@ -310,6 +332,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             filter_graph_->Push(frame);
             CHECK(filter_graph_->Pop(&frame)) << "Error fetch filtered frame.";
             frame_queue_->Push(frame);
+            ++frame_count_;
         } else {
             LOG(FATAL) << "Error decoding frame.";
         }
@@ -333,11 +356,14 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
  
 	filter_graph_ = avfilter_graph_alloc();
     /* buffer video source: the decoded frames from the decoder will be inserted here. */
-	snprintf(args, sizeof(args),
+	std::snprintf(args, sizeof(args),
             "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
             dec_ctx->width, dec_ctx->height, dec_ctx->pix_fmt,
             dec_ctx->time_base.num, dec_ctx->time_base.den,
             dec_ctx->sample_aspect_ratio.num, dec_ctx->sample_aspect_ratio.den);
+    // std::snprintf(args, sizeof(args),
+    //         "video_size=%dx%d:pix_fmt=%d",
+    //         dec_ctx->width, dec_ctx->height, dec_ctx->pix_fmt);
     
     LOG(INFO) << "filter args: " << args;
     

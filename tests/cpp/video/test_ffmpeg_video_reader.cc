@@ -6,5 +6,6 @@
 int main(int argc, const char **argv) {
     auto vr = decord::GetVideoReader("test.mp4");
     vr->QueryStreams();
+    auto array = vr->NextFrame();
     return 0;
 }

@@ -84,3 +84,8 @@ set(TEST_EXECS "")
 file(GLOB TEST_SRCS tests/cpp/video/*.cc)
 add_executable(test_decord ${TEST_SRCS})
 target_link_libraries(test_decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS} ${FFMPEG_LIBRARIES} decord)
+
+set(TEST_EXECS "")
+file(GLOB TEST_SRCS tests/cpp/video/*.c)
+add_executable(test_decord1 ${TEST_SRCS})
+target_link_libraries(test_decord1 ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS} ${FFMPEG_LIBRARIES} decord)

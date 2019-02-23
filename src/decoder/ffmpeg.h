@@ -149,6 +149,7 @@ class FFMPEGThreadedDecoder {
         // void FetcherThread(std::condition_variable& cv, FrameQueuePtr frame_queue);
         PacketQueuePtr pkt_queue_;
         FrameQueuePtr frame_queue_;
+        std::atomic<int> frame_count_;
         std::thread t_;
         // std::thread fetcher_;
         // std::condition_variable cv_;
@@ -171,6 +172,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
     protected:
         // void Reset();
     private:
+        void PushNext();
         /*! \brief Get or Create SwsContext by dtype */
         // struct SwsContext* GetSwsContext(FrameTransform out_fmt);
         /*! \brief Video Streams Codecs in original videos */
