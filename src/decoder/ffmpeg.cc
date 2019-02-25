@@ -46,7 +46,7 @@ NDArray CopyToNDArray(AVFrame *p) {
     } else {
         ctx = kCPU;
     }
-    LOG(INFO) << p->height << " x";
+    // LOG(INFO) << p->height << " x";
     DLManagedTensor dlt;
     std::vector<int64_t> shape = {p->height, p->width, p->linesize[0] / p->width};
     dlt.dl_tensor.data = p->data[0];
@@ -56,8 +56,14 @@ NDArray CopyToNDArray(AVFrame *p) {
     dlt.dl_tensor.shape = dmlc::BeginPtr(shape);
     dlt.dl_tensor.strides = NULL;
     dlt.dl_tensor.byte_offset = 0;
-    LOG(INFO) << "Before return from copy";
-    return NDArray::FromDLPack(&dlt);
+    // dlt.manager_ctx = NULL;
+    // dlt.deleter = NULL;
+    // LOG(INFO) << "Before return from copy";
+    // return NDArray::FromDLPack(&dlt);
+    LOG(INFO) << "Frame info: " << p->height << "x" << p->width << "x" << p->linesize[0] / p->width;
+    NDArray arr = NDArray::Empty({p->height, p->width, p->linesize[0] / p->width}, kUInt8, ctx);
+    arr.CopyFrom(&dlt.dl_tensor);
+    return arr;
 }
 
 FrameTransform::FrameTransform(DLDataType dtype, uint32_t h, uint32_t w, uint32_t c, int interp) 
@@ -132,6 +138,7 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string fn)
 
 FFMPEGVideoReader::~FFMPEGVideoReader(){
     avformat_free_context(fmt_ctx_);
+    LOG(INFO) << "Destruct Video REader";
 }
 
 void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
@@ -267,8 +274,7 @@ NDArray FFMPEGVideoReader::NextFrame() {
 
 FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), run_(false){
     LOG(INFO) << "ThreadedDecoder ctor: " << run_.load();
-    pkt_queue_ = PacketQueuePtr(new PacketQueue());
-    frame_queue_ = FrameQueuePtr(new FrameQueue());
+    
     // Start();
 }
 
@@ -287,28 +293,28 @@ void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx) {
 
 void FFMPEGThreadedDecoder::Start() {
     if (!run_.load()) {
+        pkt_queue_ = PacketQueuePtr(new PacketQueue());
+        frame_queue_ = FrameQueuePtr(new FrameQueue());
         run_.store(true);
         auto t = std::thread(&FFMPEGThreadedDecoder::WorkerThread, this);
         std::swap(t_, t);
-                        //  pkt_queue_, frame_queue_, filter_graph_, std::ref(run_));
     }
 }
 
 void FFMPEGThreadedDecoder::Stop() {
     if (run_.load()) {
+        pkt_queue_->SignalForKill();
         run_.store(false);
+        frame_queue_->SignalForKill();
     }
     if (t_.joinable()) {
+        LOG(INFO) << "joining";
         t_.join();
     }
 }
 
 void FFMPEGThreadedDecoder::Clear() {
     Stop();
-    pkt_queue_->SignalForKill();
-    frame_queue_->SignalForKill();
-    pkt_queue_ = PacketQueuePtr(new PacketQueue());
-    frame_queue_ = FrameQueuePtr(new FrameQueue());
 }
 
 void FFMPEGThreadedDecoder::Push(AVPacket *pkt) {
@@ -332,20 +338,25 @@ bool FFMPEGThreadedDecoder::Pop(AVFrame **frame) {
 }
 
 FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
+    LOG(INFO) << "Destructing threaded decoder";
+    
     Stop();
-    pkt_queue_->SignalForKill();
-    frame_queue_->SignalForKill();
+    LOG(INFO) << "Destructing threaded decoder finished";
 }
 
 void FFMPEGThreadedDecoder::WorkerThread() {
     while (run_.load()) {
+        LOG(INFO) << "Thread worker run: " << run_;
         // CHECK(filter_graph_) << "FilterGraph not initialized.";
         if (!filter_graph_) return;
         AVPacket *pkt;
         AVFrame *frame;
         int got_picture;
         bool ret = pkt_queue_->Pop(&pkt);
-        if (!ret) return;
+        if (!ret) {
+            LOG(INFO) << "pkt queue empty, return";
+            return;
+        }
         LOG(INFO) << "Thread worker: packet received.";
         // decode frame from packet
         // frame.Alloc();
