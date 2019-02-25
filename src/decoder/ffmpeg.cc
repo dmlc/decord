@@ -37,14 +37,16 @@ using NDArray = runtime::NDArray;
 
 NDArray CopyToNDArray(AVFrame *p) {
     CHECK(p) << "Error: converting empty AVFrame to DLTensor";
+    LOG(INFO) << "Enter copy to ndarray";
     // int channel = p->linesize[0] / p->width;
-    CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24) << "Only support RGB24 image to NDArray conversion";
+    CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24) << "Only support RGB24 image to NDArray conversion, given: " << AVPixelFormat(p->format);
     DLContext ctx;
     if (p->hw_frames_ctx) {
         ctx = DLContext({kDLGPU, 0});
     } else {
         ctx = kCPU;
     }
+    LOG(INFO) << p->height << " x";
     DLManagedTensor dlt;
     std::vector<int64_t> shape = {p->height, p->width, p->linesize[0] / p->width};
     dlt.dl_tensor.data = p->data[0];
@@ -54,6 +56,7 @@ NDArray CopyToNDArray(AVFrame *p) {
     dlt.dl_tensor.shape = dmlc::BeginPtr(shape);
     dlt.dl_tensor.strides = NULL;
     dlt.dl_tensor.byte_offset = 0;
+    LOG(INFO) << "Before return from copy";
     return NDArray::FromDLPack(&dlt);
 }
 
@@ -80,11 +83,11 @@ FrameTransform::FrameTransform(DLDataType dtype, uint32_t h, uint32_t w, uint32_
 FFMPEGVideoReader::FFMPEGVideoReader(std::string fn)
      : codecs_(), actv_stm_idx_(-1), fmt_ctx_(NULL), decoder_()  {
     // allocate format context
-    fmt_ctx_ = avformat_alloc_context();
-    if (!fmt_ctx_) {
-        LOG(FATAL) << "ERROR allocating memory for Format Context";
-    }
-    LOG(INFO) << "opened fmt ctx";
+    // fmt_ctx_ = avformat_alloc_context();
+    // if (!fmt_ctx_) {
+    //     LOG(FATAL) << "ERROR allocating memory for Format Context";
+    // }
+    // LOG(INFO) << "opened fmt ctx";
     // open file
     if(avformat_open_input(&fmt_ctx_, fn.c_str(), NULL, NULL) != 0 ) {
         LOG(FATAL) << "ERROR opening file: " << fn;
@@ -133,14 +136,15 @@ FFMPEGVideoReader::~FFMPEGVideoReader(){
 
 void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     CHECK(fmt_ctx_ != NULL);
-    int st_nb = av_find_best_stream(fmt_ctx_, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    AVCodec *dec;
+    int st_nb = av_find_best_stream(fmt_ctx_, AVMEDIA_TYPE_VIDEO, stream_nb, -1, &dec, 0);
     LOG(INFO) << "find best stream: " << st_nb;
     CHECK_GE(st_nb, 0) << "ERROR cannot find video stream with wanted index: " << stream_nb;
     // initialize the mem for codec context
-    CHECK(codecs_[st_nb] != NULL) << "Codecs of " << st_nb << " is NULL";
+    CHECK(codecs_[st_nb] == dec) << "Codecs of " << st_nb << " is NULL";
     LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
     decoder_ = std::unique_ptr<FFMPEGThreadedDecoder>(new FFMPEGThreadedDecoder());
-    auto dec_ctx = avcodec_alloc_context3(codecs_[st_nb]);
+    auto dec_ctx = avcodec_alloc_context3(dec);
     // CHECK_GE(avcodec_copy_context(dec_ctx, fmt_ctx_->streams[stream_nb]->codec), 0) << "Error: copy context";
     // CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0) << "Error: copy parameters to codec context.";
     // copy codec parameters to context
@@ -192,7 +196,7 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
 void FFMPEGVideoReader::PushNext() {
     AVPacket *packet = av_packet_alloc();
     int ret = -1;
-    while (ret <= 0) {
+    while (1) {
         ret = av_read_frame(fmt_ctx_, packet);
         if (ret < 0) {
             if (ret == AVERROR(EAGAIN)) {
@@ -202,13 +206,12 @@ void FFMPEGVideoReader::PushNext() {
             } else {
                 LOG(FATAL) << "Other error";
             }
-            
             return;
         }
-        if (packet->stream_index != actv_stm_idx_) {
+        if (packet->stream_index == actv_stm_idx_) {
             // LOG(INFO) << "Packet index: " << packet->stream_index << " vs. " << actv_stm_idx_;
-            ret = -1;
-            av_packet_unref(packet);
+            // av_packet_unref(packet);
+            break;
         }
     }
     LOG(INFO) << "Successfully load packet";
@@ -310,6 +313,7 @@ void FFMPEGThreadedDecoder::Clear() {
 
 void FFMPEGThreadedDecoder::Push(AVPacket *pkt) {
     pkt_queue_->Push(pkt);
+    ++frame_count_;
     // LOG(INFO) << "Pushed pkt to pkt_queue";
 }
 
@@ -317,6 +321,7 @@ bool FFMPEGThreadedDecoder::Pop(AVFrame **frame) {
     // Pop is blocking operation
     // unblock and return false if queue has been destroyed.
     if (!frame_count_.load()) {
+        LOG(INFO) << "No count!";
         return false;
     }
     bool ret = frame_queue_->Pop(frame);
@@ -348,7 +353,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         CHECK_GE(avcodec_send_packet(dec_ctx_, pkt), 0) << "Thread worker: Error sending packet.";
         got_picture = avcodec_receive_frame(dec_ctx_, frame);
         // avcodec_decode_video2(dec_ctx_.ptr.get(), frame.Get(), &got_picture, pkt.Get());
-        if (got_picture) {
+        if (got_picture >= 0) {
             LOG(INFO) << "Thread worker: Frame decoded successfully!";
             // filter image frame (format conversion, scaling...)
             filter_graph_->Push(frame);
@@ -356,9 +361,8 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             CHECK(filter_graph_->Pop(&frame)) << "Error fetch filtered frame.";
             frame_queue_->Push(frame);
             LOG(INFO) << "Thread worker: Pushed filtered frame to frame queue";
-            ++frame_count_;
         } else {
-            LOG(FATAL) << "Thread worker: Error decoding frame.";
+            LOG(FATAL) << "Thread worker: Error decoding frame." << got_picture;
         }
     }
 }
@@ -375,8 +379,8 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
     CHECK(buffersink) << "Error no buffersink";
     AVFilterInOut *outputs = avfilter_inout_alloc();
 	AVFilterInOut *inputs  = avfilter_inout_alloc();
-	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE };
-	AVBufferSinkParams *buffersink_params;
+	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_RGB24 }; //, AV_PIX_FMT_NONE };
+	// AVBufferSinkParams *buffersink_params;
  
 	filter_graph_ = avfilter_graph_alloc();
     /* buffer video source: the decoded frames from the decoder will be inserted here. */
@@ -395,11 +399,12 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 		args, NULL, filter_graph_), 0) << "Cannot create buffer source";
 
     /* buffer video sink: to terminate the filter chain. */
-	buffersink_params = av_buffersink_params_alloc();
-	buffersink_params->pixel_fmts = pix_fmts;
+	// buffersink_params = av_buffersink_params_alloc();
+	// buffersink_params->pixel_fmts = pix_fmts;
 	CHECK_GE(avfilter_graph_create_filter(&buffersink_ctx_, buffersink, "out",
-		NULL, buffersink_params, filter_graph_), 0) << "Cannot create buffer sink";
-	av_free(buffersink_params);
+		NULL, NULL, filter_graph_), 0) << "Cannot create buffer sink";
+	// av_free(buffersink_params);
+    CHECK_GE(av_opt_set_bin(buffersink_ctx_, "pix_fmts", (uint8_t *)&pix_fmts, sizeof(AV_PIX_FMT_RGB24), AV_OPT_SEARCH_CHILDREN), 0) << "Set bin error";
 
     /* Endpoints for the filter graph. */
 	outputs->name       = av_strdup("in");
@@ -428,10 +433,14 @@ void FFMPEGFilterGraph::Push(AVFrame *frame) {
 }
 
 bool FFMPEGFilterGraph::Pop(AVFrame **frame) {
-    if (!count_.load()) return false;
+    if (!count_.load()) {
+        LOG(INFO) << "No count in filter graph.";
+        return false;
+    } 
     if (!*frame) *frame = av_frame_alloc();
     int ret = av_buffersink_get_frame(buffersink_ctx_, *frame);
-    return ret > 0;
+    if (ret < 0) LOG(INFO) << "buffersink get frame failed" << AVERROR(ret);
+    return ret >= 0;
 }
 
 FFMPEGFilterGraph::~FFMPEGFilterGraph() {

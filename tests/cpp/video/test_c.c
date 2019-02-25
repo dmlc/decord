@@ -239,6 +239,7 @@ int main(int argc, char **argv)
 
         if (packet.stream_index == video_stream_index) {
             printf("%d/%d\n", packet.stream_index, video_stream_index);
+            continue;
             ret = avcodec_send_packet(dec_ctx, &packet);
             if (ret < 0) {
                 av_log(NULL, AV_LOG_ERROR, "Error while sending a packet to the decoder\n");
