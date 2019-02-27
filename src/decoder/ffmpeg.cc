@@ -209,7 +209,7 @@ void FFMPEGVideoReader::PushNext() {
             if (ret == AVERROR(EAGAIN)) {
                 LOG(INFO) << "EAGAIN";
             } else if (ret == AVERROR_EOF) {
-                LOG(FATAL) << "End of read file";
+                return;
             } else {
                 LOG(FATAL) << "Other error";
             }
@@ -221,19 +221,19 @@ void FFMPEGVideoReader::PushNext() {
             break;
         }
     }
-    LOG(INFO) << "Successfully load packet";
+    // LOG(INFO) << "Successfully load packet";
     decoder_->Push(packet);
-    LOG(INFO) << "Pushed packet to decoder.";
+    // LOG(INFO) << "Pushed packet to decoder.";
 }
 
 NDArray FFMPEGVideoReader::NextFrame() {
     AVFrame *frame;
     decoder_->Start();
     PushNext();
-    CHECK(decoder_->Pop(&frame)) << "Error getting next frame.";
-    // DLTensor dlt = copytondarray(frame);
-    // runtime::ndarray arr;
-    // arr.copyfrom(&dlt);
+    int ret = decoder_->Pop(&frame);
+    if (!ret) {
+        return NDArray();
+    }
     return CopyToNDArray(frame);
 }
 
