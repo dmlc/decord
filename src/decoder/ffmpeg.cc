@@ -37,7 +37,6 @@ using NDArray = runtime::NDArray;
 
 NDArray CopyToNDArray(AVFrame *p) {
     CHECK(p) << "Error: converting empty AVFrame to DLTensor";
-    LOG(INFO) << "Enter copy to ndarray";
     // int channel = p->linesize[0] / p->width;
     CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24) << "Only support RGB24 image to NDArray conversion, given: " << AVPixelFormat(p->format);
     DLContext ctx;
@@ -60,7 +59,7 @@ NDArray CopyToNDArray(AVFrame *p) {
     // dlt.deleter = NULL;
     // LOG(INFO) << "Before return from copy";
     // return NDArray::FromDLPack(&dlt);
-    LOG(INFO) << "Frame info: " << p->height << "x" << p->width << "x" << p->linesize[0] / p->width;
+    // LOG(INFO) << "Frame info: " << p->height << "x" << p->width << "x" << p->linesize[0] / p->width;
     NDArray arr = NDArray::Empty({p->height, p->width, p->linesize[0] / p->width}, kUInt8, ctx);
     arr.CopyFrom(&dlt.dl_tensor);
     return arr;
@@ -137,7 +136,8 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string fn)
 }
 
 FFMPEGVideoReader::~FFMPEGVideoReader(){
-    avformat_free_context(fmt_ctx_);
+    // avformat_free_context(fmt_ctx_);
+    avformat_close_input(&fmt_ctx_);
     LOG(INFO) << "Destruct Video REader";
 }
 
@@ -206,12 +206,10 @@ void FFMPEGVideoReader::PushNext() {
     while (1) {
         ret = av_read_frame(fmt_ctx_, packet);
         if (ret < 0) {
-            if (ret == AVERROR(EAGAIN)) {
-                LOG(INFO) << "EAGAIN";
-            } else if (ret == AVERROR_EOF) {
+            if (ret == AVERROR_EOF) {
                 return;
             } else {
-                LOG(FATAL) << "Other error";
+                LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
             }
             return;
         }
@@ -234,7 +232,9 @@ NDArray FFMPEGVideoReader::NextFrame() {
     if (!ret) {
         return NDArray();
     }
-    return CopyToNDArray(frame);
+    NDArray arr = CopyToNDArray(frame);
+    av_frame_free(&frame);
+    return arr;
 }
 
 // struct SwsContext* FFMPEGVideoReader::GetSwsContext(FrameTransform out_fmt) {
@@ -338,15 +338,11 @@ bool FFMPEGThreadedDecoder::Pop(AVFrame **frame) {
 }
 
 FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
-    LOG(INFO) << "Destructing threaded decoder";
-    
     Stop();
-    LOG(INFO) << "Destructing threaded decoder finished";
 }
 
 void FFMPEGThreadedDecoder::WorkerThread() {
     while (run_.load()) {
-        LOG(INFO) << "Thread worker run: " << run_;
         // CHECK(filter_graph_) << "FilterGraph not initialized.";
         if (!filter_graph_) return;
         AVPacket *pkt;
@@ -354,10 +350,8 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         int got_picture;
         bool ret = pkt_queue_->Pop(&pkt);
         if (!ret) {
-            LOG(INFO) << "pkt queue empty, return";
             return;
         }
-        LOG(INFO) << "Thread worker: packet received.";
         // decode frame from packet
         // frame.Alloc();
         frame = av_frame_alloc();
@@ -365,16 +359,15 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         got_picture = avcodec_receive_frame(dec_ctx_, frame);
         // avcodec_decode_video2(dec_ctx_.ptr.get(), frame.Get(), &got_picture, pkt.Get());
         if (got_picture >= 0) {
-            LOG(INFO) << "Thread worker: Frame decoded successfully!";
             // filter image frame (format conversion, scaling...)
             filter_graph_->Push(frame);
-            LOG(INFO) << "Thread worker: Pushed frame to filterGraph";
             CHECK(filter_graph_->Pop(&frame)) << "Error fetch filtered frame.";
             frame_queue_->Push(frame);
-            LOG(INFO) << "Thread worker: Pushed filtered frame to frame queue";
         } else {
             LOG(FATAL) << "Thread worker: Error decoding frame." << got_picture;
         }
+        // free raw memories allocated with ffmpeg
+        av_packet_unref(pkt);
     }
 }
 
