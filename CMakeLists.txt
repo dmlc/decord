@@ -66,7 +66,7 @@ if(FFMPEG_FOUND)
 endif()
 
 # Source file lists
-file(GLOB CORE_SRCS src/decoder/*.cc src/*.cc)
+file(GLOB CORE_SRCS src/video/*.cc src/video/ffmpeg/*.cc src/*.cc)
 message("CORE_SRCS = ${CORE_SRCS}")
 
 file(GLOB RUNTIME_SRCS src/runtime/*.cc)

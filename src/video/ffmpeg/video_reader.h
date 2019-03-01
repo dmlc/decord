@@ -1,35 +1,19 @@
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file ffmpeg.h
- * \brief FFMPEG related definitions
+ * \file video_reader.h
+ * \brief FFmpeg video reader, implements VideoReaderInterface
  */
 
-#ifndef DECORD_BACKEND_FFMPEG_H_
-#define DECORD_BACKEND_FFMPEG_H_
+#ifndef DECORD_VIDEO_FFMPEG_VIDEO_READER_H_
+#define DECORD_VIDEO_FFMPEG_VIDEO_READER_H_
 
-#include <decord/video_reader.h>
+#include "threaded_decoder.h"
+#include <decord/video_interface.h>
 
 #include <string>
 #include <vector>
-#include <unordered_map>
-#include <thread>
 // #include <condition_variable>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavfilter/avfilter.h>
-#include <libavfilter/buffersink.h>
-#include <libavfilter/buffersrc.h>
-#include <libswscale/swscale.h>
-#include <libavutil/avutil.h>
-#include <libavutil/pixfmt.h>
-#include <libavutil/opt.h>
-#ifdef __cplusplus
-}
-#endif
 #include <decord/base.h>
 #include <dmlc/concurrency.h>
 
@@ -94,72 +78,19 @@ namespace ffmpeg {
 //     std::shared_ptr<SwsContext> ptr;
 // };  // SwsContext_
 
-class FFMPEGVideoDecoder;
-class FFMPEGVideoReader;
 
-/*! \brief FrameTransform as map key */
-struct FrameTransform {
-    AVPixelFormat fmt;
-    uint32_t height;
-    uint32_t width;
-    uint32_t channel;
-    int interp;  // interpolation method
-    explicit FrameTransform(DLDataType dtype, uint32_t h, uint32_t w, uint32_t c, int interp);
-};  // struct FrameTransform
+// /*! \brief FrameTransform as map key */
+// struct FrameTransform {
+//     AVPixelFormat fmt;
+//     uint32_t height;
+//     uint32_t width;
+//     uint32_t channel;
+//     int interp;  // interpolation method
+//     explicit FrameTransform(DLDataType dtype, uint32_t h, uint32_t w, uint32_t c, int interp);
+// };  // struct FrameTransform
 
 
-class FFMPEGFilterGraph {
-    public:
-        FFMPEGFilterGraph(std::string filter_desc, AVCodecContext *dec_ctx);
-        void Push(AVFrame *frame);
-        bool Pop(AVFrame **frame);
-        ~FFMPEGFilterGraph();
-    private:
-        void Init(std::string filter_desc, AVCodecContext *dec_ctx);
-        AVFilterContext *buffersink_ctx_;
-        AVFilterContext *buffersrc_ctx_;
-        AVFilterGraph *filter_graph_;
-        std::atomic<int> count_;
 
-    DISALLOW_COPY_AND_ASSIGN(FFMPEGFilterGraph);
-};  // FFMPEGFilterGraph
-
-class FFMPEGThreadedDecoder {
-    using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacket*>;
-    using PacketQueuePtr = std::unique_ptr<PacketQueue>;
-    using FrameQueue = dmlc::ConcurrentBlockingQueue<AVFrame*>;
-    using FrameQueuePtr = std::unique_ptr<FrameQueue>;
-    using FFMPEGFilterGraphPtr = std::shared_ptr<FFMPEGFilterGraph>;
-    public:
-        FFMPEGThreadedDecoder();
-        void SetCodecContext(AVCodecContext *dec_ctx);
-        void Start();
-        void Stop();
-        void Clear();
-        // void Push(AVPacket *pkt);
-        void Push(AVPacket* pkt);
-        // bool Pull(AVFrame *frame);
-        bool Pop(AVFrame **frame);
-        ~FFMPEGThreadedDecoder();
-    protected:
-        friend class FFMPEGVideoReader;
-        
-        // SwsContext_ sws_ctx_;
-    private:
-        void WorkerThread();
-        // void FetcherThread(std::condition_variable& cv, FrameQueuePtr frame_queue);
-        PacketQueuePtr pkt_queue_;
-        FrameQueuePtr frame_queue_;
-        std::atomic<int> frame_count_;
-        std::thread t_;
-        // std::thread fetcher_;
-        // std::condition_variable cv_;
-        std::atomic<bool> run_;
-        FFMPEGFilterGraphPtr filter_graph_;
-        AVCodecContext *dec_ctx_;
-
-    DISALLOW_COPY_AND_ASSIGN(FFMPEGThreadedDecoder);
-};
 
 class FFMPEGVideoReader : public VideoReaderInterface {
     using FFMPEGThreadedDecoderPtr = std::unique_ptr<FFMPEGThreadedDecoder>;
@@ -191,11 +122,10 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         /*! \brief Container for various FFMPEG swsContext */
         // std::unordered_map<FrameTransform, struct SwsContext*> sws_ctx_map_;
         FFMPEGThreadedDecoderPtr decoder_;
-
 };  // class FFMPEGVideoReader
 
 
 }  // namespace ffmpeg
 }  // namespace decord
 
-#endif  // DECORD_BACKEND_FFMPEG_H_
+#endif  // DECORD_VIDEO_FFMPEG_VIDEO_READER_H_

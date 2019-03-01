@@ -1,11 +1,11 @@
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file video_reader.h
- * \brief Video file reader
+ * \file video_interface.h
+ * \brief Video interface
  */
 
-#ifndef DECORD_VIDEO_READER_H_
-#define DECORD_VIDEO_READER_H_
+#ifndef DECORD_VIDEO_INTERFACE_H_
+#define DECORD_VIDEO_INTERFACE_H_
 
 #include <string>
 #include <memory>
@@ -65,4 +65,4 @@ class VideoReaderInterface {
 
 VideoReaderPtr GetVideoReader(std::string fname, Decoder dec = Decoder::FFMPEG());
 }  // namespace decord
-#endif // DECORD_VIDEO_READER_H_
+#endif // DECORD_VIDEO_INTERFACE_H_

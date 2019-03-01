@@ -1,4 +1,4 @@
-#include <decord/video_reader.h>
+#include <decord/video_interface.h>
 #include <dmlc/logging.h>
 // #include <dmlc/io.h>
 // #include <gtest/gtest.h>

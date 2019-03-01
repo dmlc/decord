@@ -1,14 +1,18 @@
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file video_reader.h
+ * \file video_interface.cc
  * \brief Video file reader implementations
  */
-#include <dmlc/logging.h>
-#include <decord/video_reader.h>
-#include "decoder/ffmpeg.h"
 
+#include "ffmpeg/video_reader.h"
+
+#include <decord/video_interface.h>
+
+
+#include <dmlc/logging.h>
 
 namespace decord {
+
 VideoReaderPtr GetVideoReader(std::string fn, Decoder be) {
     std::shared_ptr<VideoReaderInterface> ptr;
     if (be == Decoder::FFMPEG()) {
