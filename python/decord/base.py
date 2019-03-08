@@ -3,7 +3,7 @@ from __future__ import absolute_import
 
 import warnings
 
-from ._ffi.base import DGLError  # pylint: disable=unused-import
+from ._ffi.base import DECORDError  # pylint: disable=unused-import
 from ._ffi.function import _init_internal_api
 
 # A special symbol for selecting all nodes or edges.
