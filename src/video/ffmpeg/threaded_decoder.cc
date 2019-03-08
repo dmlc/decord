@@ -17,13 +17,13 @@ FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), run_(false){
     // Start();
 }
 
-void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx) {
+void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, std::string descr) {
     LOG(INFO) << "Enter setcontext";
     bool running = run_.load();
     Stop();
     dec_ctx_ = dec_ctx;
     LOG(INFO) << dec_ctx->width << " x " << dec_ctx->height << " : " << dec_ctx->time_base.num << " , " << dec_ctx->time_base.den;
-    std::string descr = "scale=320:240";
+    // std::string descr = "scale=320:240";
     filter_graph_ = FFMPEGFilterGraphPtr(new FFMPEGFilterGraph(descr, dec_ctx));
     if (running) {
         Start();

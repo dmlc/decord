@@ -25,7 +25,7 @@ class FFMPEGThreadedDecoder {
 
     public:
         FFMPEGThreadedDecoder();
-        void SetCodecContext(AVCodecContext *dec_ctx);
+        void SetCodecContext(AVCodecContext *dec_ctx, std::string filter_desc="scale=-1:-1");
         void Start();
         void Stop();
         void Clear();

@@ -95,7 +95,7 @@ namespace ffmpeg {
 class FFMPEGVideoReader : public VideoReaderInterface {
     using FFMPEGThreadedDecoderPtr = std::unique_ptr<FFMPEGThreadedDecoder>;
     public:
-        FFMPEGVideoReader(std::string fn);
+        FFMPEGVideoReader(std::string fn, int width=-1, int height=-1);
         /*! \brief Destructor, note that FFMPEG resources has to be managed manually to avoid resource leak */
         ~FFMPEGVideoReader();
         void SetVideoStream(int stream_nb = -1);
@@ -122,6 +122,8 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         /*! \brief Container for various FFMPEG swsContext */
         // std::unordered_map<FrameTransform, struct SwsContext*> sws_ctx_map_;
         FFMPEGThreadedDecoderPtr decoder_;
+        int width_;   // output video width
+        int height_;  // output video height
 };  // class FFMPEGVideoReader
 
 

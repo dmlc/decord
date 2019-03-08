@@ -16,7 +16,10 @@ using NDArray = runtime::NDArray;
 NDArray CopyToNDArray(AVFrame *p) {
     CHECK(p) << "Error: converting empty AVFrame to DLTensor";
     // int channel = p->linesize[0] / p->width;
-    CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24) << "Only support RGB24 image to NDArray conversion, given: " << AVPixelFormat(p->format);
+    CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24) 
+        << "Only support RGB24 image to NDArray conversion, given: " 
+        << AVPixelFormat(p->format);
+    
     DLContext ctx;
     if (p->hw_frames_ctx) {
         ctx = DLContext({kDLGPU, 0});
@@ -24,27 +27,22 @@ NDArray CopyToNDArray(AVFrame *p) {
         ctx = kCPU;
     }
     // LOG(INFO) << p->height << " x";
-    DLManagedTensor dlt;
+    DLTensor dlt;
     std::vector<int64_t> shape = {p->height, p->width, p->linesize[0] / p->width};
-    dlt.dl_tensor.data = p->data[0];
-    dlt.dl_tensor.ctx = ctx;
-    dlt.dl_tensor.ndim = 3;
-    dlt.dl_tensor.dtype = kUInt8;
-    dlt.dl_tensor.shape = dmlc::BeginPtr(shape);
-    dlt.dl_tensor.strides = NULL;
-    dlt.dl_tensor.byte_offset = 0;
-    // dlt.manager_ctx = NULL;
-    // dlt.deleter = NULL;
-    // LOG(INFO) << "Before return from copy";
-    // return NDArray::FromDLPack(&dlt);
-    // LOG(INFO) << "Frame info: " << p->height << "x" << p->width << "x" << p->linesize[0] / p->width;
+    dlt.data = p->data[0];
+    dlt.ctx = ctx;
+    dlt.ndim = 3;
+    dlt.dtype = kUInt8;
+    dlt.shape = dmlc::BeginPtr(shape);
+    dlt.strides = NULL;
+    dlt.byte_offset = 0;
     NDArray arr = NDArray::Empty({p->height, p->width, p->linesize[0] / p->width}, kUInt8, ctx);
-    arr.CopyFrom(&dlt.dl_tensor);
+    arr.CopyFrom(&dlt);
     return arr;
 }
 
-FFMPEGVideoReader::FFMPEGVideoReader(std::string fn)
-     : codecs_(), actv_stm_idx_(-1), fmt_ctx_(NULL), decoder_()  {
+FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
+     : codecs_(), actv_stm_idx_(-1), fmt_ctx_(NULL), decoder_(), width_(width), height_(height)  {
     // allocate format context
     // fmt_ctx_ = avformat_alloc_context();
     // if (!fmt_ctx_) {
@@ -122,7 +120,10 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     actv_stm_idx_ = st_nb;
     LOG(INFO) << "time base: " << fmt_ctx_->streams[st_nb]->time_base.num << " / " << fmt_ctx_->streams[st_nb]->time_base.den;
     dec_ctx->time_base = fmt_ctx_->streams[st_nb]->time_base;
-    decoder_->SetCodecContext(dec_ctx);
+    char descr[128];
+    std::snprintf(descr, sizeof(descr),
+            "scale=%d:%d", width_, height_);
+    decoder_->SetCodecContext(dec_ctx, std::string(descr));
 }
 
 unsigned int FFMPEGVideoReader::QueryStreams() const {
