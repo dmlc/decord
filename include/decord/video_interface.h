@@ -14,6 +14,7 @@
 #include "runtime/ndarray.h"
 
 namespace decord {
+typedef void* VideoReaderInterfaceHandle;
 
 enum AccessType {
     kVideoReaderRandomAccess = 0U,

@@ -25,7 +25,7 @@ class BundledFunction(object):
         """Regular computation of this builtin function
 
         This will be used when optimization is not available and should
-        ONLY be called by DGL framework.
+        ONLY be called by DECORD framework.
         """
         ret = {}
         for fn in self.fn_list:

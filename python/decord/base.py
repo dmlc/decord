@@ -13,7 +13,7 @@ def is_all(arg):
     """Return true if the argument is a special symbol for all nodes or edges."""
     return isinstance(arg, str) and arg == ALL
 
-def dgl_warning(msg):
+def decord_warning(msg):
     """Print out warning messages."""
     warnings.warn(msg)
 

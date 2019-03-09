@@ -6,3 +6,5 @@ from ._ffi.function import register_func, get_global_func, list_global_func_name
 from ._ffi.base import DECORDError, __version__
 
 from .base import ALL
+
+from .video_reader import VideoReader

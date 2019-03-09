@@ -7,6 +7,7 @@
 #include "./ffmpeg/video_reader.h"
 
 #include <decord/video_interface.h>
+#include <decord/runtime/registry.h>
 
 
 #include <dmlc/logging.h>
@@ -23,4 +24,15 @@ VideoReaderPtr GetVideoReader(std::string fn, Decoder be) {
     }
     return ptr;
 }
+
+namespace runtime {
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoGetVideoReader")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    std::string fn = args[0];
+    int width = args[1];
+    int height = args[2];
+    VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(new ffmpeg::FFMPEGVideoReader(fn, width, height));
+    *rv = handle;
+  });
+}  // namespace runtime
 }  // namespace decord
