@@ -16,4 +16,11 @@ class VideoReader(object):
         self._handle = _CAPI_VideoGetVideoReader(
             uri, width, height)
 
+    def next(self):
+        assert self._handle is not None
+        arr = _CAPI_VideoNextFrame(self._handle)
+        if not arr.shape:
+            raise StopIteration()
+        return arr
+
 _init_api("decord.video_reader")

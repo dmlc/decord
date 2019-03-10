@@ -189,7 +189,7 @@ NDArray FFMPEGVideoReader::NextFrame() {
     PushNext();
     int ret = decoder_->Pop(&frame);
     if (!ret) {
-        return NDArray();
+        return NDArray::Empty({}, kUInt8, kCPU);
     }
     NDArray arr = CopyToNDArray(frame);
     av_frame_free(&frame);

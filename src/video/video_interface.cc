@@ -34,5 +34,12 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoGetVideoReader")
     VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(new ffmpeg::FFMPEGVideoReader(fn, width, height));
     *rv = handle;
   });
+
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoNextFrame")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    NDArray arr = static_cast<VideoReaderInterface*>(handle)->NextFrame();
+    *rv = arr;
+  });
 }  // namespace runtime
 }  // namespace decord
