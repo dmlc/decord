@@ -3,14 +3,15 @@
 // #include <dmlc/io.h>
 // #include <gtest/gtest.h>
 
-
+using NDArray = decord::runtime::NDArray;
 int main(int argc, const char **argv) {
     auto vr = decord::GetVideoReader("test.mp4");
     vr->QueryStreams();
-    auto array = vr->NextFrame();
+    NDArray array = vr->NextFrame();
     while (1) {
         array = vr->NextFrame();
-        if (!array.defined()) break;
+        LOG(INFO) << array.Size();
+        if (!array.Size()) break;
     }
     
     // auto stm = dmlc::Stream::Create("debug.params", "w");

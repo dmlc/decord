@@ -112,7 +112,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         /*! \brief Currently active video stream index */
         int actv_stm_idx_;
         /*! \brief AV format context holder */
-        AVFormatContext *fmt_ctx_;
+        AVFormatContextPtr fmt_ctx_;
         /*! \brief AVPacket buffer */
         // AVPacket *pkt_;
         /*! \brief AVFrame buffer */

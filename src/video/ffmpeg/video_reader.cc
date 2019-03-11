@@ -42,22 +42,23 @@ NDArray CopyToNDArray(AVFrame *p) {
 }
 
 FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
-     : codecs_(), actv_stm_idx_(-1), fmt_ctx_(NULL), decoder_(), width_(width), height_(height)  {
+     : codecs_(), actv_stm_idx_(-1), decoder_(), width_(width), height_(height)  {
     // allocate format context
-    // fmt_ctx_ = avformat_alloc_context();
-    // if (!fmt_ctx_) {
-    //     LOG(FATAL) << "ERROR allocating memory for Format Context";
-    // }
+    fmt_ctx_.reset(avformat_alloc_context());
+    if (!fmt_ctx_) {
+        LOG(FATAL) << "ERROR allocating memory for Format Context";
+    }
     // LOG(INFO) << "opened fmt ctx";
     // open file
-    if(avformat_open_input(&fmt_ctx_, fn.c_str(), NULL, NULL) != 0 ) {
+    auto fmt_ctx = fmt_ctx_.get();
+    if(avformat_open_input(&fmt_ctx, fn.c_str(), NULL, NULL) != 0 ) {
         LOG(FATAL) << "ERROR opening file: " << fn;
     }
 
     LOG(INFO) << "opened input";
 
     // find stream info
-    if (avformat_find_stream_info(fmt_ctx_,  NULL) < 0) {
+    if (avformat_find_stream_info(fmt_ctx,  NULL) < 0) {
         LOG(FATAL) << "ERROR getting stream info of file" << fn;
     }
 
@@ -93,14 +94,14 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
 
 FFMPEGVideoReader::~FFMPEGVideoReader(){
     // avformat_free_context(fmt_ctx_);
-    avformat_close_input(&fmt_ctx_);
+    // avformat_close_input(&fmt_ctx_);
     LOG(INFO) << "Destruct Video REader";
 }
 
 void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     CHECK(fmt_ctx_ != NULL);
     AVCodec *dec;
-    int st_nb = av_find_best_stream(fmt_ctx_, AVMEDIA_TYPE_VIDEO, stream_nb, -1, &dec, 0);
+    int st_nb = av_find_best_stream(fmt_ctx_.get(), AVMEDIA_TYPE_VIDEO, stream_nb, -1, &dec, 0);
     LOG(INFO) << "find best stream: " << st_nb;
     CHECK_GE(st_nb, 0) << "ERROR cannot find video stream with wanted index: " << stream_nb;
     // initialize the mem for codec context
@@ -160,10 +161,11 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
 }
 
 void FFMPEGVideoReader::PushNext() {
-    AVPacket *packet = av_packet_alloc();
+    // AVPacket *packet = av_packet_alloc();
+    AVPacketPtr packet = AllocAVPacketWithDeleter();
     int ret = -1;
     while (1) {
-        ret = av_read_frame(fmt_ctx_, packet);
+        ret = av_read_frame(fmt_ctx_.get(), packet.get());
         if (ret < 0) {
             if (ret == AVERROR_EOF) {
                 return;
@@ -184,15 +186,15 @@ void FFMPEGVideoReader::PushNext() {
 }
 
 NDArray FFMPEGVideoReader::NextFrame() {
-    AVFrame *frame;
+    AVFramePtr frame;
     decoder_->Start();
     PushNext();
     int ret = decoder_->Pop(&frame);
     if (!ret) {
         return NDArray::Empty({}, kUInt8, kCPU);
     }
-    NDArray arr = CopyToNDArray(frame);
-    av_frame_free(&frame);
+    NDArray arr = CopyToNDArray(frame.get());
+    // av_frame_free(&frame);
     return arr;
 }
 

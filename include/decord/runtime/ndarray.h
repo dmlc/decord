@@ -80,6 +80,8 @@ class NDArray {
   bool defined() const {
     return data_ != nullptr;
   }
+  /*! \return Element count of NDArray */
+  int64_t Size() const;
   /*! \return If both NDArray reference the same container */
   bool same_as(const NDArray& other) const {
     return data_ == other.data_;

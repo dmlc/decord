@@ -17,9 +17,9 @@ namespace decord {
 namespace ffmpeg {
 
 class FFMPEGThreadedDecoder {
-    using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacket*>;
+    using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
     using PacketQueuePtr = std::unique_ptr<PacketQueue>;
-    using FrameQueue = dmlc::ConcurrentBlockingQueue<AVFrame*>;
+    using FrameQueue = dmlc::ConcurrentBlockingQueue<AVFramePtr>;
     using FrameQueuePtr = std::unique_ptr<FrameQueue>;
     using FFMPEGFilterGraphPtr = std::shared_ptr<FFMPEGFilterGraph>;
 
@@ -29,8 +29,8 @@ class FFMPEGThreadedDecoder {
         void Start();
         void Stop();
         void Clear();
-        void Push(AVPacket* pkt);
-        bool Pop(AVFrame **frame);
+        void Push(AVPacketPtr pkt);
+        bool Pop(AVFramePtr *frame);
         ~FFMPEGThreadedDecoder();
     private:
         void WorkerThread();
@@ -43,7 +43,7 @@ class FFMPEGThreadedDecoder {
         // std::condition_variable cv_;
         std::atomic<bool> run_;
         FFMPEGFilterGraphPtr filter_graph_;
-        AVCodecContext *dec_ctx_;
+        AVCodecContextPtr dec_ctx_;
 
     DISALLOW_COPY_AND_ASSIGN(FFMPEGThreadedDecoder);
 };

@@ -42,23 +42,24 @@ template<typename T, typename R, R(*Fn)(T**)> struct Deleterp {
 };
 
 // RAII adapter for raw FFMPEG structs
+
 using AVFramePtr = std::shared_ptr<AVFrame>;
 
-void AVFrameDeleter(AVFrame *p) {
-    if (p) av_frame_free(&p);
+inline void AVFrameDeleter(AVFrame *p) {
+    if (p) av_frame_unref(p);
 }
 
-AVFramePtr AllocAVFrameWithDeleter() {
+inline AVFramePtr AllocAVFrameWithDeleter() {
     return std::shared_ptr<AVFrame>(av_frame_alloc(), AVFrameDeleter);
 }
 
 using AVPacketPtr = std::shared_ptr<AVPacket>;
 
-void AVPacketDeleter(AVPacket *p) {
-    if (p) av_packet_free(&p);
+inline void AVPacketDeleter(AVPacket *p) {
+    if (p) av_packet_unref(p);
 }
 
-AVPacketPtr AllocAVPacketWithDeleter() {
+inline AVPacketPtr AllocAVPacketWithDeleter() {
     return std::shared_ptr<AVPacket>(av_packet_alloc(), AVPacketDeleter);
 }
 
@@ -66,7 +67,7 @@ using AVFormatContextPtr = std::unique_ptr<
     AVFormatContext, Deleter<AVFormatContext, void, avformat_free_context> >;
 
 using AVCodecContextPtr = std::unique_ptr<
-    AVCodecContext, Deleter<AVCodecContext, int, avcodec_close> >;
+    AVCodecContext, Deleter<AVCodecContext, int, avcodec_close> >;\
 
 using AVFilterGraphPtr = std::unique_ptr<
     AVFilterGraph, Deleterp<AVFilterGraph, void, avfilter_graph_free> >;

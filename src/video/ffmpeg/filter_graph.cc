@@ -16,23 +16,24 @@ FFMPEGFilterGraph::FFMPEGFilterGraph(std::string filters_descr, AVCodecContext *
 }
 
 FFMPEGFilterGraph::~FFMPEGFilterGraph() {
+    LOG(INFO) << "Destruct FIlter Graph";
     // avfilter_free(buffersink_ctx_);
     // avfilter_free(buffersrc_ctx_);
-    avfilter_graph_free(&filter_graph_);
+    // avfilter_graph_free(&filter_graph_);
 }
 
 void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx) {
     char args[512];
     const AVFilter *buffersrc  = avfilter_get_by_name("buffer");
 	const AVFilter *buffersink = avfilter_get_by_name("buffersink");
-    CHECK(buffersrc) << "Error no buffersrc";
-    CHECK(buffersink) << "Error no buffersink";
+    CHECK(buffersrc) << "Error: no buffersrc";
+    CHECK(buffersink) << "Error: no buffersink";
     AVFilterInOut *outputs = avfilter_inout_alloc();
 	AVFilterInOut *inputs  = avfilter_inout_alloc();
 	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_RGB24 }; //, AV_PIX_FMT_NONE };
 	// AVBufferSinkParams *buffersink_params;
  
-	filter_graph_ = avfilter_graph_alloc();
+	filter_graph_.reset(avfilter_graph_alloc());
     /* buffer video source: the decoded frames from the decoder will be inserted here. */
 	std::snprintf(args, sizeof(args),
             "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
@@ -45,17 +46,23 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
     
     LOG(INFO) << "filter args: " << args;
     
+    // AVFilterContext *buffersrc_ctx;
+    // AVFilterContext *buffersink_ctx;
     CHECK_GE(avfilter_graph_create_filter(&buffersrc_ctx_, buffersrc, "in",
-		args, NULL, filter_graph_), 0) << "Cannot create buffer source";
+		args, NULL, filter_graph_.get()), 0) << "Cannot create buffer source";
+
+    LOG(INFO) << "create filter src";
 
     /* buffer video sink: to terminate the filter chain. */
 	// buffersink_params = av_buffersink_params_alloc();
 	// buffersink_params->pixel_fmts = pix_fmts;
 	CHECK_GE(avfilter_graph_create_filter(&buffersink_ctx_, buffersink, "out",
-		NULL, NULL, filter_graph_), 0) << "Cannot create buffer sink";
+		NULL, NULL, filter_graph_.get()), 0) << "Cannot create buffer sink";
 	// av_free(buffersink_params);
+    LOG(INFO) << "create filter sink";
     CHECK_GE(av_opt_set_bin(buffersink_ctx_, "pix_fmts", (uint8_t *)&pix_fmts, sizeof(AV_PIX_FMT_RGB24), AV_OPT_SEARCH_CHILDREN), 0) << "Set bin error";
 
+    LOG(INFO) << "create filter set opt";
     /* Endpoints for the filter graph. */
 	outputs->name       = av_strdup("in");
 	outputs->filter_ctx = buffersrc_ctx_;
@@ -68,11 +75,11 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 	inputs->next       = NULL;
 
     /* Parse filter description */
-    CHECK_GE(avfilter_graph_parse_ptr(filter_graph_, filters_descr.c_str(),
+    CHECK_GE(avfilter_graph_parse_ptr(filter_graph_.get(), filters_descr.c_str(),
 		&inputs, &outputs, NULL), 0) << "Failed to parse filters description.";
 
     /* Config filter graph */
-    CHECK_GE(avfilter_graph_config(filter_graph_, NULL), 0) << "Failed to config filter graph";
+    CHECK_GE(avfilter_graph_config(filter_graph_.get(), NULL), 0) << "Failed to config filter graph";
 }
 
 void FFMPEGFilterGraph::Push(AVFrame *frame) {
