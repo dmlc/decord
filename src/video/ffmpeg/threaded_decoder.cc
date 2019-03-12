@@ -32,8 +32,8 @@ void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, std::string
 
 void FFMPEGThreadedDecoder::Start() {
     if (!run_.load()) {
-        pkt_queue_ = PacketQueuePtr(new PacketQueue());
-        frame_queue_ = FrameQueuePtr(new FrameQueue());
+        pkt_queue_.reset(new PacketQueue());
+        frame_queue_.reset(new FrameQueue());
         run_.store(true);
         auto t = std::thread(&FFMPEGThreadedDecoder::WorkerThread, this);
         std::swap(t_, t);
@@ -92,15 +92,16 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             return;
         }
         AVFramePtr frame = AllocAVFrameWithDeleter();
-        AVFrame *out_frame;
+        AVFramePtr out_frame = AllocAVFrameWithDeleter();
+        AVFrame *out_frame_p = out_frame.get();
         CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
         got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
         // avcodec_decode_video2(dec_ctx_.ptr.get(), frame.Get(), &got_picture, pkt.Get());
         if (got_picture >= 0) {
             // filter image frame (format conversion, scaling...)
             filter_graph_->Push(frame.get());
-            CHECK(filter_graph_->Pop(&out_frame)) << "Error fetch filtered frame.";
-            frame_queue_->Push(std::shared_ptr<AVFrame>(out_frame, AVFrameDeleter));
+            CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
+            frame_queue_->Push(out_frame);
         } else {
             LOG(FATAL) << "Thread worker: Error decoding frame." << got_picture;
         }
