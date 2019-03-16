@@ -8,6 +8,7 @@
 #define DECORD_VIDEO_FFMPEG_COMMON_H_
 
 #include <memory>
+#include <queue>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +25,8 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#include <dmlc/logging.h>
 
 namespace decord {
 namespace ffmpeg {
@@ -45,13 +48,44 @@ template<typename T, typename R, R(*Fn)(T**)> struct Deleterp {
 
 using AVFramePtr = std::shared_ptr<AVFrame>;
 
-inline void AVFrameDeleter(AVFrame *p) {
-    if (p) av_frame_unref(p);
-}
+class AVFramePool {
+    static const uint16_t MAX_AVFRAME_POOL_SIZE = 32;
+    public:
+        AVFramePool() : active_(true) {};
+        ~AVFramePool() {
+            LOG(INFO) << "Destructing AVFRAME Pool";
+            active_ = false;
+        }
+        static AVFramePtr Alloc() {
+            std::queue<AVFrame*> pool = Get()->pool_;
+            if (pool.empty()) return AllocAVFrameWithDeleter();
+            AVFrame* ret = pool.front();
+            pool.pop();
+            return std::shared_ptr<AVFrame>(ret, Recycle);
+        }
 
-inline AVFramePtr AllocAVFrameWithDeleter() {
-    return std::shared_ptr<AVFrame>(av_frame_alloc(), AVFrameDeleter);
-}
+        static AVFramePool* Get() {
+            static AVFramePool pool;
+            return &pool;
+        }
+    private:
+        std::queue<AVFrame*> pool_;
+        bool active_;
+
+        static void Recycle(AVFrame *p) {
+            if (!p) return;
+            std::queue<AVFrame*> pool = Get()->pool_;
+            if (!Get()->active_ || pool.size() + 1 > MAX_AVFRAME_POOL_SIZE) {
+                av_frame_unref(p);
+            } else {
+                pool.push(p);
+            }
+        }
+
+        static AVFramePtr AllocAVFrameWithDeleter() {
+            return std::shared_ptr<AVFrame>(av_frame_alloc(), Recycle);
+        }
+};
 
 using AVPacketPtr = std::shared_ptr<AVPacket>;
 

@@ -91,8 +91,8 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         if (!ret) {
             return;
         }
-        AVFramePtr frame = AllocAVFrameWithDeleter();
-        AVFramePtr out_frame = AllocAVFrameWithDeleter();
+        AVFramePtr frame = AVFramePool::Alloc();
+        AVFramePtr out_frame = AVFramePool::Alloc();
         AVFrame *out_frame_p = out_frame.get();
         CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
         got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
