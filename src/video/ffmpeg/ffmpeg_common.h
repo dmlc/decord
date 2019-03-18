@@ -89,13 +89,51 @@ class AVFramePool {
 
 using AVPacketPtr = std::shared_ptr<AVPacket>;
 
-inline void AVPacketDeleter(AVPacket *p) {
-    if (p) av_packet_unref(p);
-}
+// inline void AVPacketDeleter(AVPacket *p) {
+//     if (p) av_packet_unref(p);
+// }
 
-inline AVPacketPtr AllocAVPacketWithDeleter() {
-    return std::shared_ptr<AVPacket>(av_packet_alloc(), AVPacketDeleter);
-}
+// inline AVPacketPtr AllocAVPacketWithDeleter() {
+//     return std::shared_ptr<AVPacket>(av_packet_alloc(), AVPacketDeleter);
+// }
+
+class AVPacketPool {
+    static const uint16_t MAX_AVPACKET_POOL_SIZE = 32;
+    public:
+        AVPacketPool() : active_(true) {};
+        ~AVPacketPool() {
+            active_ = false;
+        }
+        static AVPacketPtr Alloc() {
+            std::queue<AVPacket*> pool = Get()->pool_;
+            if (pool.empty()) return AllocAVPacketWithDeleter();
+            AVPacket* ret = pool.front();
+            pool.pop();
+            return std::shared_ptr<AVPacket>(ret, Recycle);
+        }
+
+        static AVPacketPool* Get() {
+            static AVPacketPool pool;
+            return &pool;
+        }
+    private:
+        std::queue<AVPacket*> pool_;
+        bool active_;
+
+        static void Recycle(AVPacket *p) {
+            if (!p) return;
+            std::queue<AVPacket*> pool = Get()->pool_;
+            if (!Get()->active_ || pool.size() + 1 > MAX_AVPACKET_POOL_SIZE) {
+                av_packet_unref(p);
+            } else {
+                pool.push(p);
+            }
+        }
+
+        static AVPacketPtr AllocAVPacketWithDeleter() {
+            return std::shared_ptr<AVPacket>(av_packet_alloc(), Recycle);
+        }
+};
 
 using AVFormatContextPtr = std::unique_ptr<
     AVFormatContext, Deleter<AVFormatContext, void, avformat_free_context> >;
