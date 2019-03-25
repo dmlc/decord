@@ -65,5 +65,18 @@ class VideoReaderInterface {
 };  // class VideoReader
 
 VideoReaderPtr GetVideoReader(std::string fname, Decoder dec = Decoder::FFMPEG());
+
+class VideoLoader {
+    public:
+        VideoLoader(std::vector<std::string> filenames, bool shuffle);
+        ~VideoLoader();
+
+    private:
+        std::vector<VideoReaderInterface> readers_;
+        bool shuffle_;
+        int sequence_length_;
+        int sequence_interval_;
+};
+
 }  // namespace decord
 #endif // DECORD_VIDEO_INTERFACE_H_

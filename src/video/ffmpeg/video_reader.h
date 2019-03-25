@@ -101,10 +101,8 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         void SetVideoStream(int stream_nb = -1);
         unsigned int QueryStreams() const;
         runtime::NDArray NextFrame();
-    protected:
-        // void Reset();
-    private:
         void PushNext();
+    private:
         /*! \brief Get or Create SwsContext by dtype */
         // struct SwsContext* GetSwsContext(FrameTransform out_fmt);
         /*! \brief Video Streams Codecs in original videos */
