@@ -10,7 +10,7 @@ int main(int argc, const char **argv) {
     NDArray array = vr->NextFrame();
     while (1) {
         array = vr->NextFrame();
-        LOG(INFO) << array.Size();
+        // LOG(INFO) << array.Size();
         if (!array.Size()) break;
     }
     

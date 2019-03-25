@@ -162,7 +162,7 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
 
 void FFMPEGVideoReader::PushNext() {
     // AVPacket *packet = av_packet_alloc();
-    AVPacketPtr packet = AVPacketPool::Alloc();
+    AVPacketPtr packet = AVPacketPool::Get()->Acquire();
     int ret = -1;
     while (1) {
         ret = av_read_frame(fmt_ctx_.get(), packet.get());

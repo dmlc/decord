@@ -27,6 +27,7 @@ extern "C" {
 #endif
 
 #include <dmlc/logging.h>
+#include <dmlc/thread_local.h>
 
 namespace decord {
 namespace ffmpeg {
@@ -44,48 +45,117 @@ template<typename T, typename R, R(*Fn)(T**)> struct Deleterp {
     }
 };
 
-// RAII adapter for raw FFMPEG structs
-
-using AVFramePtr = std::shared_ptr<AVFrame>;
-
-class AVFramePool {
-    static const uint16_t MAX_AVFRAME_POOL_SIZE = 32;
+template<typename T, int S>
+class AutoReleasePool {
     public:
-        AVFramePool() : active_(true) {};
-        ~AVFramePool() {
-            LOG(INFO) << "Destructing AVFRAME Pool";
+        using ptr_type = std::shared_ptr<T>;
+        AutoReleasePool() : active_(true) {};
+        ~AutoReleasePool() {
             active_ = false;
         }
-        static AVFramePtr Alloc() {
-            std::queue<AVFrame*> pool = Get()->pool_;
-            if (pool.empty()) return AllocAVFrameWithDeleter();
-            AVFrame* ret = pool.front();
-            pool.pop();
-            return std::shared_ptr<AVFrame>(ret, Recycle);
+
+        ptr_type Acquire() {
+            if (pool_.empty()) {
+                return std::shared_ptr<T>(Allocate(), std::bind(&AutoReleasePool::Recycle, this, std::placeholders::_1));
+            }
+            T* ret = pool_.front();
+            pool_.pop();
+            return std::shared_ptr<T>(ret, std::bind(&AutoReleasePool::Recycle, this, std::placeholders::_1));
         }
 
-        static AVFramePool* Get() {
-            static AVFramePool pool;
-            return &pool;
-        }
     private:
-        std::queue<AVFrame*> pool_;
-        bool active_;
-
-        static void Recycle(AVFrame *p) {
+        void Recycle(T* p) {
             if (!p) return;
-            std::queue<AVFrame*> pool = Get()->pool_;
-            if (!Get()->active_ || pool.size() + 1 > MAX_AVFRAME_POOL_SIZE) {
-                av_frame_unref(p);
+            if (!active_ || pool_.size() + 1 > S) {
+                Delete(p);
             } else {
-                pool.push(p);
+                pool_.push(p);
             }
         }
 
-        static AVFramePtr AllocAVFrameWithDeleter() {
-            return std::shared_ptr<AVFrame>(av_frame_alloc(), Recycle);
+        virtual T* Allocate() {
+            return new T;
+        }
+
+        virtual void Delete(T* p) {
+            delete p;
+        }
+
+        bool active_;
+        std::queue<T*> pool_;
+};
+
+template<int S>
+class AutoReleaseAVFramePool : public AutoReleasePool<AVFrame, S> {
+    private:
+        using T = AVFrame;
+        T* Allocate() override {
+            return av_frame_alloc();
+        }
+
+        void Delete(T* p) override {
+            av_frame_unref(p);
         }
 };
+
+template<int S>
+class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
+    private:
+        using T = AVPacket;
+        T* Allocate() override {
+            return av_packet_alloc();
+        }
+
+        void Delete(T* p) override {
+            av_packet_unref(p);
+        }
+};
+
+// RAII adapter for raw FFMPEG structs
+using AVFramePool = dmlc::ThreadLocalStore<AutoReleaseAVFramePool<32>>;
+using AVPacketPool = dmlc::ThreadLocalStore<AutoReleaseAVPacketPool<32>>;
+
+using AVFramePtr = std::shared_ptr<AVFrame>;
+
+
+
+// class AVFramePool {
+//     static const uint16_t MAX_AVFRAME_POOL_SIZE = 32;
+//     public:
+//         AVFramePool() : active_(true) {};
+//         ~AVFramePool() {
+//             active_ = false;
+//         }
+//         static AVFramePtr Alloc() {
+//             std::queue<AVFrame*> pool = Get()->pool_;
+//             if (pool.empty()) return AllocAVFrameWithDeleter();
+//             AVFrame* ret = pool.front();
+//             pool.pop();
+//             return std::shared_ptr<AVFrame>(ret, Recycle);
+//         }
+
+//         static AVFramePool* Get() {
+//             static AVFramePool pool;
+//             return &pool;
+//         }
+//     private:
+//         std::queue<AVFrame*> pool_;
+//         bool active_;
+
+//         static void Recycle(AVFrame *p) {
+//             if (!p) return;
+//             std::queue<AVFrame*> pool = Get()->pool_;
+//             if (!Get()->active_ || pool.size() + 1 > MAX_AVFRAME_POOL_SIZE) {
+//                 av_frame_unref(p);
+//             } else {
+//                 pool.push(p);
+//             }
+//         }
+
+//         static AVFramePtr AllocAVFrameWithDeleter() {
+//             return std::shared_ptr<AVFrame>(av_frame_alloc(), Recycle);
+//         }
+// };
 
 using AVPacketPtr = std::shared_ptr<AVPacket>;
 
@@ -97,43 +167,43 @@ using AVPacketPtr = std::shared_ptr<AVPacket>;
 //     return std::shared_ptr<AVPacket>(av_packet_alloc(), AVPacketDeleter);
 // }
 
-class AVPacketPool {
-    static const uint16_t MAX_AVPACKET_POOL_SIZE = 32;
-    public:
-        AVPacketPool() : active_(true) {};
-        ~AVPacketPool() {
-            active_ = false;
-        }
-        static AVPacketPtr Alloc() {
-            std::queue<AVPacket*> pool = Get()->pool_;
-            if (pool.empty()) return AllocAVPacketWithDeleter();
-            AVPacket* ret = pool.front();
-            pool.pop();
-            return std::shared_ptr<AVPacket>(ret, Recycle);
-        }
+// class AVPacketPool {
+//     static const uint16_t MAX_AVPACKET_POOL_SIZE = 32;
+//     public:
+//         AVPacketPool() : active_(true) {};
+//         ~AVPacketPool() {
+//             active_ = false;
+//         }
+//         static AVPacketPtr Alloc() {
+//             std::queue<AVPacket*> pool = Get()->pool_;
+//             if (pool.empty()) return AllocAVPacketWithDeleter();
+//             AVPacket* ret = pool.front();
+//             pool.pop();
+//             return std::shared_ptr<AVPacket>(ret, Recycle);
+//         }
 
-        static AVPacketPool* Get() {
-            static AVPacketPool pool;
-            return &pool;
-        }
-    private:
-        std::queue<AVPacket*> pool_;
-        bool active_;
+//         static AVPacketPool* Get() {
+//             static AVPacketPool pool;
+//             return &pool;
+//         }
+//     private:
+//         std::queue<AVPacket*> pool_;
+//         bool active_;
 
-        static void Recycle(AVPacket *p) {
-            if (!p) return;
-            std::queue<AVPacket*> pool = Get()->pool_;
-            if (!Get()->active_ || pool.size() + 1 > MAX_AVPACKET_POOL_SIZE) {
-                av_packet_unref(p);
-            } else {
-                pool.push(p);
-            }
-        }
+//         static void Recycle(AVPacket *p) {
+//             if (!p) return;
+//             std::queue<AVPacket*> pool = Get()->pool_;
+//             if (!Get()->active_ || pool.size() + 1 > MAX_AVPACKET_POOL_SIZE) {
+//                 av_packet_unref(p);
+//             } else {
+//                 pool.push(p);
+//             }
+//         }
 
-        static AVPacketPtr AllocAVPacketWithDeleter() {
-            return std::shared_ptr<AVPacket>(av_packet_alloc(), Recycle);
-        }
-};
+//         static AVPacketPtr AllocAVPacketWithDeleter() {
+//             return std::shared_ptr<AVPacket>(av_packet_alloc(), Recycle);
+//         }
+// };
 
 using AVFormatContextPtr = std::unique_ptr<
     AVFormatContext, Deleter<AVFormatContext, void, avformat_free_context> >;
