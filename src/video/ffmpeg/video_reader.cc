@@ -42,7 +42,7 @@ NDArray CopyToNDArray(AVFrame *p) {
 }
 
 FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
-     : codecs_(), actv_stm_idx_(-1), decoder_(), width_(width), height_(height)  {
+     : codecs_(), actv_stm_idx_(-1), decoder_(), width_(width), height_(height), eof_(false) {
     // allocate format context
     fmt_ctx_.reset(avformat_alloc_context());
     if (!fmt_ctx_) {
@@ -149,7 +149,9 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
                 << " bit_rate: "
                 << st->codecpar->bit_rate
                 << " Resolution: "
-                << st->codecpar->width << "x" << st->codecpar->height;
+                << st->codecpar->width << "x" << st->codecpar->height
+                << " Frame count: "
+                << st->nb_frames;
         } else {
             const char *codec_type = av_get_media_type_string(st->codecpar->codec_type);
             codec_type = codec_type? codec_type : "unknown type";
@@ -164,10 +166,11 @@ void FFMPEGVideoReader::PushNext() {
     // AVPacket *packet = av_packet_alloc();
     AVPacketPtr packet = AVPacketPool::Get()->Acquire();
     int ret = -1;
-    while (1) {
+    while (!eof_) {
         ret = av_read_frame(fmt_ctx_.get(), packet.get());
         if (ret < 0) {
             if (ret == AVERROR_EOF) {
+                eof_ = true;
                 return;
             } else {
                 LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
@@ -188,11 +191,19 @@ void FFMPEGVideoReader::PushNext() {
 NDArray FFMPEGVideoReader::NextFrame() {
     AVFramePtr frame;
     decoder_->Start();
-    PushNext();
-    int ret = decoder_->Pop(&frame);
-    if (!ret) {
-        return NDArray::Empty({}, kUInt8, kCPU);
+    bool ret = false;
+    while (!ret) {
+        PushNext();
+        ret = decoder_->Pop(&frame);
+        if (!ret && eof_) {
+            return NDArray::Empty({}, kUInt8, kCPU);
+        }
     }
+    
+    // int ret = decoder_->Pop(&frame);
+    // if (!ret) {
+    //     return NDArray::Empty({}, kUInt8, kCPU);
+    // }
     NDArray arr = CopyToNDArray(frame.get());
     // av_frame_free(&frame);
     return arr;

@@ -122,6 +122,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         FFMPEGThreadedDecoderPtr decoder_;
         int width_;   // output video width
         int height_;  // output video height
+        bool eof_;  // end of file indicator
 };  // class FFMPEGVideoReader
 
 

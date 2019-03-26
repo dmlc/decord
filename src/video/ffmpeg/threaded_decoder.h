@@ -18,6 +18,7 @@ namespace ffmpeg {
 
 class FFMPEGThreadedDecoder {
     using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
+    // using PacketQueue = dmlc::ConcurrentBlockingQueue<int>;
     using PacketQueuePtr = std::unique_ptr<PacketQueue>;
     using FrameQueue = dmlc::ConcurrentBlockingQueue<AVFramePtr>;
     using FrameQueuePtr = std::unique_ptr<FrameQueue>;
@@ -36,6 +37,7 @@ class FFMPEGThreadedDecoder {
         void WorkerThread();
         // void FetcherThread(std::condition_variable& cv, FrameQueuePtr frame_queue);
         PacketQueuePtr pkt_queue_;
+
         FrameQueuePtr frame_queue_;
         std::atomic<int> frame_count_;
         std::thread t_;

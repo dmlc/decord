@@ -73,7 +73,7 @@ bool FFMPEGThreadedDecoder::Pop(AVFramePtr *frame) {
     if (ret){
         --frame_count_;
     }
-    return ret;
+    return (ret && (*frame));
 }
 
 FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
@@ -97,13 +97,15 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
         got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
         // avcodec_decode_video2(dec_ctx_.ptr.get(), frame.Get(), &got_picture, pkt.Get());
-        if (got_picture >= 0) {
+        if (got_picture == 0) {
             // filter image frame (format conversion, scaling...)
             filter_graph_->Push(frame.get());
             CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
             frame_queue_->Push(out_frame);
+        } else if (AVERROR(EAGAIN) == got_picture || AVERROR_EOF == got_picture) {
+            frame_queue_->Push(AVFramePtr(nullptr));
         } else {
-            LOG(FATAL) << "Thread worker: Error decoding frame." << got_picture;
+            LOG(FATAL) << "Thread worker: Error decoding frame: " << av_err2str(got_picture);
         }
         // free raw memories allocated with ffmpeg
         // av_packet_unref(pkt);
