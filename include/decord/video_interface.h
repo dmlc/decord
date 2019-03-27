@@ -77,15 +77,15 @@ class VideoLoader {
     protected:
         // For doc only
         VideoLoader(std::vector<std::string> filenames, 
-                    int batchsize, int inner_interval, 
+                    std::vector<int> shape, int inner_interval, 
                     int outer_interval, bool shuffle, 
                     int prefetch_frames, int num_shards);
 
     private:
         std::vector<VideoReaderInterface> readers_;
-        int batchsize_;
-        int inner_interval_;
-        int outer_interval_;
+        std::vector<int> shape_;
+        int interval_;
+        int skip_;
         bool shuffle_;
         int num_prefetch_;
 };  // class VideoLoader
