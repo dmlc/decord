@@ -162,6 +162,18 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
     return fmt_ctx_->nb_streams;
 }
 
+int64_t FFMPEGVideoReader::FrameCount() const {
+   CHECK(fmt_ctx_ != NULL);
+   CHECK(actv_stm_idx_ >= 0 && actv_stm_idx_ < fmt_ctx_->nb_streams);
+   int64_t cnt = fmt_ctx_->streams[actv_stm_idx_]->nb_frames;
+   if (cnt < 1) {
+       AVStream *stm = fmt_ctx_->streams[actv_stm_idx_];
+       // webM format may not provide accurate frame count, use duration and FPS to approximate
+       cnt = static_cast<double>(stm->avg_frame_rate.num) / stm->avg_frame_rate.den * fmt_ctx_->duration / AV_TIME_BASE;
+   }
+   return cnt;
+}
+
 void FFMPEGVideoReader::PushNext() {
     // AVPacket *packet = av_packet_alloc();
     AVPacketPtr packet = AVPacketPool::Get()->Acquire();

@@ -52,6 +52,8 @@ class VideoReaderInterface {
     virtual unsigned int QueryStreams() const = 0;
     /*! \brief check if video file successfully opened */
     virtual void SetVideoStream(int stream_nb = -1) = 0;
+    /*! \brief get the total frame count in current stream */
+    virtual int64_t FrameCount() const = 0;
     /*! \brief read the next frame, return NDArray */
     virtual runtime::NDArray NextFrame() = 0;
     /*! \brief destructor */
@@ -60,6 +62,7 @@ class VideoReaderInterface {
     // The following APIs have perf concerns, use with caucious
     /*! \brief seek to position, this will clear all buffer and queue */
     // virtual runtime::NDArray Seek(uint64_t pos) = 0;
+    // virtual bool SeekKeyFrame(uint64_t pos) = 0;
     /*! \brief seek and read frame at position p */
     // virtual runtime::NDArray GetFrame(uint64_t pos) = 0;
 };  // class VideoReader
