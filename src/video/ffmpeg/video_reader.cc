@@ -125,6 +125,11 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     std::snprintf(descr, sizeof(descr),
             "scale=%d:%d", width_, height_);
     decoder_->SetCodecContext(dec_ctx, std::string(descr));
+    IndexKeyframes();
+    LOG(INFO) << "Printing key frames...";
+    for (auto i : key_indices_) {
+        LOG(INFO) << i;
+    }
 }
 
 unsigned int FFMPEGVideoReader::QueryStreams() const {
@@ -177,9 +182,15 @@ int64_t FFMPEGVideoReader::FrameCount() const {
 bool FFMPEGVideoReader::Seek(int64_t pos) {
     decoder_->Clear();
     eof_ = false;
+    int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / FrameCount();
     int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, 
-                                pos-100, pos, pos+100, 
+                                ts-1, ts, ts+1, 
                                 AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+    // int tm = av_rescale(pos, fmt_ctx_->streams[actv_stm_idx_]->time_base.den, fmt_ctx_->streams[actv_stm_idx_]->time_base.num) / 1000;
+    // LOG(INFO) << "TM: " << tm;
+    // int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, 
+    //                             tm, tm, tm, 
+    //                             0);
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << pos;
     LOG(INFO) << "seek return: " << ret;
     decoder_->Start();
@@ -231,6 +242,34 @@ NDArray FFMPEGVideoReader::NextFrame() {
     NDArray arr = CopyToNDArray(frame.get());
     // av_frame_free(&frame);
     return arr;
+}
+
+void FFMPEGVideoReader::IndexKeyframes() {
+    Seek(0);
+    key_indices_.clear();
+    AVPacketPtr packet = AVPacketPool::Get()->Acquire();
+    int ret = -1;
+    bool eof = false;
+    int64_t cnt = 0;
+    while (!eof) {
+        ret = av_read_frame(fmt_ctx_.get(), packet.get());
+        if (ret < 0) {
+            if (ret == AVERROR_EOF) {
+                eof = true;
+                break;
+            } else {
+                LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
+            }
+            break;
+        }
+        if (packet->stream_index == actv_stm_idx_) {
+            if (packet->flags & AV_PKT_FLAG_KEY) {
+                key_indices_.emplace_back(cnt);
+            }
+            ++cnt;
+        }
+    }
+    Seek(0);
 }
 
 }  // namespace ffmpeg

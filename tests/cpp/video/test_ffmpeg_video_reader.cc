@@ -16,9 +16,10 @@ int main(int argc, const char **argv) {
         if (!array.Size()) break;
         cnt++;
         // if (cnt > 100) break;
-        LOG(INFO) << "Frame: " << cnt;
+        // LOG(INFO) << "Frame: " << cnt;
     }
 
+    LOG(INFO) << " reset by seek";
     vr->Seek(3000);
     cnt = 0;
     while (1) {

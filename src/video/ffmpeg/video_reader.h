@@ -104,8 +104,9 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         runtime::NDArray NextFrame();
         void PushNext();
         bool Seek(int64_t pos);
-        std::vector<int64_t> IndexKeyframes() const;
     private:
+        void IndexKeyframes();
+        std::vector<int64_t> key_indices_;
         /*! \brief Get or Create SwsContext by dtype */
         // struct SwsContext* GetSwsContext(FrameTransform out_fmt);
         /*! \brief Video Streams Codecs in original videos */
