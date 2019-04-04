@@ -34,6 +34,7 @@ void FFMPEGThreadedDecoder::Start() {
     if (!run_.load()) {
         pkt_queue_.reset(new PacketQueue());
         frame_queue_.reset(new FrameQueue());
+        avcodec_flush_buffers(dec_ctx_.get());
         run_.store(true);
         auto t = std::thread(&FFMPEGThreadedDecoder::WorkerThread, this);
         std::swap(t_, t);

@@ -176,8 +176,14 @@ int64_t FFMPEGVideoReader::FrameCount() const {
 
 bool FFMPEGVideoReader::Seek(int64_t pos) {
     decoder_->Clear();
-    avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, INT64_MIN, pos, INT64_MAX, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+    eof_ = false;
+    int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, 
+                                pos-100, pos, pos+100, 
+                                AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+    if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << pos;
+    LOG(INFO) << "seek return: " << ret;
     decoder_->Start();
+    return ret >= 0;
 }
 
 void FFMPEGVideoReader::PushNext() {

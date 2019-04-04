@@ -8,12 +8,26 @@ int main(int argc, const char **argv) {
     auto vr = decord::GetVideoReader("test2.mp4");
     LOG(INFO) << "Frame count: " << vr->FrameCount();
     vr->QueryStreams();
-    NDArray array = vr->NextFrame();
+    NDArray array;
+    int cnt = 0;
     while (1) {
         array = vr->NextFrame();
         // LOG(INFO) << array.Size();
         if (!array.Size()) break;
+        cnt++;
+        // if (cnt > 100) break;
+        LOG(INFO) << "Frame: " << cnt;
     }
+
+    vr->Seek(3000);
+    cnt = 0;
+    while (1) {
+        array = vr->NextFrame();
+        // LOG(INFO) << array.Size();
+        if (!array.Size()) break;
+        cnt++;
+        LOG(INFO) << "Frame: " << cnt;
+    } 
     
     // auto stm = dmlc::Stream::Create("debug.params", "w");
     // array.Save(stm);
