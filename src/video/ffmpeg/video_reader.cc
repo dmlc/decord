@@ -168,10 +168,16 @@ int64_t FFMPEGVideoReader::FrameCount() const {
    int64_t cnt = fmt_ctx_->streams[actv_stm_idx_]->nb_frames;
    if (cnt < 1) {
        AVStream *stm = fmt_ctx_->streams[actv_stm_idx_];
-       // webM format may not provide accurate frame count, use duration and FPS to approximate
+       // many formats do not provide accurate frame count, use duration and FPS to approximate
        cnt = static_cast<double>(stm->avg_frame_rate.num) / stm->avg_frame_rate.den * fmt_ctx_->duration / AV_TIME_BASE;
    }
    return cnt;
+}
+
+bool FFMPEGVideoReader::Seek(int64_t pos) {
+    decoder_->Clear();
+    avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, INT64_MIN, pos, INT64_MAX, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+    decoder_->Start();
 }
 
 void FFMPEGVideoReader::PushNext() {

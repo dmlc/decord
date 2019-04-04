@@ -103,6 +103,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         int64_t FrameCount() const;
         runtime::NDArray NextFrame();
         void PushNext();
+        bool Seek(int64_t pos);
     private:
         /*! \brief Get or Create SwsContext by dtype */
         // struct SwsContext* GetSwsContext(FrameTransform out_fmt);
