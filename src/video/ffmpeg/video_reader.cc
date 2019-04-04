@@ -272,5 +272,24 @@ void FFMPEGVideoReader::IndexKeyframes() {
     Seek(0);
 }
 
+runtime::NDArray FFMPEGVideoReader::GetKeyIndices() {
+    DLManagedTensor dlt;
+    dlt.dl_tensor.data = dmlc::BeginPtr(key_indices_);
+    dlt.dl_tensor.dtype = kInt64;
+    dlt.dl_tensor.ctx = kCPU;
+    std::vector<int64_t> shape = {static_cast<int64_t>(key_indices_.size())};
+    dlt.dl_tensor.shape = dmlc::BeginPtr(shape);
+    dlt.dl_tensor.ndim = 1;
+    dlt.dl_tensor.byte_offset = 0;
+    dlt.deleter = nullptr;
+    dlt.manager_ctx = nullptr;
+    runtime::NDArray orig = runtime::NDArray::FromDLPack(&dlt);
+    runtime::NDArray ret = runtime::NDArray::Empty(shape, kInt64, kCPU);
+    LOG(INFO) << "begin copy!";
+    ret.CopyFrom(orig);
+    LOG(INFO) << "copied!";
+    return ret;
+}
+
 }  // namespace ffmpeg
 }  // namespace decord

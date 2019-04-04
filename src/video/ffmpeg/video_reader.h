@@ -104,6 +104,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         runtime::NDArray NextFrame();
         void PushNext();
         bool Seek(int64_t pos);
+        runtime::NDArray GetKeyIndices();
     private:
         void IndexKeyframes();
         std::vector<int64_t> key_indices_;

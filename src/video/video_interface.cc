@@ -41,5 +41,12 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoNextFrame")
     NDArray arr = static_cast<VideoReaderInterface*>(handle)->NextFrame();
     *rv = arr;
   });
+
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoGetKeyIndices")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    NDArray ret = static_cast<VideoReaderInterface*>(handle)->GetKeyIndices();
+    *rv = ret;
+  });
 }  // namespace runtime
 }  // namespace decord

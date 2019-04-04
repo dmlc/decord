@@ -20,6 +20,7 @@ static const DLDataType kUInt8 = { kDLUInt, 8U, 1U };
 static const DLDataType kUInt16 = { kDLUInt, 16U, 1U };
 static const DLDataType kFloat16 = { kDLFloat, 16U, 1U };
 static const DLDataType kFloat32 = { kDLFloat, 32U, 1U };
+static const DLDataType kInt64 = {kDLInt, 64U, 1U};
 
 /*! \brief check if current date type equals another one */
 inline bool operator== (const DLDataType &d1, const DLDataType &d2) {

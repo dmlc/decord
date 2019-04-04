@@ -23,4 +23,11 @@ class VideoReader(object):
             raise StopIteration()
         return arr
 
+    def get_key_indices(self):
+        assert self._handle is not None
+        indices = _CAPI_VideoGetKeyIndices(self._handle)
+        if not indices.shape:
+            raise RuntimeError("No key frame indices found.")
+        return indices
+
 _init_api("decord.video_reader")

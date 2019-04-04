@@ -56,6 +56,8 @@ class VideoReaderInterface {
     virtual int64_t FrameCount() const = 0;
     /*! \brief read the next frame, return NDArray */
     virtual runtime::NDArray NextFrame() = 0;
+    /*! \brief retrieve keyframe indices */
+    virtual runtime::NDArray GetKeyIndices() = 0;
     /*! \brief destructor */
     virtual ~VideoReaderInterface() = default;
 
