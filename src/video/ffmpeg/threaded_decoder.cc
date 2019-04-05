@@ -60,6 +60,7 @@ void FFMPEGThreadedDecoder::Clear() {
 void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt) {
     pkt_queue_->Push(pkt);
     ++frame_count_;
+    // LOG(INFO)<< "frame push: " << frame_count_;
     // LOG(INFO) << "Pushed pkt to pkt_queue";
 }
 
@@ -71,6 +72,7 @@ bool FFMPEGThreadedDecoder::Pop(AVFramePtr *frame) {
         return false;
     }
     bool ret = frame_queue_->Pop(frame);
+    
     if (ret){
         --frame_count_;
     }
@@ -94,6 +96,8 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         }
         AVFramePtr frame = AVFramePool::Get()->Acquire();
         AVFramePtr out_frame = AVFramePool::Get()->Acquire();
+        // AVFramePtr frame = AVFramePtr(av_frame_alloc());
+        // AVFramePtr out_frame = AVFramePtr(av_frame_alloc());
         AVFrame *out_frame_p = out_frame.get();
         CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
         got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
@@ -104,7 +108,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
             frame_queue_->Push(out_frame);
         } else if (AVERROR(EAGAIN) == got_picture || AVERROR_EOF == got_picture) {
-            frame_queue_->Push(AVFramePtr(nullptr));
+            frame_queue_->Push(AVFramePtr(nullptr, [](AVFrame *p){}));
         } else {
             LOG(FATAL) << "Thread worker: Error decoding frame: " << av_err2str(got_picture);
         }

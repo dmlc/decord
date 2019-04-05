@@ -102,7 +102,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         unsigned int QueryStreams() const;
         int64_t GetFrameCount() const;
         runtime::NDArray NextFrame();
-        void SkipFrames(int num = 1);
+        void SkipFrames(int64_t num = 1);
         void PushNext();
         bool Seek(int64_t pos);
         runtime::NDArray GetKeyIndices();
@@ -126,6 +126,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         /*! \brief Container for various FFMPEG swsContext */
         // std::unordered_map<FrameTransform, struct SwsContext*> sws_ctx_map_;
         FFMPEGThreadedDecoderPtr decoder_;
+        int64_t curr_frame_;  // current frame location
         int width_;   // output video width
         int height_;  // output video height
         bool eof_;  // end of file indicator

@@ -9,7 +9,6 @@
 
 #include <memory>
 #include <queue>
-#include <mutex>
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,17 +47,12 @@ template<typename T, typename R, R(*Fn)(T**)> struct Deleterp {
 
 template<typename T, int S>
 class AutoReleasePool {
-    using pool_type = dmlc::ThreadLocalStore<std::queue<T*>>;
     public:
         using ptr_type = std::shared_ptr<T>;
+        using pool_type = dmlc::ThreadLocalStore<std::queue<T*>>;
         AutoReleasePool() : active_(true) {};
         ~AutoReleasePool() {
             active_.store(false);
-        }
-
-        static AutoReleasePool<T, S>* Get() {
-            static AutoReleasePool<T, S> pool;
-            return &pool;
         }
 
         ptr_type Acquire() {
@@ -81,10 +75,12 @@ class AutoReleasePool {
         }
 
         virtual T* Allocate() {
+            LOG(FATAL) << "No entry";
             return new T;
         }
 
         virtual void Delete(T* p) {
+            LOG(FATAL) << "No entry";
             delete p;
         }
 
@@ -95,6 +91,12 @@ class AutoReleasePool {
 
 template<int S>
 class AutoReleaseAVFramePool : public AutoReleasePool<AVFrame, S> {
+    public:
+        static AutoReleaseAVFramePool<S>* Get() {
+            static AutoReleaseAVFramePool<S> pool;
+            return &pool;
+        }
+
     private:
         using T = AVFrame;
         T* Allocate() override {
@@ -108,6 +110,12 @@ class AutoReleaseAVFramePool : public AutoReleasePool<AVFrame, S> {
 
 template<int S>
 class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
+    public:
+        static AutoReleaseAVPacketPool<S>* Get() {
+            static AutoReleaseAVPacketPool<S> pool;
+            return &pool;
+        }
+
     private:
         using T = AVPacket;
         T* Allocate() override {

@@ -15,7 +15,7 @@ int main(int argc, const char **argv) {
         // LOG(INFO) << array.Size();
         if (!array.Size()) break;
         cnt++;
-        // if (cnt > 100) break;
+        if (cnt > 200) break;
         // LOG(INFO) << "Frame: " << cnt;
     }
 

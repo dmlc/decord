@@ -42,7 +42,7 @@ NDArray CopyToNDArray(AVFrame *p) {
 }
 
 FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
-     : codecs_(), actv_stm_idx_(-1), decoder_(), width_(width), height_(height), eof_(false) {
+     : codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0), width_(width), height_(height), eof_(false) {
     // allocate format context
     fmt_ctx_.reset(avformat_alloc_context());
     if (!fmt_ctx_) {
@@ -194,12 +194,16 @@ bool FFMPEGVideoReader::Seek(int64_t pos) {
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << pos;
     LOG(INFO) << "seek return: " << ret;
     decoder_->Start();
+    if (ret) {
+        curr_frame_ = pos;
+    }
     return ret >= 0;
 }
 
 void FFMPEGVideoReader::PushNext() {
     // AVPacket *packet = av_packet_alloc();
-    AVPacketPtr packet = AVPacketPool::Get()->Acquire();
+    // AVPacketPtr packet = AVPacketPool::Get()->Acquire();
+    AVPacketPtr packet = AVPacketPtr(av_packet_alloc());
     int ret = -1;
     while (!eof_) {
         ret = av_read_frame(fmt_ctx_.get(), packet.get());
@@ -240,6 +244,7 @@ NDArray FFMPEGVideoReader::NextFrame() {
     //     return NDArray::Empty({}, kUInt8, kCPU);
     // }
     NDArray arr = CopyToNDArray(frame.get());
+    ++curr_frame_;
     // av_frame_free(&frame);
     return arr;
 }
@@ -247,7 +252,8 @@ NDArray FFMPEGVideoReader::NextFrame() {
 void FFMPEGVideoReader::IndexKeyframes() {
     Seek(0);
     key_indices_.clear();
-    AVPacketPtr packet = AVPacketPool::Get()->Acquire();
+    // AVPacketPtr packet = AVPacketPool::Get()->Acquire();
+    AVPacketPtr packet = AVPacketPtr(av_packet_alloc());
     int ret = -1;
     bool eof = false;
     int64_t cnt = 0;
@@ -291,34 +297,35 @@ runtime::NDArray FFMPEGVideoReader::GetKeyIndices() {
     return ret;
 }
 
-void FFMPEGVideoReader::SkipFrames(int num) {
-    // AVPacketPtr packet = AVPacketPool::Get()->Acquire();
-    // int ret = -1;
-    // while ((!eof_) && (num > 0)) {
-    //     ret = av_read_frame(fmt_ctx_.get(), packet.get());
-    //     if (ret < 0) {
-    //         if (ret == AVERROR_EOF) {
-    //             eof_ = true;
-    //             return;
-    //         } else {
-    //             LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
-    //         }
-    //         return;
-    //     }
-    //     if (packet->stream_index == actv_stm_idx_) {
-    //         if (packet->flags & AV_PKT_FLAG_DISCARD) continue;
-    //         --num;
-    //     }
-    // }
+void FFMPEGVideoReader::SkipFrames(int64_t num) {
+    // check if skip pass keyframes, if so, we can seek to latest keyframe first
+    LOG(INFO) << " Skip Frame start: " << num << " current frame: " << curr_frame_;
+    if (num < 1) return;
+    num = std::min(GetFrameCount() - curr_frame_, num);
+    auto it1 = std::upper_bound(key_indices_.begin(), key_indices_.end(), curr_frame_) - 1;
+    CHECK_GE(it1 - key_indices_.begin(), 0);
+    auto it2 = std::upper_bound(key_indices_.begin(), key_indices_.end(), curr_frame_ + num) - 1;
+    CHECK_GE(it2 - key_indices_.begin(), 0);
+    LOG(INFO) << "first: " << it1 - key_indices_.begin() << " second: " << it2 - key_indices_.begin() << ", " << *it1 << ", " << *it2;
+    if (it2 > it1) {
+        LOG(INFO) << "Seek to frame: " << *it2;
+        Seek(*it2);
+        num += curr_frame_ - *it2;
+    }
+
+    LOG(INFO) << "started skipping with: " << num;
     AVFramePtr frame;
     decoder_->Start();
     bool ret = false;
-    while (num > 0) {
+    while ((!eof_) && num > 0) {
         PushNext();
         ret = decoder_->Pop(&frame);
-        if (!ret) break;
+        if (!ret) continue;
+        ++curr_frame_;
+        LOG(INFO) << "skip: " << num;
         --num;
     }
+    LOG(INFO) << " stopped skipframes";
 }
 
 }  // namespace ffmpeg
