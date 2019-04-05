@@ -63,5 +63,12 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoSeek")
     bool ret = static_cast<VideoReaderInterface*>(handle)->Seek(pos);
     *rv = ret;
   });
+
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoSkipFrames")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    int num = args[1];
+    static_cast<VideoReaderInterface*>(handle)->SkipFrames(num);
+  });
 }  // namespace runtime
 }  // namespace decord

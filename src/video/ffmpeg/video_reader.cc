@@ -291,5 +291,26 @@ runtime::NDArray FFMPEGVideoReader::GetKeyIndices() {
     return ret;
 }
 
+void FFMPEGVideoReader::SkipFrames(int num) {
+    AVPacketPtr packet = AVPacketPool::Get()->Acquire();
+    int ret = -1;
+    while ((!eof_) && (num > 0)) {
+        ret = av_read_frame(fmt_ctx_.get(), packet.get());
+        if (ret < 0) {
+            if (ret == AVERROR_EOF) {
+                eof_ = true;
+                return;
+            } else {
+                LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
+            }
+            return;
+        }
+        if (packet->stream_index == actv_stm_idx_) {
+            if (packet->flags & AV_PKT_FLAG_DISCARD) continue;
+            --num;
+        }
+    }
+}
+
 }  // namespace ffmpeg
 }  // namespace decord

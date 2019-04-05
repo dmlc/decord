@@ -102,6 +102,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         unsigned int QueryStreams() const;
         int64_t GetFrameCount() const;
         runtime::NDArray NextFrame();
+        void SkipFrames(int num = 1);
         void PushNext();
         bool Seek(int64_t pos);
         runtime::NDArray GetKeyIndices();

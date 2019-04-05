@@ -58,6 +58,8 @@ class VideoReaderInterface {
     virtual runtime::NDArray NextFrame() = 0;
     /*! \brief retrieve keyframe indices */
     virtual runtime::NDArray GetKeyIndices() = 0;
+    /*! \brief skip certain frames without decoding */
+    virtual void SkipFrames(int num = 1) = 0;
     /*! \brief destructor */
     virtual ~VideoReaderInterface() = default;
 

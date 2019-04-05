@@ -43,4 +43,9 @@ class VideoReader(object):
         if not success:
             raise RuntimeError("Failed to seek to frame {}".format(pos))
 
+    def skip_frames(self, num=1):
+        assert self._handle is not None
+        assert num > 0
+        _CAPI_VideoSkipFrames(self._handle, num)
+
 _init_api("decord.video_reader")
