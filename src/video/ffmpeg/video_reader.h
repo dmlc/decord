@@ -100,7 +100,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         ~FFMPEGVideoReader();
         void SetVideoStream(int stream_nb = -1);
         unsigned int QueryStreams() const;
-        int64_t FrameCount() const;
+        int64_t GetFrameCount() const;
         runtime::NDArray NextFrame();
         void PushNext();
         bool Seek(int64_t pos);

@@ -42,10 +42,25 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoNextFrame")
     *rv = arr;
   });
 
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoGetFrameCount")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    int64_t ret = static_cast<VideoReaderInterface*>(handle)->GetFrameCount();
+    *rv = ret;
+  });
+
 DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoGetKeyIndices")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
     VideoReaderInterfaceHandle handle = args[0];
     NDArray ret = static_cast<VideoReaderInterface*>(handle)->GetKeyIndices();
+    *rv = ret;
+  });
+
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoSeek")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    int64_t pos = args[1];
+    bool ret = static_cast<VideoReaderInterface*>(handle)->Seek(pos);
     *rv = ret;
   });
 }  // namespace runtime

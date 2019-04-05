@@ -167,7 +167,7 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
     return fmt_ctx_->nb_streams;
 }
 
-int64_t FFMPEGVideoReader::FrameCount() const {
+int64_t FFMPEGVideoReader::GetFrameCount() const {
    CHECK(fmt_ctx_ != NULL);
    CHECK(actv_stm_idx_ >= 0 && actv_stm_idx_ < fmt_ctx_->nb_streams);
    int64_t cnt = fmt_ctx_->streams[actv_stm_idx_]->nb_frames;
@@ -182,7 +182,7 @@ int64_t FFMPEGVideoReader::FrameCount() const {
 bool FFMPEGVideoReader::Seek(int64_t pos) {
     decoder_->Clear();
     eof_ = false;
-    int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / FrameCount();
+    int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / GetFrameCount();
     int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, 
                                 ts-1, ts, ts+1, 
                                 AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
