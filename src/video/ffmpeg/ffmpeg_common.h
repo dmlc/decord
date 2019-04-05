@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <queue>
+#include <mutex>
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,29 +48,35 @@ template<typename T, typename R, R(*Fn)(T**)> struct Deleterp {
 
 template<typename T, int S>
 class AutoReleasePool {
+    using pool_type = dmlc::ThreadLocalStore<std::queue<T*>>;
     public:
         using ptr_type = std::shared_ptr<T>;
         AutoReleasePool() : active_(true) {};
         ~AutoReleasePool() {
-            active_ = false;
+            active_.store(false);
+        }
+
+        static AutoReleasePool<T, S>* Get() {
+            static AutoReleasePool<T, S> pool;
+            return &pool;
         }
 
         ptr_type Acquire() {
-            if (pool_.empty()) {
+            if (pool_type::Get()->empty()) {
                 return std::shared_ptr<T>(Allocate(), std::bind(&AutoReleasePool::Recycle, this, std::placeholders::_1));
             }
-            T* ret = pool_.front();
-            pool_.pop();
+            T* ret = pool_type::Get()->front();
+            pool_type::Get()->pop();
             return std::shared_ptr<T>(ret, std::bind(&AutoReleasePool::Recycle, this, std::placeholders::_1));
         }
 
     private:
         void Recycle(T* p) {
             if (!p) return;
-            if (!active_ || pool_.size() + 1 > S) {
+            if (!active_.load() || pool_type::Get()->size() + 1 > S) {
                 Delete(p);
             } else {
-                pool_.push(p);
+                pool_type::Get()->push(p);
             }
         }
 
@@ -81,8 +88,9 @@ class AutoReleasePool {
             delete p;
         }
 
-        bool active_;
-        std::queue<T*> pool_;
+        std::atomic<bool> active_;
+
+    DISALLOW_COPY_AND_ASSIGN(AutoReleasePool);
 };
 
 template<int S>
@@ -112,12 +120,12 @@ class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
 };
 
 // RAII adapter for raw FFMPEG structs
-using AVFramePool = dmlc::ThreadLocalStore<AutoReleaseAVFramePool<32>>;
-using AVPacketPool = dmlc::ThreadLocalStore<AutoReleaseAVPacketPool<32>>;
+static const int kAVFramePoolMaxSize = 32;
+static const int kAVPacketPoolMaxSize = 32;
+using AVFramePool = AutoReleaseAVFramePool<kAVFramePoolMaxSize>;
+using AVPacketPool = AutoReleaseAVPacketPool<kAVPacketPoolMaxSize>;
 
 using AVFramePtr = std::shared_ptr<AVFrame>;
-
-
 
 // class AVFramePool {
 //     static const uint16_t MAX_AVFRAME_POOL_SIZE = 32;
@@ -209,7 +217,7 @@ using AVFormatContextPtr = std::unique_ptr<
     AVFormatContext, Deleter<AVFormatContext, void, avformat_free_context> >;
 
 using AVCodecContextPtr = std::unique_ptr<
-    AVCodecContext, Deleter<AVCodecContext, int, avcodec_close> >;\
+    AVCodecContext, Deleter<AVCodecContext, int, avcodec_close> >;
 
 using AVFilterGraphPtr = std::unique_ptr<
     AVFilterGraph, Deleterp<AVFilterGraph, void, avfilter_graph_free> >;

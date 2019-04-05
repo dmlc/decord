@@ -215,12 +215,12 @@ void FFMPEGVideoReader::PushNext() {
         if (packet->stream_index == actv_stm_idx_) {
             // LOG(INFO) << "Packet index: " << packet->stream_index << " vs. " << actv_stm_idx_;
             // av_packet_unref(packet);
+            // LOG(INFO) << "Successfully load packet";
+            decoder_->Push(packet);
+            // LOG(INFO) << "Pushed packet to decoder.";
             break;
         }
     }
-    // LOG(INFO) << "Successfully load packet";
-    decoder_->Push(packet);
-    // LOG(INFO) << "Pushed packet to decoder.";
 }
 
 NDArray FFMPEGVideoReader::NextFrame() {
@@ -292,23 +292,32 @@ runtime::NDArray FFMPEGVideoReader::GetKeyIndices() {
 }
 
 void FFMPEGVideoReader::SkipFrames(int num) {
-    AVPacketPtr packet = AVPacketPool::Get()->Acquire();
-    int ret = -1;
-    while ((!eof_) && (num > 0)) {
-        ret = av_read_frame(fmt_ctx_.get(), packet.get());
-        if (ret < 0) {
-            if (ret == AVERROR_EOF) {
-                eof_ = true;
-                return;
-            } else {
-                LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
-            }
-            return;
-        }
-        if (packet->stream_index == actv_stm_idx_) {
-            if (packet->flags & AV_PKT_FLAG_DISCARD) continue;
-            --num;
-        }
+    // AVPacketPtr packet = AVPacketPool::Get()->Acquire();
+    // int ret = -1;
+    // while ((!eof_) && (num > 0)) {
+    //     ret = av_read_frame(fmt_ctx_.get(), packet.get());
+    //     if (ret < 0) {
+    //         if (ret == AVERROR_EOF) {
+    //             eof_ = true;
+    //             return;
+    //         } else {
+    //             LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
+    //         }
+    //         return;
+    //     }
+    //     if (packet->stream_index == actv_stm_idx_) {
+    //         if (packet->flags & AV_PKT_FLAG_DISCARD) continue;
+    //         --num;
+    //     }
+    // }
+    AVFramePtr frame;
+    decoder_->Start();
+    bool ret = false;
+    while (num > 0) {
+        PushNext();
+        ret = decoder_->Pop(&frame);
+        if (!ret) break;
+        --num;
     }
 }
 

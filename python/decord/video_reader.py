@@ -44,7 +44,6 @@ class VideoReader(object):
             raise RuntimeError("Failed to seek to frame {}".format(pos))
 
     def skip_frames(self, num=1):
-        """Skip certain frames without decoding, note that this may introduce some artifacts to decoded frames"""
         assert self._handle is not None
         assert num > 0
         _CAPI_VideoSkipFrames(self._handle, num)
