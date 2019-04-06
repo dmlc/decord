@@ -20,7 +20,7 @@ int main(int argc, const char **argv) {
     }
 
     LOG(INFO) << " reset by seek";
-    vr->Seek(3000);
+    vr->SeekAccurate(3065);
     cnt = 0;
     while (1) {
         array = vr->NextFrame();

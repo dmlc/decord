@@ -42,6 +42,13 @@ class VideoReader(object):
         success = _CAPI_VideoSeek(self._handle, pos)
         if not success:
             raise RuntimeError("Failed to seek to frame {}".format(pos))
+    
+    def seek_accurate(self, pos):
+        assert self._handle is not None
+        assert pos >= 0 and pos < self._num_frame
+        success = _CAPI_VideoSeekAccurate(self._handle, pos)
+        if not success:
+            raise RuntimeError("Failed to seek_accurate to frame {}".format(pos))
 
     def skip_frames(self, num=1):
         assert self._handle is not None

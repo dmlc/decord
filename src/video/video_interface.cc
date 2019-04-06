@@ -64,6 +64,14 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoSeek")
     *rv = ret;
   });
 
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoSeekAccurate")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    int64_t pos = args[1];
+    bool ret = static_cast<VideoReaderInterface*>(handle)->SeekAccurate(pos);
+    *rv = ret;
+  });
+
 DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoSkipFrames")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
     VideoReaderInterfaceHandle handle = args[0];

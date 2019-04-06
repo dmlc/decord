@@ -194,10 +194,27 @@ bool FFMPEGVideoReader::Seek(int64_t pos) {
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << pos;
     LOG(INFO) << "seek return: " << ret;
     decoder_->Start();
-    if (ret) {
+    if (ret >= 0) {
         curr_frame_ = pos;
     }
     return ret >= 0;
+}
+
+int64_t FFMPEGVideoReader::LocateKeyframe(int64_t pos) {
+    if (key_indices_.size() < 1) return 0;
+    if (pos <= key_indices_[0]) return 0;
+    if (pos >= GetFrameCount()) return key_indices_.back();
+    auto it = std::upper_bound(key_indices_.begin(), key_indices_.end(), pos) - 1;
+    return *it;
+}
+
+bool FFMPEGVideoReader::SeekAccurate(int64_t pos) {
+    int64_t key_pos = LocateKeyframe(pos);
+    LOG(INFO) << "Accurate seek to " << pos << " with key pos: " << key_pos;
+    bool ret = Seek(key_pos);
+    if (!ret) return false;
+    SkipFrames(pos - key_pos);
+    return true;
 }
 
 void FFMPEGVideoReader::PushNext() {
@@ -322,7 +339,7 @@ void FFMPEGVideoReader::SkipFrames(int64_t num) {
         ret = decoder_->Pop(&frame);
         if (!ret) continue;
         ++curr_frame_;
-        LOG(INFO) << "skip: " << num;
+        // LOG(INFO) << "skip: " << num;
         --num;
     }
     LOG(INFO) << " stopped skipframes";
