@@ -34,8 +34,10 @@ FFMPEGVideoLoader::FFMPEGVideoLoader(std::vector<std::string> filenames,
 
     for (std::string filename : filenames) {
        ReaderPtr ptr = std::make_shared<FFMPEGVideoReader>(filename, shape_[3], shape_[2]);
-       auto key_indices = ptr->GetKeyIndices();
+       auto key_indices = ptr->GetKeyIndicesVector();
+       CHECK_GT(key_indices.size(), 0) << "Error getting key frame info from " << filename;
        auto frame_count = ptr->GetFrameCount(); 
+       CHECK_GT(frame_count, 0) << "Error getting total frame from " << filename;
        readers_.emplace_back(Entry(ptr, key_indices, frame_count));
     }
 }

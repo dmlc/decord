@@ -103,18 +103,18 @@ class NDArray {
    */
   inline void CopyFrom(DLTensor* other);
   inline void CopyFrom(const NDArray& other);
-  template<typename T>
-  inline void CopyFrom(const std::vector<T>& other);
+  // template<typename T>
+  // inline void CopyFrom(const std::vector<T>& other, const std::vector<int64_t>& shape);
   /*!
    * \brief Copy data content into another array.
-   * \param other The source array to be copied from.
+   * \param other The dst array to be copied to.
    * \note The copy may happen asynchrously if it involves a GPU context.
    *       DECORDSynchronize is necessary.
    */
   inline void CopyTo(DLTensor* other) const;
   inline void CopyTo(const NDArray& other) const;
-  template<typename T>
-  inline void CopyTo()
+  // template<typename T>
+  // inline void CopyTo(std::vector<T>& other, std::vector<int64_t>& shape);
   /*!
    * \brief Copy the data to another context.
    * \param ctx The target context.

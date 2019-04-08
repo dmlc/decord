@@ -107,6 +107,9 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         bool Seek(int64_t pos);
         bool SeekAccurate(int64_t pos);
         runtime::NDArray GetKeyIndices();
+    protected:
+        friend class FFMPEGVideoLoader;
+        std::vector<int64_t> GetKeyIndicesVector() const;
     private:
         void IndexKeyframes();
         int64_t LocateKeyframe(int64_t pos);

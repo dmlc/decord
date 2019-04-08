@@ -314,6 +314,10 @@ runtime::NDArray FFMPEGVideoReader::GetKeyIndices() {
     return ret;
 }
 
+std::vector<int64_t> FFMPEGVideoReader::GetKeyIndicesVector() const {
+    return key_indices_;
+}
+
 void FFMPEGVideoReader::SkipFrames(int64_t num) {
     // check if skip pass keyframes, if so, we can seek to latest keyframe first
     LOG(INFO) << " Skip Frame start: " << num << " current frame: " << curr_frame_;
