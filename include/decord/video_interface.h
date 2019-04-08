@@ -79,6 +79,7 @@ class VideoLoaderInterface {
     public:
         using NDArray = runtime::NDArray;
         virtual ~VideoLoaderInterface() = 0;
+        virtual void Reset() = 0;
         virtual bool HasNext() = 0;
         virtual NDArray Next() = 0;
 

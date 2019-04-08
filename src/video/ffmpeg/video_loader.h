@@ -20,12 +20,13 @@ class FFMPEGVideoLoader : public VideoLoaderInterface {
 public:
         FFMPEGVideoLoader(std::vector<std::string> filenames, 
                           std::vector<int> shape, int interval, 
-                          int skip, bool shuffle, 
+                          int skip, int shuffle, 
                           int prefetch);
-        ~FFMPEGVideoLoader() = 0;
-        bool HasNext() = 0;
-        NDArray Next() = 0;
-
+        ~FFMPEGVideoLoader();
+        void Reset();
+        bool HasNext() const;
+        int64_t GetSize() const;
+        NDArray Next();
     
     private:
         using ReaderPtr = std::shared_ptr<FFMPEGVideoReader>;
@@ -39,10 +40,13 @@ public:
         };
         std::vector<Entry> readers_;
         std::vector<int> shape_;
-        int interval_;
+        int intvl_;
         int skip_;
-        bool shuffle_;
-        int num_prefetch_;
+        int shuffle_;
+        int prefetch_;
+        std::vector<std::pair<std::size_t, int64_t> > visit_order_;
+        std::vector<std::size_t> visit_bounds_;
+        std::size_t curr_;
 };  // class FFMPEGVideoLoader
 
 }  // namespace ffmpeg
