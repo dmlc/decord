@@ -103,6 +103,8 @@ class NDArray {
    */
   inline void CopyFrom(DLTensor* other);
   inline void CopyFrom(const NDArray& other);
+  template<typename T>
+  inline void CopyFrom(const std::vector<T>& other);
   /*!
    * \brief Copy data content into another array.
    * \param other The source array to be copied from.
@@ -111,6 +113,8 @@ class NDArray {
    */
   inline void CopyTo(DLTensor* other) const;
   inline void CopyTo(const NDArray& other) const;
+  template<typename T>
+  inline void CopyTo()
   /*!
    * \brief Copy the data to another context.
    * \param ctx The target context.

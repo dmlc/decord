@@ -75,28 +75,20 @@ class VideoReaderInterface {
 VideoReaderPtr GetVideoReader(std::string fname, 
                               Decoder dec = Decoder::FFMPEG());
 
-class VideoLoader {
+class VideoLoaderInterface {
     public:
         using NDArray = runtime::NDArray;
-        virtual ~VideoLoader() = 0;
+        virtual ~VideoLoaderInterface() = 0;
         virtual bool HasNext() = 0;
         virtual NDArray Next() = 0;
 
     protected:
-        // For doc only
-        VideoLoader(std::vector<std::string> filenames, 
-                    std::vector<int> shape, int inner_interval, 
-                    int outer_interval, bool shuffle, 
-                    int prefetch_frames, int num_shards);
-
-    private:
-        std::vector<VideoReaderInterface> readers_;
-        std::vector<int> shape_;
-        int interval_;
-        int skip_;
-        bool shuffle_;
-        int num_prefetch_;
-};  // class VideoLoader
+        // Ctor for doc only
+        VideoLoaderInterface(std::vector<std::string> filenames, 
+                             std::vector<int> shape, int interval, 
+                             int skip, bool shuffle, 
+                             int prefetch);
+};  // class VideoLoaderInterface
 
 }  // namespace decord
 #endif // DECORD_VIDEO_INTERFACE_H_
