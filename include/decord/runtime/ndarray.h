@@ -103,8 +103,8 @@ class NDArray {
    */
   inline void CopyFrom(DLTensor* other);
   inline void CopyFrom(const NDArray& other);
-  // template<typename T>
-  // inline void CopyFrom(const std::vector<T>& other, const std::vector<int64_t>& shape);
+  template<typename T>
+  inline void CopyFrom(std::vector<T>& other, std::vector<int64_t>& shape);
   /*!
    * \brief Copy data content into another array.
    * \param other The dst array to be copied to.
@@ -312,6 +312,33 @@ inline void NDArray::CopyFrom(const NDArray& other) {
   CHECK(data_ != nullptr);
   CHECK(other.data_ != nullptr);
   CopyFromTo(&(other.data_->dl_tensor), &(data_->dl_tensor));
+}
+
+template<typename T>
+inline void NDArray::CopyFrom(std::vector<T>& other, std::vector<int64_t>& shape) {
+  CHECK(data_ != nullptr);
+  int64_t size = 1;
+  for (int64_t s : shape) {
+    size *= s;
+  }
+  CHECK(other.size() == size);
+  // Create view as DLTensor
+  DLTensor dlt;
+  dlt.data = dmlc::BeginPtr(other);
+  DLContext cpu_ctx;
+  cpu_ctx.device_type = kDLCPU;
+  cpu_ctx.device_id = 0;
+  dlt.ctx = cpu_ctx;
+  DLDataType uint8_type;
+  uint8_type.bits = 8U;
+  uint8_type.code = kDLUInt;
+  uint8_type.lanes = 1U;
+  dlt.dtype = uint8_type;
+  dlt.ndim = static_cast<int>(shape.size());
+  dlt.shape = dmlc::BeginPtr(shape);
+  dlt.strides = nullptr;
+  dlt.byte_offset = 0;
+  CopyFromTo(&dlt, &(data_->dl_tensor));
 }
 
 inline void NDArray::CopyTo(DLTensor* other) const {

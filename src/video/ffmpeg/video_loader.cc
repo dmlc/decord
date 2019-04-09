@@ -28,14 +28,14 @@ FFMPEGVideoLoader::FFMPEGVideoLoader(std::vector<std::string> filenames,
             ss << s << ", ";
         }
         ss << (")");
-        LOG(FATAL) << "Shape must be of dim 4, in [Batchsize, C, H, W], given " << ss.str();
+        LOG(FATAL) << "Shape must be of dim 4, in [Batchsize, H, W, C], given " << ss.str();
     } 
 
     // Initialize readers
     CHECK_GE(filenames.size(), 1) << "At least one video is required for video loader!";
 
     for (std::string filename : filenames) {
-       ReaderPtr ptr = std::make_shared<FFMPEGVideoReader>(filename, shape_[3], shape_[2]);
+       ReaderPtr ptr = std::make_shared<FFMPEGVideoReader>(filename, shape_[2], shape_[1]);
        auto key_indices = ptr->GetKeyIndicesVector();
        CHECK_GT(key_indices.size(), 0) << "Error getting key frame info from " << filename;
        auto frame_count = ptr->GetFrameCount(); 
@@ -90,6 +90,7 @@ bool FFMPEGVideoLoader::HasNext() const {
 
 runtime::NDArray FFMPEGVideoLoader::Next() {
     
+    ++curr_;
 }
 
 }  // namespace ffmpeg

@@ -94,6 +94,7 @@ namespace ffmpeg {
 
 class FFMPEGVideoReader : public VideoReaderInterface {
     using FFMPEGThreadedDecoderPtr = std::unique_ptr<FFMPEGThreadedDecoder>;
+    using NDArray = runtime::NDArray;
     public:
         FFMPEGVideoReader(std::string fn, int width=-1, int height=-1);
         /*! \brief Destructor, note that FFMPEG resources has to be managed manually to avoid resource leak */
@@ -101,7 +102,8 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         void SetVideoStream(int stream_nb = -1);
         unsigned int QueryStreams() const;
         int64_t GetFrameCount() const;
-        runtime::NDArray NextFrame();
+        NDArray NextFrame();
+        NDArray GetBatch(std::vector<int64_t> indices);
         void SkipFrames(int64_t num = 1);
         void PushNext();
         bool Seek(int64_t pos);
@@ -113,6 +115,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
     private:
         void IndexKeyframes();
         int64_t LocateKeyframe(int64_t pos);
+        AVFramePtr NextFrameImpl();
         std::vector<int64_t> key_indices_;
         /*! \brief Get or Create SwsContext by dtype */
         // struct SwsContext* GetSwsContext(FrameTransform out_fmt);

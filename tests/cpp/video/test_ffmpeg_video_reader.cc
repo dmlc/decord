@@ -5,7 +5,7 @@
 
 using NDArray = decord::runtime::NDArray;
 int main(int argc, const char **argv) {
-    auto vr = decord::GetVideoReader("test2.mp4");
+    auto vr = decord::GetVideoReader("test4.avi");
     LOG(INFO) << "Frame count: " << vr->GetFrameCount();
     vr->QueryStreams();
     NDArray array;
@@ -18,6 +18,7 @@ int main(int argc, const char **argv) {
         if (cnt > 200) break;
         // LOG(INFO) << "Frame: " << cnt;
     }
+    return 0;
 
     LOG(INFO) << " reset by seek";
     vr->SeekAccurate(3065);

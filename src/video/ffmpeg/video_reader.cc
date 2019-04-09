@@ -13,7 +13,7 @@ namespace ffmpeg {
 
 using NDArray = runtime::NDArray;
 
-NDArray CopyToNDArray(AVFrame *p) {
+NDArray CopyToNDArray(AVFramePtr p) {
     CHECK(p) << "Error: converting empty AVFrame to DLTensor";
     // int channel = p->linesize[0] / p->width;
     CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24) 
@@ -244,7 +244,7 @@ void FFMPEGVideoReader::PushNext() {
     }
 }
 
-NDArray FFMPEGVideoReader::NextFrame() {
+AVFramePtr FFMPEGVideoReader::NextFrameImpl() {
     AVFramePtr frame;
     decoder_->Start();
     bool ret = false;
@@ -252,17 +252,19 @@ NDArray FFMPEGVideoReader::NextFrame() {
         PushNext();
         ret = decoder_->Pop(&frame);
         if (!ret && eof_) {
-            return NDArray::Empty({}, kUInt8, kCPU);
+            return nullptr;
         }
     }
-    
-    // int ret = decoder_->Pop(&frame);
-    // if (!ret) {
-    //     return NDArray::Empty({}, kUInt8, kCPU);
-    // }
-    NDArray arr = CopyToNDArray(frame.get());
+    return frame;
+}
+
+NDArray FFMPEGVideoReader::NextFrame() {
+    AVFramePtr frame = NextFrameImpl();
+    if (frame == nullptr) {
+        return NDArray::Empty({}, kUInt8, kCPU);
+    }
+    NDArray arr = CopyToNDArray(frame);
     ++curr_frame_;
-    // av_frame_free(&frame);
     return arr;
 }
 
@@ -347,6 +349,37 @@ void FFMPEGVideoReader::SkipFrames(int64_t num) {
         --num;
     }
     LOG(INFO) << " stopped skipframes";
+}
+
+NDArray FFMPEGVideoReader::GetBatch(std::vector<int64_t> indices) {
+    std::size_t bs = indices.size();
+    int sz = height_ * width_ * 3;
+    std::vector<uint8_t> buffer(bs * sz);
+    int64_t frame_count = GetFrameCount();
+    for (std::size_t i = 0; i < indices.size(); ++i) {
+        int64_t pos = indices[i];
+        CHECK_LT(pos, frame_count);
+        CHECK_GE(pos, 0);
+        if (curr_frame_ + 1 == pos) {
+            // no need to seek
+        } else if (pos > curr_frame_) {
+            // skip positive number of frames
+            SkipFrames(pos - curr_frame_ - 1);
+        } else {
+            // seek no matter what
+            SeekAccurate(pos);
+        }
+        AVFramePtr frame = NextFrameImpl();
+        if (frame == nullptr && eof_) {
+            LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
+        }
+        // copy frame to buffer
+        std::copy(frame->data[0], frame->data[0] + sz, buffer.begin() + i * sz);
+    }
+    std::vector<int64_t> shape({static_cast<int64_t>(bs), height_, width_, 3});
+    NDArray batch = NDArray::Empty(shape, kUInt8, kCPU);
+    batch.CopyFrom(buffer, shape);
+    return batch;
 }
 
 }  // namespace ffmpeg
