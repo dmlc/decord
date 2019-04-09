@@ -8,3 +8,4 @@ from ._ffi.base import DECORDError, __version__
 from .base import ALL
 
 from .video_reader import VideoReader
+from .video_loader import VideoLoader

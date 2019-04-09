@@ -49,10 +49,11 @@ FFMPEGVideoLoader::FFMPEGVideoLoader(std::vector<std::string> filenames,
     for (auto entry : readers_) {
         int64_t len = entry.frame_count;
         int64_t i = 0;
-        for (i = 0; i < len; i += bs) {
+        int64_t bs_skip = bs * (1 + intvl_) + skip_;
+        for (i = 0; i < len; i += bs_skip) {
             visit_order_.emplace_back(std::make_pair(entry_index, i));
         }
-        CHECK_LT(i, len);
+        CHECK_LT(i, len + bs_skip);
         visit_bounds_.emplace_back(visit_order_.size());
         ++entry_index;
     }
@@ -71,7 +72,7 @@ void FFMPEGVideoLoader::Reset() {
             std::random_shuffle(visit_order_.begin() + begin, visit_order_.begin() + end);
             begin = end;
         }
-        CHECK_EQ(visit_order_.begin() + begin, visit_order_.end());
+        CHECK(visit_order_.begin() + begin == visit_order_.end());
     } else if (shuffle_ == 2) {
         // shuffle files and re-order frames in each video, reading batches can be slower than other shuffle mode
         std::random_shuffle(visit_order_.begin(), visit_order_.end());
@@ -89,8 +90,24 @@ bool FFMPEGVideoLoader::HasNext() const {
 }
 
 runtime::NDArray FFMPEGVideoLoader::Next() {
-    
+    if (!HasNext()) return NDArray::Empty({}, kUInt8, kCPU);
+    CHECK(curr_ < visit_order_.size());
+    auto pair = visit_order_[curr_];
+    std::vector<int64_t> indices;
+    indices.resize(shape_[0]);
+    std::size_t reader_idx = pair.first;
+    int64_t frame_idx = pair.second;
+    for (auto i = 0; i < indices.size(); ++i) {
+        indices.emplace_back(frame_idx);
+        frame_idx += intvl_;
+    }
+    auto batch = readers_[reader_idx].ptr->GetBatch(indices);
     ++curr_;
+    return batch;
+}
+
+int64_t FFMPEGVideoLoader::Length() const {
+    return visit_order_.size();
 }
 
 }  // namespace ffmpeg

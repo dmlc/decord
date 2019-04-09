@@ -15,6 +15,7 @@
 
 namespace decord {
 typedef void* VideoReaderInterfaceHandle;
+typedef void* VideoLoaderInterfaceHandle;
 
 enum AccessType {
     kVideoReaderRandomAccess = 0U,
@@ -78,17 +79,11 @@ VideoReaderPtr GetVideoReader(std::string fname,
 class VideoLoaderInterface {
     public:
         using NDArray = runtime::NDArray;
-        virtual ~VideoLoaderInterface() = 0;
+        virtual ~VideoLoaderInterface() = default;
         virtual void Reset() = 0;
-        virtual bool HasNext() = 0;
+        virtual bool HasNext() const = 0;
         virtual NDArray Next() = 0;
-
-    protected:
-        // Ctor for doc only
-        VideoLoaderInterface(std::vector<std::string> filenames, 
-                             std::vector<int> shape, int interval, 
-                             int skip, bool shuffle, 
-                             int prefetch);
+        virtual int64_t Length() const = 0;
 };  // class VideoLoaderInterface
 
 }  // namespace decord

@@ -25,7 +25,7 @@ public:
         ~FFMPEGVideoLoader();
         void Reset();
         bool HasNext() const;
-        int64_t GetSize() const;
+        int64_t Length() const;
         NDArray Next();
     
     private:
@@ -36,7 +36,7 @@ public:
             int64_t frame_count;
 
             Entry(ReaderPtr p, std::vector<int64_t> keys, int64_t frames)
-                : ptr(ptr), key_indices(keys), frame_count(frames) {}
+                : ptr(p), key_indices(keys), frame_count(frames) {}
         };
         std::vector<Entry> readers_;
         std::vector<int> shape_;
