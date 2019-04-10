@@ -17,16 +17,16 @@ namespace decord {
 typedef void* VideoReaderInterfaceHandle;
 typedef void* VideoLoaderInterfaceHandle;
 
-enum AccessType {
-    kVideoReaderRandomAccess = 0U,
-    kVideoReaderSequential = 1U,
-};
+// enum AccessType {
+//     kVideoReaderRandomAccess = 0U,
+//     kVideoReaderSequential = 1U,
+// };
 
-enum InterpolationType {
-    kInterpolationLinear = 0U,
-    kInterpolationBicubic = 1U,
-    kInterpolationArea = 2U,
-};
+// enum InterpolationType {
+//     kInterpolationLinear = 0U,
+//     kInterpolationBicubic = 1U,
+//     kInterpolationArea = 2U,
+// };
 
 enum VideoLoaderShuffleType {
     kSequential = 0U,
@@ -35,18 +35,18 @@ enum VideoLoaderShuffleType {
     kShuffleInsideVideoOnly,
 };
 
-struct Size {
-    uint32_t width;
-    uint32_t height;
-};
+// struct Size {
+//     uint32_t width;
+//     uint32_t height;
+// };
 
-struct FrameProperty {
-    uint32_t width;
-    uint32_t height;
-    uint32_t channel;
-    DLDataType dtype;
-    InterpolationType itype;
-};
+// struct FrameProperty {
+//     uint32_t width;
+//     uint32_t height;
+//     uint32_t channel;
+//     DLDataType dtype;
+//     InterpolationType itype;
+// };
 
 class VideoReaderInterface;
 typedef std::shared_ptr<VideoReaderInterface> VideoReaderPtr;
@@ -74,15 +74,34 @@ class VideoReaderInterface {
     // The following APIs have perf concerns, use with caucious
     /*! \brief seek to position, this will clear all buffer and queue */
     // virtual runtime::NDArray Seek(uint64_t pos) = 0;
+    /**
+     * \brief Seek to nearest keyframe before frame pos
+     * 
+     * \param pos The frame position
+     * \return true Success
+     * \return false Failed
+     */
     virtual bool Seek(int64_t pos) = 0;
+    /**
+     * \brief Seek accurately to given position
+     * 
+     * \param pos Frame position
+     * \return true Success
+     * \return false Failed
+     */
     virtual bool SeekAccurate(int64_t pos) = 0;
     /*! \brief seek and read frame at position p */
     // virtual runtime::NDArray GetFrame(uint64_t pos) = 0;
 };  // class VideoReader
 
+
 VideoReaderPtr GetVideoReader(std::string fname, 
                               Decoder dec = Decoder::FFMPEG());
 
+/**
+ * \brief Interface of VideoLoader, pure virtual class
+ * 
+ */
 class VideoLoaderInterface {
     public:
         using NDArray = runtime::NDArray;
