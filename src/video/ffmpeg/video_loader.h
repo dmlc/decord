@@ -46,6 +46,7 @@ public:
         int prefetch_;
         std::vector<std::pair<std::size_t, int64_t> > visit_order_;
         std::vector<std::size_t> visit_bounds_;
+        std::vector<std::vector<std::pair<std::size_t, int64_t> > > visit_buffer_;
         std::size_t curr_;
 };  // class FFMPEGVideoLoader
 

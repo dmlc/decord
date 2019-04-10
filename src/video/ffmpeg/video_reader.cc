@@ -255,6 +255,9 @@ AVFramePtr FFMPEGVideoReader::NextFrameImpl() {
             return nullptr;
         }
     }
+    if (frame != nullptr) {
+        ++curr_frame_;
+    }
     return frame;
 }
 
@@ -264,7 +267,6 @@ NDArray FFMPEGVideoReader::NextFrame() {
         return NDArray::Empty({}, kUInt8, kCPU);
     }
     NDArray arr = CopyToNDArray(frame);
-    ++curr_frame_;
     return arr;
 }
 
@@ -331,9 +333,11 @@ void FFMPEGVideoReader::SkipFrames(int64_t num) {
     CHECK_GE(it2 - key_indices_.begin(), 0);
     LOG(INFO) << "first: " << it1 - key_indices_.begin() << " second: " << it2 - key_indices_.begin() << ", " << *it1 << ", " << *it2;
     if (it2 > it1) {
+        int64_t old_frame = curr_frame_;
         LOG(INFO) << "Seek to frame: " << *it2;
         Seek(*it2);
-        num += curr_frame_ - *it2;
+        LOG(INFO) << "current: " << curr_frame_ << ", adjust skip from " << num << " to " << num + old_frame - *it2;
+        num += old_frame - *it2;
     }
 
     LOG(INFO) << "started skipping with: " << num;
@@ -348,7 +352,7 @@ void FFMPEGVideoReader::SkipFrames(int64_t num) {
         // LOG(INFO) << "skip: " << num;
         --num;
     }
-    LOG(INFO) << " stopped skipframes";
+    LOG(INFO) << " stopped skipframes: " << curr_frame_;
 }
 
 NDArray FFMPEGVideoReader::GetBatch(std::vector<int64_t> indices) {
@@ -358,13 +362,14 @@ NDArray FFMPEGVideoReader::GetBatch(std::vector<int64_t> indices) {
     int64_t frame_count = GetFrameCount();
     for (std::size_t i = 0; i < indices.size(); ++i) {
         int64_t pos = indices[i];
+        LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
         CHECK_LT(pos, frame_count);
         CHECK_GE(pos, 0);
-        if (curr_frame_ + 1 == pos) {
+        if (curr_frame_ == pos) {
             // no need to seek
         } else if (pos > curr_frame_) {
             // skip positive number of frames
-            SkipFrames(pos - curr_frame_ - 1);
+            SkipFrames(pos - curr_frame_);
         } else {
             // seek no matter what
             SeekAccurate(pos);

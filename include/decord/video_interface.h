@@ -28,6 +28,13 @@ enum InterpolationType {
     kInterpolationArea = 2U,
 };
 
+enum VideoLoaderShuffleType {
+    kSequential = 0U,
+    kShuffleVideoOrderOnly,
+    kShuffleBoth,
+    kShuffleInsideVideoOnly,
+};
+
 struct Size {
     uint32_t width;
     uint32_t height;

@@ -39,6 +39,7 @@ class VideoLoader(object):
         if self._curr >= self._len:
             raise StopIteration
         arr = _CAPI_VideoLoaderNext(self._handle)
+        self._curr += 1
         return arr
     
     def next(self):
