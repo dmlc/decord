@@ -43,6 +43,10 @@ NDArray CopyToNDArray(AVFramePtr p) {
 
 FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
      : codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0), width_(width), height_(height), eof_(false) {
+    // av_register_all deprecated in latest versions
+    #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
+    av_register_all();
+    #endif
     // allocate format context
     fmt_ctx_.reset(avformat_alloc_context());
     if (!fmt_ctx_) {

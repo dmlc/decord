@@ -23,6 +23,7 @@ extern "C" {
 #include <libavutil/avutil.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/opt.h>
+#include <libavutil/version.h>
 #ifdef __cplusplus
 }
 #endif

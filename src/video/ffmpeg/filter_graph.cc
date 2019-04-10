@@ -23,8 +23,14 @@ FFMPEGFilterGraph::~FFMPEGFilterGraph() {
 
 void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx) {
     char args[512];
+    #if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(7,14,100)
+    avfilter_register_all();
+    #endif
     const AVFilter *buffersrc  = avfilter_get_by_name("buffer");
 	const AVFilter *buffersink = avfilter_get_by_name("buffersink");
+    if (!buffersink) {
+        buffersink = avfilter_get_by_name("ffbuffersink");
+    } 
     CHECK(buffersrc) << "Error: no buffersrc";
     CHECK(buffersink) << "Error: no buffersink";
     AVFilterInOut *outputs = avfilter_inout_alloc();
