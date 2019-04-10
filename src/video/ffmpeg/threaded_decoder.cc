@@ -48,7 +48,7 @@ void FFMPEGThreadedDecoder::Stop() {
         frame_queue_->SignalForKill();
     }
     if (t_.joinable()) {
-        LOG(INFO) << "joining";
+        // LOG(INFO) << "joining";
         t_.join();
     }
 }

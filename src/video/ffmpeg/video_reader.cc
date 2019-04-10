@@ -331,7 +331,7 @@ void FFMPEGVideoReader::SkipFrames(int64_t num) {
     CHECK_GE(it1 - key_indices_.begin(), 0);
     auto it2 = std::upper_bound(key_indices_.begin(), key_indices_.end(), curr_frame_ + num) - 1;
     CHECK_GE(it2 - key_indices_.begin(), 0);
-    LOG(INFO) << "first: " << it1 - key_indices_.begin() << " second: " << it2 - key_indices_.begin() << ", " << *it1 << ", " << *it2;
+    // LOG(INFO) << "first: " << it1 - key_indices_.begin() << " second: " << it2 - key_indices_.begin() << ", " << *it1 << ", " << *it2;
     if (it2 > it1) {
         int64_t old_frame = curr_frame_;
         LOG(INFO) << "Seek to frame: " << *it2;
@@ -352,7 +352,7 @@ void FFMPEGVideoReader::SkipFrames(int64_t num) {
         // LOG(INFO) << "skip: " << num;
         --num;
     }
-    LOG(INFO) << " stopped skipframes: " << curr_frame_;
+    // LOG(INFO) << " stopped skipframes: " << curr_frame_;
 }
 
 NDArray FFMPEGVideoReader::GetBatch(std::vector<int64_t> indices) {
