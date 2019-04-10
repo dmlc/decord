@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 project(decord C CXX)
 
 if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
@@ -21,6 +21,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_
 cmake_policy(SET CMP0042 NEW)
 
 # Generic compilation options
+set(CMAKE_CXX_STANDARD 11)
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -50,19 +51,18 @@ else(MSVC)
   endif(OPENMP_FOUND)
 endif(MSVC)
 
-include(FindFFmpeg)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/FindFFmpeg.cmake)
 #find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE AVFILTER REQUIRED)
 
 if(FFMPEG_FOUND)
     #  FFMPEG_INCLUDE_DIRS  - Include directory necessary for using the required components headers.
     #  FFMPEG_LIBRARIES     - Link these to use the required ffmpeg components.
     #  FFMPEG_DEFINITIONS   - Compiler switches required for using the required ffmpeg components.
-    message("FFMPEG_INCLUDE_DIRS = ${FFMPEG_INCLUDE_DIRS} ")
+    message("FFMPEG_INCLUDE_DIR = ${FFMPEG_INCLUDE_DIR} ")
     message("FFMPEG_LIBRARIES = ${FFMPEG_LIBRARIES} ")
-    message("FFMPEG_DEFINITIONS = ${FFMPEG_DEFINITIONS} ")
-
     include_directories(${FFMPEG_INCLUDE_DIRS})
-
+else()
+    message( FATAL_ERROR "Unable to find FFMPEG automatically, please specify FFMPEG " )
 endif()
 
 # Source file lists

@@ -7,6 +7,7 @@
 #include "video_loader.h"
 
 #include <sstream>
+#include <algorithm>
 
 namespace decord {
 namespace ffmpeg {
@@ -81,7 +82,7 @@ void FFMPEGVideoLoader::Reset() {
         std::vector<std::size_t> random_array;
         random_array.reserve(visit_order_.size());
         for (std::size_t i = 0; i < visit_buffer_.size(); ++i) {
-            for (int64_t j = 0; j < visit_buffer_[i].size(); ++j) {
+            for (std::size_t j = 0; j < visit_buffer_[i].size(); ++j) {
                 random_array.emplace_back(i);
             }
         }

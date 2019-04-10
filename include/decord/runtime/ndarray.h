@@ -317,7 +317,7 @@ inline void NDArray::CopyFrom(const NDArray& other) {
 template<typename T>
 inline void NDArray::CopyFrom(std::vector<T>& other, std::vector<int64_t>& shape) {
   CHECK(data_ != nullptr);
-  int64_t size = 1;
+  std::size_t size = 1;
   for (int64_t s : shape) {
     size *= s;
   }

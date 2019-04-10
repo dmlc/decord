@@ -5,7 +5,7 @@
  */
 
 #include "video_reader.h"
-
+#include <algorithm>
 #include <decord/runtime/ndarray.h>
 
 namespace decord {
@@ -51,8 +51,9 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
     // LOG(INFO) << "opened fmt ctx";
     // open file
     auto fmt_ctx = fmt_ctx_.get();
-    if(avformat_open_input(&fmt_ctx, fn.c_str(), NULL, NULL) != 0 ) {
-        LOG(FATAL) << "ERROR opening file: " << fn;
+    int open_ret = avformat_open_input(&fmt_ctx, fn.c_str(), NULL, NULL);
+    if( open_ret != 0 ) {
+        LOG(FATAL) << "ERROR opening file: " << fn.c_str() << ", " << av_make_error_string((char*)__builtin_alloca(AV_ERROR_MAX_STRING_SIZE),AV_ERROR_MAX_STRING_SIZE, open_ret);
     }
 
     LOG(INFO) << "opened input";
@@ -169,7 +170,8 @@ unsigned int FFMPEGVideoReader::QueryStreams() const {
 
 int64_t FFMPEGVideoReader::GetFrameCount() const {
    CHECK(fmt_ctx_ != NULL);
-   CHECK(actv_stm_idx_ >= 0 && actv_stm_idx_ < fmt_ctx_->nb_streams);
+   CHECK(actv_stm_idx_ >= 0);
+   CHECK(actv_stm_idx_ >= 0 && static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
    int64_t cnt = fmt_ctx_->streams[actv_stm_idx_]->nb_frames;
    if (cnt < 1) {
        AVStream *stm = fmt_ctx_->streams[actv_stm_idx_];

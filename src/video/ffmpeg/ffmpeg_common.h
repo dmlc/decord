@@ -9,6 +9,8 @@
 
 #include <memory>
 #include <queue>
+#include <functional>
+#include <atomic>
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,7 +20,6 @@ extern "C" {
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
-#include <libswscale/swscale.h>
 #include <libavutil/avutil.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/opt.h>

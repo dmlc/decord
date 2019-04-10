@@ -110,7 +110,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         } else if (AVERROR(EAGAIN) == got_picture || AVERROR_EOF == got_picture) {
             frame_queue_->Push(AVFramePtr(nullptr, [](AVFrame *p){}));
         } else {
-            LOG(FATAL) << "Thread worker: Error decoding frame: " << av_err2str(got_picture);
+            LOG(FATAL) << "Thread worker: Error decoding frame: " << av_make_error_string((char*)__builtin_alloca(AV_ERROR_MAX_STRING_SIZE),AV_ERROR_MAX_STRING_SIZE, got_picture);
         }
         // free raw memories allocated with ffmpeg
         // av_packet_unref(pkt);

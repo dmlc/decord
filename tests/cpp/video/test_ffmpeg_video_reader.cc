@@ -5,7 +5,7 @@
 
 using NDArray = decord::runtime::NDArray;
 int main(int argc, const char **argv) {
-    auto vr = decord::GetVideoReader("test4.avi");
+    auto vr = decord::GetVideoReader("test.mp4");
     LOG(INFO) << "Frame count: " << vr->GetFrameCount();
     vr->QueryStreams();
     NDArray array;

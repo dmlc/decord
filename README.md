@@ -8,3 +8,21 @@
 - LibAV
 - Nvidia Codecs
 - Intel Codecs
+
+
+## Installation
+
+### Install via pip
+TODO
+
+### Install from source
+
+#### Linux
+
+Install the system packages for building the shared library, for Debian/Ubuntu users, run:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential python3-dev make cmake libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
+```
+
