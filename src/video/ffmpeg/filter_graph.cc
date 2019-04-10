@@ -16,7 +16,6 @@ FFMPEGFilterGraph::FFMPEGFilterGraph(std::string filters_descr, AVCodecContext *
 }
 
 FFMPEGFilterGraph::~FFMPEGFilterGraph() {
-    LOG(INFO) << "Destruct FIlter Graph";
     // avfilter_free(buffersink_ctx_);
     // avfilter_free(buffersrc_ctx_);
     // avfilter_graph_free(&filter_graph_);
