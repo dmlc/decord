@@ -135,6 +135,9 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     for (auto i : key_indices_) {
         LOG(INFO) << i;
     }
+    // for (int i = 0; i < 100; ++i) {
+    //     PushNext();
+    // }
 }
 
 unsigned int FFMPEGVideoReader::QueryStreams() const {
