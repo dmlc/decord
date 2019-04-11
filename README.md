@@ -88,6 +88,11 @@ python3 setup.py install --user
 ```
 
 
+#### Windows
+
+For windows, you will need CMake and Visual Studio for C++ compilation.
+
+
 ## Usage
 
 Decord provides minimal API set for bootstraping.
