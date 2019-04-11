@@ -186,9 +186,11 @@ int64_t FFMPEGVideoReader::GetFrameCount() const {
 }
 
 bool FFMPEGVideoReader::Seek(int64_t pos) {
+    if (curr_frame_ == pos) return true;
     decoder_->Clear();
     eof_ = false;
     int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / GetFrameCount();
+    LOG(INFO) << "ts as by seek: " << ts;
     int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, 
                                 ts-1, ts, ts+1, 
                                 AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
@@ -243,6 +245,7 @@ void FFMPEGVideoReader::PushNext() {
             // LOG(INFO) << "Packet index: " << packet->stream_index << " vs. " << actv_stm_idx_;
             // av_packet_unref(packet);
             // LOG(INFO) << "Successfully load packet";
+            LOG(FATAL) << packet->pts << " dts: " << packet->dts;
             decoder_->Push(packet);
             // LOG(INFO) << "Pushed packet to decoder.";
             break;
@@ -302,6 +305,7 @@ void FFMPEGVideoReader::IndexKeyframes() {
             ++cnt;
         }
     }
+    curr_frame_ = GetFrameCount();
     Seek(0);
 }
 
