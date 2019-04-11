@@ -4,11 +4,11 @@
 
 `Decord` is a reverse procedure of `Record`. It provides convenient video slicing methods based on a thin wrapper on top of hardware accelerated video decoders, e.g.
 
-- FFMPEG
-- LibAV
-- Nvidia Codecs
+- FFMPEG/LibAV(On going)
+- Nvidia Codecs(Planed)
 - Intel Codecs
 
+`Decord` was designed to handle awkward video shuffling experience in order to provide smooth experiences similar to random image loader for deep learning.
 
 ## Installation
 
