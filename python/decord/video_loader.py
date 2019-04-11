@@ -7,6 +7,7 @@ import numpy as np
 from ._ffi.base import c_array, c_str
 from ._ffi.function import _init_api
 from .base import DECORDError
+from . import ndarray as _nd
 
 VideoLoaderHandle = ctypes.c_void_p
 

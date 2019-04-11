@@ -92,6 +92,8 @@ python3 setup.py install --user
 
 For windows, you will need CMake and Visual Studio for C++ compilation.
 
+TODO
+
 
 ## Usage
 
@@ -142,3 +144,5 @@ shuffle = 3  # random frame access in each video only
 ```
 
 ## Preliminary Benchmarks
+
+TODO
