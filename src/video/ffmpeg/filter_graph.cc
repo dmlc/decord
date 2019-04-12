@@ -85,6 +85,10 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 
     /* Config filter graph */
     CHECK_GE(avfilter_graph_config(filter_graph_.get(), NULL), 0) << "Failed to config filter graph";
+
+	/* automatic threading */
+	LOG(INFO) << "Original GraphFilter nb_threads: " << filter_graph_->nb_threads;
+	filter_graph_->nb_threads = 0;
 }
 
 void FFMPEGFilterGraph::Push(AVFrame *frame) {

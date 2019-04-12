@@ -164,6 +164,8 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
     decoder_ = std::unique_ptr<FFMPEGThreadedDecoder>(new FFMPEGThreadedDecoder());
     auto dec_ctx = avcodec_alloc_context3(dec);
+	LOG(INFO) << "Original decoder multithreading: " << dec_ctx->thread_count;
+	dec_ctx->thread_count = 0;
     // CHECK_GE(avcodec_copy_context(dec_ctx, fmt_ctx_->streams[stream_nb]->codec), 0) << "Error: copy context";
     // CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0) << "Error: copy parameters to codec context.";
     // copy codec parameters to context
