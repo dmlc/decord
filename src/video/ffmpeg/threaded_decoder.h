@@ -39,6 +39,7 @@ class FFMPEGThreadedDecoder {
 
         FrameQueuePtr frame_queue_;
         std::atomic<int> frame_count_;
+        std::atomic<bool> draining_;
         std::thread t_;
         // std::thread fetcher_;
         // std::condition_variable cv_;

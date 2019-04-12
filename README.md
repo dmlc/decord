@@ -145,4 +145,10 @@ shuffle = 3  # random frame access in each video only
 
 ## Preliminary Benchmarks
 
-TODO
+| Setting             | OpenCV VideoCapture | NVVL | Decord |
+|---------------------|---------------------|------|--------|
+| CPU sequential read | 1.0x                | -    | 1.1x   |
+| CPU random acess(no accurate seek)  | 0.08x                | -    | 0.23x  |
+| CPU random acess (accurate seek)                    |    -                 |      |  0.06x  |
+|                     |                     |      |        |
+|                     |                     |      |        |

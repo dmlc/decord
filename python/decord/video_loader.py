@@ -13,7 +13,7 @@ VideoLoaderHandle = ctypes.c_void_p
 
 
 class VideoLoader(object):
-    def __init__(self, uris, shape, interval, skip, shuffle, prefetch):
+    def __init__(self, uris, shape, interval, skip, shuffle, prefetch=0):
         self._handle = None
         assert isinstance(uris, (list, tuple))
         assert (len(uris) > 0)

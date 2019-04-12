@@ -11,7 +11,7 @@
 namespace decord {
 namespace ffmpeg {
 
-FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), run_(false){
+FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false){
     LOG(INFO) << "ThreadedDecoder ctor: " << run_.load();
     
     // Start();
@@ -60,6 +60,9 @@ void FFMPEGThreadedDecoder::Clear() {
 void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt) {
     pkt_queue_->Push(pkt);
     ++frame_count_;
+    if (!pkt) {
+        draining_.store(true);
+    }
     // LOG(INFO)<< "frame push: " << frame_count_;
     // LOG(INFO) << "Pushed pkt to pkt_queue";
 }
@@ -67,8 +70,8 @@ void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt) {
 bool FFMPEGThreadedDecoder::Pop(AVFramePtr *frame) {
     // Pop is blocking operation
     // unblock and return false if queue has been destroyed.
-    if (!frame_count_.load()) {
-        // LOG(FATAL) << "No count!";
+    
+    if (!frame_count_.load() && !draining_.load()) {
         return false;
     }
     bool ret = frame_queue_->Pop(frame);
@@ -96,21 +99,36 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         }
         AVFramePtr frame = AVFramePool::Get()->Acquire();
         AVFramePtr out_frame = AVFramePool::Get()->Acquire();
-        // AVFramePtr frame = AVFramePtr(av_frame_alloc());
-        // AVFramePtr out_frame = AVFramePtr(av_frame_alloc());
         AVFrame *out_frame_p = out_frame.get();
-        CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
-        got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
-        // avcodec_decode_video2(dec_ctx_.ptr.get(), frame.Get(), &got_picture, pkt.Get());
-        if (got_picture == 0) {
-            // filter image frame (format conversion, scaling...)
-            filter_graph_->Push(frame.get());
-            CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
-            frame_queue_->Push(out_frame);
-        } else if (AVERROR(EAGAIN) == got_picture || AVERROR_EOF == got_picture) {
+        if (!pkt) {
+            LOG(INFO) << "Draining mode start...";
+            // draining mode, pulling buffered frames out
+            CHECK_GE(avcodec_send_packet(dec_ctx_.get(), NULL), 0) << "Thread worker: Error entering draining mode.";
+            while (true) {
+                got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
+                if (got_picture == AVERROR_EOF) break;
+                // filter image frame (format conversion, scaling...)
+                filter_graph_->Push(frame.get());
+                CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
+                frame_queue_->Push(out_frame);
+            }
+            draining_.store(false);
             frame_queue_->Push(AVFramePtr(nullptr, [](AVFrame *p){}));
         } else {
-            LOG(FATAL) << "Thread worker: Error decoding frame: " << got_picture;
+            // normal mode, push in valid packets and retrieve frames
+            CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
+            got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
+            if (got_picture == 0) {
+                // filter image frame (format conversion, scaling...)
+                filter_graph_->Push(frame.get());
+                CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
+                frame_queue_->Push(out_frame);
+                // LOG(INFO) << "pts: " << out_frame->pts;
+            } else if (AVERROR(EAGAIN) == got_picture || AVERROR_EOF == got_picture) {
+                frame_queue_->Push(AVFramePtr(nullptr, [](AVFrame *p){}));
+            } else {
+                LOG(FATAL) << "Thread worker: Error decoding frame: " << got_picture;
+            }
         }
         // free raw memories allocated with ffmpeg
         // av_packet_unref(pkt);

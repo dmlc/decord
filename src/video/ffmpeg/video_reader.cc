@@ -288,6 +288,8 @@ void FFMPEGVideoReader::PushNext() {
         if (ret < 0) {
             if (ret == AVERROR_EOF) {
                 eof_ = true;
+                // flush buffer
+                decoder_->Push(nullptr);
                 return;
             } else {
                 LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
@@ -328,6 +330,7 @@ NDArray FFMPEGVideoReader::NextFrame() {
     if (frame == nullptr) {
         return NDArray::Empty({}, kUInt8, kCPU);
     }
+    // LOG(INFO) << "pts: " << frame->pts;
     NDArray arr = AsNDArray(frame);
     return arr;
 }
@@ -344,7 +347,6 @@ void FFMPEGVideoReader::IndexKeyframes() {
         if (ret < 0) {
             if (ret == AVERROR_EOF) {
                 eof = true;
-				LOG(INFO) << "EOF reached. " << cnt;
                 break;
             } else {
                 LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
@@ -428,6 +430,14 @@ NDArray FFMPEGVideoReader::GetBatch(std::vector<int64_t> indices) {
         LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
         CHECK_LT(pos, frame_count);
         CHECK_GE(pos, 0);
+#if 1
+        if (curr_frame_ == pos) {
+            // no need to seek
+        } else {
+            // seek no matter what
+            Seek(pos);
+        }
+#else
         if (curr_frame_ == pos) {
             // no need to seek
         } else if (pos > curr_frame_) {
@@ -437,6 +447,7 @@ NDArray FFMPEGVideoReader::GetBatch(std::vector<int64_t> indices) {
             // seek no matter what
             SeekAccurate(pos);
         }
+#endif
         AVFramePtr frame = NextFrameImpl();
         if (frame == nullptr && eof_) {
             LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
