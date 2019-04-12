@@ -13,6 +13,56 @@ namespace ffmpeg {
 
 using NDArray = runtime::NDArray;
 
+static void AVFrameManagerDeleter(DLManagedTensor *manager) {
+	delete manager->manager_ctx;
+	delete manager;
+}
+
+void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
+	CHECK(p) << "Error: converting empty AVFrame to DLTensor";
+	// int channel = p->linesize[0] / p->width;
+	CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24)
+		<< "Only support RGB24 image to NDArray conversion, given: "
+		<< AVPixelFormat(p->format);
+
+	DLContext ctx;
+	if (p->hw_frames_ctx) {
+		ctx = DLContext({ kDLGPU, 0 });
+	}
+	else {
+		ctx = kCPU;
+	}
+	// LOG(INFO) << p->height << " x";
+	// std::vector<int64_t> shape = { p->height, p->width, p->linesize[0] / p->width };
+	shape[0] = p->height;
+	shape[1] = p->width;
+	shape[2] = p->linesize[0] / p->width;
+	dlt.data = p->data[0];
+	dlt.ctx = ctx;
+	dlt.ndim = 3;
+	dlt.dtype = kUInt8;
+	dlt.shape = shape;
+	dlt.strides = NULL;
+	dlt.byte_offset = 0;
+}
+
+struct AVFrameManager {
+	AVFramePtr ptr;
+
+
+	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
+};
+
+NDArray AsNDArray(AVFramePtr p) {
+	DLManagedTensor* manager = new DLManagedTensor();
+	int64_t shape[3];
+	ToDLTensor(p, manager->dl_tensor, shape);
+	manager->manager_ctx = new AVFrameManager(p);
+	manager->deleter = AVFrameManagerDeleter;
+	NDArray arr = NDArray::FromDLPack(manager);
+	return arr;
+}
+
 NDArray CopyToNDArray(AVFramePtr p) {
     CHECK(p) << "Error: converting empty AVFrame to DLTensor";
     // int channel = p->linesize[0] / p->width;
@@ -276,7 +326,7 @@ NDArray FFMPEGVideoReader::NextFrame() {
     if (frame == nullptr) {
         return NDArray::Empty({}, kUInt8, kCPU);
     }
-    NDArray arr = CopyToNDArray(frame);
+    NDArray arr = AsNDArray(frame);
     return arr;
 }
 

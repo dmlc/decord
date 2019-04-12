@@ -139,6 +139,7 @@ NDArray NDArray::FromDLPack(DLManagedTensor* tensor) {
   data->deleter = Internal::DLPackDeleter;
   data->manager_ctx = tensor;
   data->dl_tensor = tensor->dl_tensor;
+  data->shape_.assign(data->dl_tensor.shape, data->dl_tensor.shape + data->dl_tensor.ndim);
   return NDArray(data);
 }
 
