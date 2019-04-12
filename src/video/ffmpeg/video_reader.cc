@@ -13,11 +13,6 @@ namespace ffmpeg {
 
 using NDArray = runtime::NDArray;
 
-static void AVFrameManagerDeleter(DLManagedTensor *manager) {
-	delete manager->manager_ctx;
-	delete manager;
-}
-
 void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 	CHECK(p) << "Error: converting empty AVFrame to DLTensor";
 	// int channel = p->linesize[0] / p->width;
@@ -52,6 +47,11 @@ struct AVFrameManager {
 
 	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
 };
+
+static void AVFrameManagerDeleter(DLManagedTensor *manager) {
+	delete static_cast<AVFrameManager*>(manager->manager_ctx);
+	delete manager;
+}
 
 NDArray AsNDArray(AVFramePtr p) {
 	DLManagedTensor* manager = new DLManagedTensor();
