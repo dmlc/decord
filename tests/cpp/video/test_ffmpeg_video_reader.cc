@@ -5,13 +5,19 @@
 // #include <gtest/gtest.h>
 
 using NDArray = decord::runtime::NDArray;
+
+std::time_t getTimeStamp() {
+	std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
+	return tp.time_since_epoch().count();
+}
+
 int main(int argc, const char **argv) {
     auto vr = decord::GetVideoReader("test2.mp4");
     LOG(INFO) << "Frame count: " << vr->GetFrameCount();
     vr->QueryStreams();
     NDArray array;
     int cnt = 0;
-    auto start = std::chrono::system_clock::now();
+	auto start = getTimeStamp();
     while (1) {
         array = vr->NextFrame();
         // LOG(INFO) << array.Size();
@@ -20,9 +26,8 @@ int main(int argc, const char **argv) {
         // if (cnt > 200) break;
         // LOG(INFO) << "Frame: " << cnt;
     }
-    auto end = std::chrono::system_clock::now();
-    auto elapsed = end - start;
-    LOG(INFO) << cnt << " frame. Elapsed time: " << elapsed.count() / 1000000.0;
+    auto end = getTimeStamp();
+	LOG(INFO) << cnt << " frame. Elapsed time: " << (end - start) / 1000.0;
     return 0;
 
     LOG(INFO) << " reset by seek";
