@@ -57,7 +57,7 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
     auto fmt_ctx = fmt_ctx_.get();
     int open_ret = avformat_open_input(&fmt_ctx, fn.c_str(), NULL, NULL);
     if( open_ret != 0 ) {
-        LOG(FATAL) << "ERROR opening file: " << fn.c_str() << ", " << av_make_error_string((char*)__builtin_alloca(AV_ERROR_MAX_STRING_SIZE),AV_ERROR_MAX_STRING_SIZE, open_ret);
+        LOG(FATAL) << "ERROR opening file: " << fn.c_str() << ", " << open_ret;
     }
 
     LOG(INFO) << "opened input";
@@ -229,8 +229,7 @@ bool FFMPEGVideoReader::SeekAccurate(int64_t pos) {
 
 void FFMPEGVideoReader::PushNext() {
     // AVPacket *packet = av_packet_alloc();
-    // AVPacketPtr packet = AVPacketPool::Get()->Acquire();
-    AVPacketPtr packet = AVPacketPtr(av_packet_alloc());
+    AVPacketPtr packet = AVPacketPool::Get()->Acquire();
     int ret = -1;
     while (!eof_) {
         ret = av_read_frame(fmt_ctx_.get(), packet.get());
@@ -284,8 +283,7 @@ NDArray FFMPEGVideoReader::NextFrame() {
 void FFMPEGVideoReader::IndexKeyframes() {
     Seek(0);
     key_indices_.clear();
-    // AVPacketPtr packet = AVPacketPool::Get()->Acquire();
-    AVPacketPtr packet = AVPacketPtr(av_packet_alloc());
+    AVPacketPtr packet = AVPacketPool::Get()->Acquire();
     int ret = -1;
     bool eof = false;
     int64_t cnt = 0;
@@ -294,6 +292,7 @@ void FFMPEGVideoReader::IndexKeyframes() {
         if (ret < 0) {
             if (ret == AVERROR_EOF) {
                 eof = true;
+				LOG(INFO) << "EOF reached. " << cnt;
                 break;
             } else {
                 LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
@@ -308,7 +307,7 @@ void FFMPEGVideoReader::IndexKeyframes() {
         }
     }
     curr_frame_ = GetFrameCount();
-    Seek(0);
+	ret = Seek(0);
 }
 
 runtime::NDArray FFMPEGVideoReader::GetKeyIndices() {

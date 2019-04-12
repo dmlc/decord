@@ -173,7 +173,7 @@ class DECORD_DLL DeviceAPI {
    * \param allow_missing Whether allow missing
    * \return The corresponding device API.
    */
-  DECORD_DLL static DeviceAPI* Get(DECORDContext ctx, bool allow_missing = false);
+  static DeviceAPI* Get(DECORDContext ctx, bool allow_missing = false);
 };
 
 /*! \brief The device type bigger than this is RPC device */

@@ -3,7 +3,6 @@
  * \file ndarray.cc
  * \brief NDArray container infratructure.
  */
-#include <numeric>
 #include <dmlc/logging.h>
 #include <decord/runtime/ndarray.h>
 #include <decord/runtime/c_runtime_api.h>
@@ -120,14 +119,6 @@ NDArray NDArray::CreateView(std::vector<int64_t> shape,
 
 DLManagedTensor* NDArray::ToDLPack() const {
   return Internal::ToDLPack(data_);
-}
-
-int64_t NDArray::Size() const {
-  if (!data_) return 0;
-  if (data_->shape_.empty()) return 0;
-  return std::accumulate(
-    std::begin(data_->shape_), std::end(data_->shape_), 
-    1, std::multiplies<int64_t>());
 }
 
 NDArray NDArray::Empty(std::vector<int64_t> shape,

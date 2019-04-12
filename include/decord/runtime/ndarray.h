@@ -9,6 +9,7 @@
 #include <atomic>
 #include <vector>
 #include <utility>
+#include <numeric>
 #include "c_runtime_api.h"
 #include "serializer.h"
 
@@ -80,12 +81,12 @@ class NDArray {
   bool defined() const {
     return data_ != nullptr;
   }
-  /*! \return Element count of NDArray */
-  int64_t Size() const;
   /*! \return If both NDArray reference the same container */
   bool same_as(const NDArray& other) const {
     return data_ == other.data_;
   }
+  /*! \return Element count of NDArray */
+  inline int64_t Size() const;
   /*! \brief reset the content of NDArray to be nullptr */
   inline void reset();
   /*!
@@ -359,6 +360,14 @@ inline NDArray NDArray::CopyTo(const DLContext& ctx) const {
                       dptr->dtype, ctx);
   this->CopyTo(ret);
   return ret;
+}
+
+inline int64_t NDArray::Size() const {
+  if (!data_) return 0;
+  if (data_->shape_.empty()) return 0;
+  return std::accumulate(
+    std::begin(data_->shape_), std::end(data_->shape_),
+    1, std::multiplies<int64_t>());
 }
 
 inline int NDArray::use_count() const {

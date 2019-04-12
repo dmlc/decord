@@ -17,7 +17,7 @@ include_directories("3rdparty/dmlc-core/include")
 # initial variables
 set(DECORD_LINKER_LIBS "")
 set(DECORD_RUNTIME_LINKER_LIBS "")
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules;${CMAKE_MODULE_PATH}")
 cmake_policy(SET CMP0042 NEW)
 
 # Generic compilation options
@@ -28,7 +28,9 @@ if(MSVC)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DDECORD_EXPORTS")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /bigobj")
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
   if(USE_MSVC_MT)
     foreach(flag_var
         CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
@@ -51,7 +53,7 @@ else(MSVC)
   endif(OPENMP_FOUND)
 endif(MSVC)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/FindFFmpeg.cmake)
+include(FindFFmpeg)
 #find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE AVFILTER REQUIRED)
 
 if(FFMPEG_FOUND)
@@ -60,7 +62,7 @@ if(FFMPEG_FOUND)
     #  FFMPEG_DEFINITIONS   - Compiler switches required for using the required ffmpeg components.
     message("FFMPEG_INCLUDE_DIR = ${FFMPEG_INCLUDE_DIR} ")
     message("FFMPEG_LIBRARIES = ${FFMPEG_LIBRARIES} ")
-    include_directories(${FFMPEG_INCLUDE_DIRS})
+    include_directories(${FFMPEG_INCLUDE_DIR})
 else()
     message( FATAL_ERROR "Unable to find FFMPEG automatically, please specify FFMPEG " )
 endif()
@@ -84,8 +86,3 @@ set(TEST_EXECS "")
 file(GLOB TEST_SRCS tests/cpp/video/*.cc)
 add_executable(test_decord ${TEST_SRCS})
 target_link_libraries(test_decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS} ${FFMPEG_LIBRARIES} decord)
-
-set(TEST_EXECS "")
-file(GLOB TEST_SRCS tests/cpp/video/*.c)
-add_executable(test_decord1 ${TEST_SRCS})
-target_link_libraries(test_decord1 ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS} ${FFMPEG_LIBRARIES} decord)
