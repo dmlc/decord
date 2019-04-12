@@ -430,7 +430,8 @@ NDArray FFMPEGVideoReader::GetBatch(std::vector<int64_t> indices) {
         LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
         CHECK_LT(pos, frame_count);
         CHECK_GE(pos, 0);
-#if 1
+#if 0
+        // TODO(zhreshold): make sure this seek strategy is useful.
         if (curr_frame_ == pos) {
             // no need to seek
         } else {
