@@ -49,14 +49,14 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
     //         "video_size=%dx%d:pix_fmt=%d",
     //         dec_ctx->width, dec_ctx->height, dec_ctx->pix_fmt);
     
-    LOG(INFO) << "filter args: " << args;
+    // LOG(INFO) << "filter args: " << args;
     
     // AVFilterContext *buffersrc_ctx;
     // AVFilterContext *buffersink_ctx;
     CHECK_GE(avfilter_graph_create_filter(&buffersrc_ctx_, buffersrc, "in",
 		args, NULL, filter_graph_.get()), 0) << "Cannot create buffer source";
 
-    LOG(INFO) << "create filter src";
+    // LOG(INFO) << "create filter src";
 
     /* buffer video sink: to terminate the filter chain. */
 	// buffersink_params = av_buffersink_params_alloc();
@@ -64,10 +64,10 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 	CHECK_GE(avfilter_graph_create_filter(&buffersink_ctx_, buffersink, "out",
 		NULL, NULL, filter_graph_.get()), 0) << "Cannot create buffer sink";
 	// av_free(buffersink_params);
-    LOG(INFO) << "create filter sink";
+    // LOG(INFO) << "create filter sink";
     CHECK_GE(av_opt_set_bin(buffersink_ctx_, "pix_fmts", (uint8_t *)&pix_fmts, sizeof(AV_PIX_FMT_RGB24), AV_OPT_SEARCH_CHILDREN), 0) << "Set bin error";
 
-    LOG(INFO) << "create filter set opt";
+    // LOG(INFO) << "create filter set opt";
     /* Endpoints for the filter graph. */
 	outputs->name       = av_strdup("in");
 	outputs->filter_ctx = buffersrc_ctx_;
@@ -87,7 +87,7 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
     CHECK_GE(avfilter_graph_config(filter_graph_.get(), NULL), 0) << "Failed to config filter graph";
 
 	/* automatic threading */
-	LOG(INFO) << "Original GraphFilter nb_threads: " << filter_graph_->nb_threads;
+	// LOG(INFO) << "Original GraphFilter nb_threads: " << filter_graph_->nb_threads;
 	filter_graph_->nb_threads = 0;
 }
 
@@ -100,7 +100,7 @@ void FFMPEGFilterGraph::Push(AVFrame *frame) {
 
 bool FFMPEGFilterGraph::Pop(AVFrame **frame) {
     if (!count_.load()) {
-        LOG(INFO) << "No count in filter graph.";
+        // LOG(INFO) << "No count in filter graph.";
         return false;
     } 
     if (!*frame) *frame = av_frame_alloc();

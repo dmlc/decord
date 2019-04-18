@@ -14,6 +14,7 @@
 
 
 namespace decord {
+static const bool kVerbose = false;
 
 // common data types
 static const DLDataType kUInt8 = { kDLUInt, 8U, 1U };

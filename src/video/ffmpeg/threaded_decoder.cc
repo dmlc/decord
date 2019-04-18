@@ -12,17 +12,17 @@ namespace decord {
 namespace ffmpeg {
 
 FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false){
-    LOG(INFO) << "ThreadedDecoder ctor: " << run_.load();
+    // LOG(INFO) << "ThreadedDecoder ctor: " << run_.load();
     
     // Start();
 }
 
 void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, std::string descr) {
-    LOG(INFO) << "Enter setcontext";
+    // LOG(INFO) << "Enter setcontext";
     bool running = run_.load();
     Stop();
     dec_ctx_.reset(dec_ctx);
-    LOG(INFO) << dec_ctx->width << " x " << dec_ctx->height << " : " << dec_ctx->time_base.num << " , " << dec_ctx->time_base.den;
+    // LOG(INFO) << dec_ctx->width << " x " << dec_ctx->height << " : " << dec_ctx->time_base.num << " , " << dec_ctx->time_base.den;
     // std::string descr = "scale=320:240";
     filter_graph_ = FFMPEGFilterGraphPtr(new FFMPEGFilterGraph(descr, dec_ctx_.get()));
     if (running) {
@@ -101,7 +101,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         AVFramePtr out_frame = AVFramePool::Get()->Acquire();
         AVFrame *out_frame_p = out_frame.get();
         if (!pkt) {
-            LOG(INFO) << "Draining mode start...";
+            // LOG(INFO) << "Draining mode start...";
             // draining mode, pulling buffered frames out
             CHECK_GE(avcodec_send_packet(dec_ctx_.get(), NULL), 0) << "Thread worker: Error entering draining mode.";
             while (true) {

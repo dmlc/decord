@@ -110,14 +110,14 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
         LOG(FATAL) << "ERROR opening file: " << fn.c_str() << ", " << open_ret;
     }
 
-    LOG(INFO) << "opened input";
+    // LOG(INFO) << "opened input";
 
     // find stream info
     if (avformat_find_stream_info(fmt_ctx,  NULL) < 0) {
         LOG(FATAL) << "ERROR getting stream info of file" << fn;
     }
 
-    LOG(INFO) << "find stream info";
+    // LOG(INFO) << "find stream info";
 
     // initialize all video streams and store codecs info
     for (uint32_t i = 0; i < fmt_ctx_->nb_streams; ++i) {
@@ -132,10 +132,10 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
             codecs_.emplace_back(tmp);
         }
     }
-    LOG(INFO) << "initialized all streams";
+    // LOG(INFO) << "initialized all streams";
     // find best video stream (-1 means auto, relay on FFMPEG)
     SetVideoStream(-1);
-    LOG(INFO) << "Set video stream";
+    // LOG(INFO) << "Set video stream";
     decoder_->Start();
 
     // // allocate AVFrame buffer
@@ -150,21 +150,21 @@ FFMPEGVideoReader::FFMPEGVideoReader(std::string fn, int width, int height)
 FFMPEGVideoReader::~FFMPEGVideoReader(){
     // avformat_free_context(fmt_ctx_);
     // avformat_close_input(&fmt_ctx_);
-    LOG(INFO) << "Destruct Video REader";
+    // LOG(INFO) << "Destruct Video REader";
 }
 
 void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     CHECK(fmt_ctx_ != NULL);
     AVCodec *dec;
     int st_nb = av_find_best_stream(fmt_ctx_.get(), AVMEDIA_TYPE_VIDEO, stream_nb, -1, &dec, 0);
-    LOG(INFO) << "find best stream: " << st_nb;
+    // LOG(INFO) << "find best stream: " << st_nb;
     CHECK_GE(st_nb, 0) << "ERROR cannot find video stream with wanted index: " << stream_nb;
     // initialize the mem for codec context
     CHECK(codecs_[st_nb] == dec) << "Codecs of " << st_nb << " is NULL";
-    LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
+    // LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
     decoder_ = std::unique_ptr<FFMPEGThreadedDecoder>(new FFMPEGThreadedDecoder());
     auto dec_ctx = avcodec_alloc_context3(dec);
-	LOG(INFO) << "Original decoder multithreading: " << dec_ctx->thread_count;
+	// LOG(INFO) << "Original decoder multithreading: " << dec_ctx->thread_count;
 	dec_ctx->thread_count = 0;
     // CHECK_GE(avcodec_copy_context(dec_ctx, fmt_ctx_->streams[stream_nb]->codec), 0) << "Error: copy context";
     // CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0) << "Error: copy parameters to codec context.";
@@ -174,19 +174,19 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     // initialize AVCodecContext to use given AVCodec
     CHECK_GE(avcodec_open2(dec_ctx, codecs_[st_nb], NULL), 0)
         << "ERROR open codec through avcodec_open2";
-    LOG(INFO) << "codecs opened.";
+    // LOG(INFO) << "codecs opened.";
     actv_stm_idx_ = st_nb;
-    LOG(INFO) << "time base: " << fmt_ctx_->streams[st_nb]->time_base.num << " / " << fmt_ctx_->streams[st_nb]->time_base.den;
+    // LOG(INFO) << "time base: " << fmt_ctx_->streams[st_nb]->time_base.num << " / " << fmt_ctx_->streams[st_nb]->time_base.den;
     dec_ctx->time_base = fmt_ctx_->streams[st_nb]->time_base;
     char descr[128];
     std::snprintf(descr, sizeof(descr),
             "scale=%d:%d", width_, height_);
     decoder_->SetCodecContext(dec_ctx, std::string(descr));
     IndexKeyframes();
-    LOG(INFO) << "Printing key frames...";
-    for (auto i : key_indices_) {
-        LOG(INFO) << i;
-    }
+    // LOG(INFO) << "Printing key frames...";
+    // for (auto i : key_indices_) {
+    //     LOG(INFO) << i;
+    // }
     
 }
 
@@ -243,7 +243,7 @@ bool FFMPEGVideoReader::Seek(int64_t pos) {
     decoder_->Clear();
     eof_ = false;
     int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / GetFrameCount();
-    LOG(INFO) << "ts as by seek: " << ts;
+    // LOG(INFO) << "ts as by seek: " << ts;
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
     // int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, 
     //                             ts-1, ts, ts+1, 
@@ -254,7 +254,7 @@ bool FFMPEGVideoReader::Seek(int64_t pos) {
     //                             tm, tm, tm, 
     //                             0);
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << pos;
-    LOG(INFO) << "seek return: " << ret;
+    // LOG(INFO) << "seek return: " << ret;
     decoder_->Start();
     if (ret >= 0) {
         curr_frame_ = pos;
@@ -272,7 +272,7 @@ int64_t FFMPEGVideoReader::LocateKeyframe(int64_t pos) {
 
 bool FFMPEGVideoReader::SeekAccurate(int64_t pos) {
     int64_t key_pos = LocateKeyframe(pos);
-    LOG(INFO) << "Accurate seek to " << pos << " with key pos: " << key_pos;
+    // LOG(INFO) << "Accurate seek to " << pos << " with key pos: " << key_pos;
     bool ret = Seek(key_pos);
     if (!ret) return false;
     SkipFrames(pos - key_pos);
@@ -377,9 +377,9 @@ runtime::NDArray FFMPEGVideoReader::GetKeyIndices() {
     dlt.manager_ctx = nullptr;
     runtime::NDArray orig = runtime::NDArray::FromDLPack(&dlt);
     runtime::NDArray ret = runtime::NDArray::Empty(shape, kInt64, kCPU);
-    LOG(INFO) << "begin copy!";
+    // LOG(INFO) << "begin copy!";
     ret.CopyFrom(orig);
-    LOG(INFO) << "copied!";
+    // LOG(INFO) << "copied!";
     return ret;
 }
 
@@ -389,7 +389,7 @@ std::vector<int64_t> FFMPEGVideoReader::GetKeyIndicesVector() const {
 
 void FFMPEGVideoReader::SkipFrames(int64_t num) {
     // check if skip pass keyframes, if so, we can seek to latest keyframe first
-    LOG(INFO) << " Skip Frame start: " << num << " current frame: " << curr_frame_;
+    // LOG(INFO) << " Skip Frame start: " << num << " current frame: " << curr_frame_;
     if (num < 1) return;
     num = std::min(GetFrameCount() - curr_frame_, num);
     auto it1 = std::upper_bound(key_indices_.begin(), key_indices_.end(), curr_frame_) - 1;
@@ -399,13 +399,13 @@ void FFMPEGVideoReader::SkipFrames(int64_t num) {
     // LOG(INFO) << "first: " << it1 - key_indices_.begin() << " second: " << it2 - key_indices_.begin() << ", " << *it1 << ", " << *it2;
     if (it2 > it1) {
         int64_t old_frame = curr_frame_;
-        LOG(INFO) << "Seek to frame: " << *it2;
+        // LOG(INFO) << "Seek to frame: " << *it2;
         Seek(*it2);
-        LOG(INFO) << "current: " << curr_frame_ << ", adjust skip from " << num << " to " << num + old_frame - *it2;
+        // LOG(INFO) << "current: " << curr_frame_ << ", adjust skip from " << num << " to " << num + old_frame - *it2;
         num += old_frame - *it2;
     }
 
-    LOG(INFO) << "started skipping with: " << num;
+    // LOG(INFO) << "started skipping with: " << num;
     AVFramePtr frame;
     decoder_->Start();
     bool ret = false;
@@ -427,7 +427,7 @@ NDArray FFMPEGVideoReader::GetBatch(std::vector<int64_t> indices) {
     int64_t frame_count = GetFrameCount();
     for (std::size_t i = 0; i < indices.size(); ++i) {
         int64_t pos = indices[i];
-        LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
+        // LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
         CHECK_LT(pos, frame_count);
         CHECK_GE(pos, 0);
 #if 0
