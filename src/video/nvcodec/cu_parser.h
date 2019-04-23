@@ -36,7 +36,7 @@ class CUVideoParser {
                   uint8_t* extradata, int extradata_size)
         : parser_{0}, parser_info_{}, parser_extinfo_{}, initialized_{false}
     {
-        init_params(codec, decoder, decode_surfaces, extradata, extradata_size);
+        InitParams(codec, decoder, decode_surfaces, extradata, extradata_size);
 
         if (CUDA_CHECK_CALL(cuvidCreateVideoParser(&parser_, &parser_info_))) {
             initialized_ = true;
@@ -44,36 +44,6 @@ class CUVideoParser {
             LOG(FATAL) << "Problem creating video parser" << std::endl;
         }
 
-    }
-
-    template<typename Decoder>
-    void init_params(int codec, Decoder* decoder, int decode_surfaces,
-                     uint8_t* extradata, int extradata_size) {
-        switch (codec) {
-            case AV_CODEC_ID_H264:
-                parser_info_.CodecType = cudaVideoCodec_H264;
-                break;
-            case AV_CODEC_ID_HEVC:
-                parser_info_.CodecType = cudaVideoCodec_HEVC;
-                // this can probably be better
-                parser_info_.ulMaxNumDecodeSurfaces = 20;
-                break;
-            default:
-                LOG(FATAL) << "Invalid codec: " << avcodec_get_name(codec);
-                return;
-        }
-        parser_info_.ulMaxNumDecodeSurfaces = decode_surfaces;
-        parser_info_.pUserData = decoder;
-        parser_info_.pfnSequenceCallback = Decoder::handle_sequence;
-        parser_info_.pfnDecodePicture = Decoder::handle_decode;
-        parser_info_.pfnDisplayPicture = Decoder::handle_display;
-        parser_info_.pExtVideoInfo = &parser_extinfo_;
-        if (extradata_size > 0) {
-            auto hdr_size = std::min(sizeof(parser_extinfo_.raw_seqhdr_data),
-                                     static_cast<std::size_t>(extradata_size));
-            parser_extinfo_.format.seqhdr_data_length = hdr_size;
-            memcpy(parser_extinfo_.raw_seqhdr_data, extradata, hdr_size);
-        }
     }
 
     CUVideoParser(CUvideoparser parser)
@@ -107,7 +77,7 @@ class CUVideoParser {
         return *this;
     }
 
-    bool initialized() const {
+    bool Initialized() const {
         return initialized_;
     }
 
@@ -116,6 +86,37 @@ class CUVideoParser {
     }
 
   private:
+
+    template<typename Decoder>
+    void InitParams(int codec, Decoder* decoder, int decode_surfaces,
+                     uint8_t* extradata, int extradata_size) {
+        switch (codec) {
+            case AV_CODEC_ID_H264:
+                parser_info_.CodecType = cudaVideoCodec_H264;
+                break;
+            case AV_CODEC_ID_HEVC:
+                parser_info_.CodecType = cudaVideoCodec_HEVC;
+                // this can probably be better
+                parser_info_.ulMaxNumDecodeSurfaces = 20;
+                break;
+            default:
+                LOG(FATAL) << "Invalid codec: " << avcodec_get_name(codec);
+                return;
+        }
+        parser_info_.ulMaxNumDecodeSurfaces = decode_surfaces;
+        parser_info_.pUserData = decoder;
+        parser_info_.pfnSequenceCallback = Decoder::handle_sequence;
+        parser_info_.pfnDecodePicture = Decoder::handle_decode;
+        parser_info_.pfnDisplayPicture = Decoder::handle_display;
+        parser_info_.pExtVideoInfo = &parser_extinfo_;
+        if (extradata_size > 0) {
+            auto hdr_size = std::min(sizeof(parser_extinfo_.raw_seqhdr_data),
+                                     static_cast<std::size_t>(extradata_size));
+            parser_extinfo_.format.seqhdr_data_length = hdr_size;
+            memcpy(parser_extinfo_.raw_seqhdr_data, extradata, hdr_size);
+        }
+    }
+
     CUvideoparser parser_;
     CUVIDPARSERPARAMS parser_info_;
     CUVIDEOFORMATEX parser_extinfo_;
