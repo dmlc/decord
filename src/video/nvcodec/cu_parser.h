@@ -12,6 +12,14 @@
 #include "nvcuvid/nvcuvid.h"
 #include "cu_utils.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <libavcodec/avcodec.h>
+#ifdef __cplusplus
+}
+#endif
+
 namespace decord {
 namespace cuda {
 
@@ -30,29 +38,28 @@ class CUVideoParser {
     {
         init_params(codec, decoder, decode_surfaces, extradata, extradata_size);
 
-        if (cucall(cuvidCreateVideoParser(&parser_, &parser_info_))) {
+        if (CUDA_CHECK_CALL(cuvidCreateVideoParser(&parser_, &parser_info_))) {
             initialized_ = true;
         } else {
-            std::cerr << "Problem creating video parser" << std::endl;
+            LOG(FATAL) << "Problem creating video parser" << std::endl;
         }
 
     }
 
-
     template<typename Decoder>
-    void init_params(Codec codec, Decoder* decoder, int decode_surfaces,
+    void init_params(int codec, Decoder* decoder, int decode_surfaces,
                      uint8_t* extradata, int extradata_size) {
         switch (codec) {
-            case Codec::H264:
+            case AV_CODEC_ID_H264:
                 parser_info_.CodecType = cudaVideoCodec_H264;
                 break;
-            case Codec::HEVC:
+            case AV_CODEC_ID_HEVC:
                 parser_info_.CodecType = cudaVideoCodec_HEVC;
                 // this can probably be better
                 parser_info_.ulMaxNumDecodeSurfaces = 20;
                 break;
             default:
-                std::cerr << "Invalid codec\n";
+                LOG(FATAL) << "Invalid codec: " << avcodec_get_name(codec);
                 return;
         }
         parser_info_.ulMaxNumDecodeSurfaces = decode_surfaces;
@@ -76,7 +83,7 @@ class CUVideoParser {
 
     ~CUVideoParser() {
         if (initialized_) {
-            cucall(cuvidDestroyVideoParser(parser_));
+            CUDA_CHECK_CALL(cuvidDestroyVideoParser(parser_));
         }
     }
 
@@ -89,7 +96,7 @@ class CUVideoParser {
 
     CUVideoParser& operator=(CUVideoParser&& other) {
         if (initialized_) {
-            cucall(cuvidDestroyVideoParser(parser_));
+            CUDA_CHECK_CALL(cuvidDestroyVideoParser(parser_));
         }
         parser_ = other.parser_;
         parser_info_ = other.parser_info_;
