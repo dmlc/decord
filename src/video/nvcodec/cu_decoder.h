@@ -14,6 +14,9 @@ namespace decord {
 namespace cuda {
 
 class CUThreadedDecoder {
+    using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
+    using PacketQueuePtr = std::unique_ptr<PacketQueue>;
+
     public:
         CUThreadedDecoder();
         void SetCodecContext(AVCodecContext *dec_ctx, int height = -1, int width = -1);
@@ -30,7 +33,11 @@ class CUThreadedDecoder {
 
     private:
         CUVideoParser parser_;
-}
+        PacketQueuePtr pkt_queue_;
+        std::thread t_;
+        std::atomic<bool> run_;
+        
+}；
 
 }  // namespace decord
 }  // namespace cuda
