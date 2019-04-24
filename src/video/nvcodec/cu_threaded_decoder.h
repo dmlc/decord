@@ -33,9 +33,9 @@ class CUThreadedDecoder {
         void Push(AVPacketPtr pkt);
         // bool Pop(AVFramePtr *frame);
 
-        static int CUDAAPI handle_sequence(void* user_data, CUVIDEOFORMAT* format);
-        static int CUDAAPI handle_decode(void* user_data, CUVIDPICPARAMS* pic_params);
-        static int CUDAAPI handle_display(void* user_data, CUVIDPARSERDISPINFO* disp_info);
+        static int CUDAAPI callback_sequence(void* user_data, CUVIDEOFORMAT* format);
+        static int CUDAAPI callback_decode(void* user_data, CUVIDPICPARAMS* pic_params);
+        static int CUDAAPI callback_display(void* user_data, CUVIDPARSERDISPINFO* disp_info);
 
     private:
         int device_id_;
@@ -53,21 +53,21 @@ class CUThreadedDecoder {
         
 }；
 
-int CUDAAPI CUThreadedDecoder::handle_sequence(void* user_data, CUVIDEOFORMAT* format) {
+int CUDAAPI CUThreadedDecoder::callback_sequence(void* user_data, CUVIDEOFORMAT* format) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->handle_sequence_(format);
+    return decoder->callback_sequence_(format);
 }
 
-int CUDAAPI CUThreadedDecoder::handle_decode(void* user_data,
+int CUDAAPI CUThreadedDecoder::callback_decode(void* user_data,
                                             CUVIDPICPARAMS* pic_params) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->handle_decode_(pic_params);
+    return decoder->callback_decode_(pic_params);
 }
 
-int CUDAAPI CUThreadedDecoder::handle_display(void* user_data,
+int CUDAAPI CUThreadedDecoder::callback_display(void* user_data,
                                              CUVIDPARSERDISPINFO* disp_info) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->handle_display_(disp_info);
+    return decoder->callback_display_(disp_info);
 }
 
 }  // namespace decord

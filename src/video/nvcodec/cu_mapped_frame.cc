@@ -4,6 +4,7 @@
  * \brief NVCUVID mapped frame
  */
 
+#include "nvcuvid/cuviddec.h"
 #include "cu_mapped_frame.h"
 #include "cu_utils.h"
 
