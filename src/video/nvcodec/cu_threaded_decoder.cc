@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2019 by Contributors if not otherwise specified
  * \file cu_decoder.cc
  * \brief NVCUVID based decoder impl
  */

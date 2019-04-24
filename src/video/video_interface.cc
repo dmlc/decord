@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2019 by Contributors if not otherwise specified
  * \file video_interface.cc
  * \brief Video file reader implementations
  */

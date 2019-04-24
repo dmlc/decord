@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2019 by Contributors if not otherwise specified
  * \file file_util.cc
  */
 #include <dmlc/json.h>

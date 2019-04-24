@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2019 by Contributors if not otherwise specified
  * \file decord/runtime/c_runtime_api.h
  * \brief DECORD runtime library.
  *

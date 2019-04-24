@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2019 by Contributors if not otherwise specified
  * \file dso_dll_module.cc
  * \brief Module to load from dynamic shared library.
  */

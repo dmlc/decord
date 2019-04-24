@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2019 by Contributors if not otherwise specified
  * \file filter_graph.cc
  * \brief FFmpeg Filter Graph Impl
  */

@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2019 by Contributors if not otherwise specified
  * \file pack_args.h
  * \brief Utility to pack DECORDArgs to other type-erased fution calling convention.
  *

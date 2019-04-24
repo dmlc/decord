@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2019 by Contributors if not otherwise specified
  * \file thread_storage_scope.h
  * \brief Extract thread axis configuration from DECORDArgs.
  */
