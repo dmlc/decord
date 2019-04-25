@@ -6,6 +6,7 @@
 
 #include "cu_threaded_decoder.h"
 
+
 namespace decord {
 namespace cuda {
 
@@ -71,6 +72,51 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id, const AVCodecContext *dec_ct
         LOG(FATAL) << "Problem creating video parser";
         return;
     }
+
+}
+
+int CUDAAPI CUThreadedDecoder::CallbackSequence(void* user_data, CUVIDEOFORMAT* format) {
+    auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
+    return decoder->CallbackSequence_(format);
+}
+
+int CUDAAPI CUThreadedDecoder::CallbackDecode(void* user_data,
+                                            CUVIDPICPARAMS* pic_params) {
+    auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
+    return decoder->CallbackDecode_(pic_params);
+}
+
+int CUDAAPI CUThreadedDecoder::CallbackDisplay(void* user_data,
+                                             CUVIDPARSERDISPINFO* disp_info) {
+    auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
+    return decoder->CallbackDisplay_(disp_info);
+}
+
+int CUThreadedDecoder::CallbackSequence_(CUVIDEOFORMAT* format) {
+    return decoder_.initialize(format);
+}
+
+int CUThreadedDecoder::CallbackDecode_(CUVIDPICPARAMS* pic_params) {
+    CHECK_GE(pic_pararms->CurrPicIdx, 0);
+    CHECK_LT(pic_params->CurrPicIdx, buffer_queues_.size());
+    buffer_queues_[pic_params->CurrPicIdx]->Push(pic_params);
+}
+
+int CUThreadedDecoder::CallbackDisplay_(CUVIDPARSERDISPINFO* disp_info) {
+    // convert frame
+    worker_permits_[disp_info->CurrPicIdx].Push(1);
+}
+
+void WorkerThread(int worker_idx) {
+    if (worker_idx >= buffer_queues_.size() || worker_idx >= worker_permits_.size()) return;
+    auto& queue = buffer_queues_[worker_idx];
+    auto& permit_queue = worker_permits_[worker_idx];
+    while (true) {
+        auto pic_params = queue.Pop();  // blocking
+        CUDA_CHECK_CALL(cuvidDecodePicture(decoder_, pic_params));
+        permit_queue.Pop();  // blocking, acquire allowance for next decoding
+    }
+}
 
 }  // namespace cuda
 }  // namespace decord
