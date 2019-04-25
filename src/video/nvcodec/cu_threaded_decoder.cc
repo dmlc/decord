@@ -18,18 +18,18 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id, const AVCodecContext *dec_ct
         LOG(FATAL) << "Invalid CodecContext!";
     }
     
-    if (!CUDA_CHECK_CALL(cuInit(0))) {
+    if (!CHECK_CUDA_CALL(cuInit(0))) {
         LOG(FATAL) << "Unable to initial cuda driver. Is the kernel module installed?";
     }
 
-    if (!CUDA_CHECK_CALL(cuDeviceGet(&device_, device_id_))) {
+    if (!CHECK_CUDA_CALL(cuDeviceGet(&device_, device_id_))) {
         LOG(FATAL) << "Problem getting device info for device "
                   << device_id_ << ", not initializing VideoDecoder\n";
         return;
     }
 
     char device_name[100];
-    if (!CUDA_CHECK_CALL(cuDeviceGetName(device_name, 100, device_))) {
+    if (!CHECK_CUDA_CALL(cuDeviceGetName(device_name, 100, device_))) {
         LOG(FATAL) << "Problem getting device name for device "
                   << device_id_ << ", not initializing VideoDecoder\n";
         return;
@@ -75,46 +75,87 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id, const AVCodecContext *dec_ct
 
 }
 
-int CUDAAPI CUThreadedDecoder::CallbackSequence(void* user_data, CUVIDEOFORMAT* format) {
+int CUDAAPI CUThreadedDecoder::HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->CallbackSequence_(format);
+    return decoder->HandlePictureSequence_(format);
 }
 
-int CUDAAPI CUThreadedDecoder::CallbackDecode(void* user_data,
+int CUDAAPI CUThreadedDecoder::HandlePictureDecode(void* user_data,
                                             CUVIDPICPARAMS* pic_params) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->CallbackDecode_(pic_params);
+    return decoder->HandlePictureDecode_(pic_params);
 }
 
-int CUDAAPI CUThreadedDecoder::CallbackDisplay(void* user_data,
+int CUDAAPI CUThreadedDecoder::HandlePictureDisplay(void* user_data,
                                              CUVIDPARSERDISPINFO* disp_info) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->CallbackDisplay_(disp_info);
+    return decoder->HandlePictureDisplay_(disp_info);
 }
 
-int CUThreadedDecoder::CallbackSequence_(CUVIDEOFORMAT* format) {
+int CUThreadedDecoder::HandlePictureSequence_(CUVIDEOFORMAT* format) {
     return decoder_.initialize(format);
 }
 
-int CUThreadedDecoder::CallbackDecode_(CUVIDPICPARAMS* pic_params) {
+int CUThreadedDecoder::HandlePictureDecode_(CUVIDPICPARAMS* pic_params) {
     CHECK_GE(pic_pararms->CurrPicIdx, 0);
-    CHECK_LT(pic_params->CurrPicIdx, buffer_queues_.size());
-    buffer_queues_[pic_params->CurrPicIdx]->Push(pic_params);
+    CHECK_LT(pic_pararms->CurrPicIdx, permits_.size());
+    auto& permit_queue = permits_[pic_pararms->CurrPicIdx];
+    bool ret;
+    uint8_t tmp;
+    if (!run_.load() || !permit_queue.Pop(&tmp)) return 0;
+    if (!CHECK_CUDA_CALL(cuvidDecodePicture(decoder_, pic_params))) {
+        LOG(FATAL) << "Failed to launch cuvidDecodePicture";
+    }
+    return 1;
 }
 
-int CUThreadedDecoder::CallbackDisplay_(CUVIDPARSERDISPINFO* disp_info) {
-    // convert frame
-    worker_permits_[disp_info->CurrPicIdx].Push(1);
+int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
+    // push to converter
+    buffer_queue_.Push(disp_info);
+    // finished, send clear msg to allow next decoding
+    permits_[disp_info->CurrPicIdx].Push(1);
 }
 
-void WorkerThread(int worker_idx) {
-    if (worker_idx >= buffer_queues_.size() || worker_idx >= worker_permits_.size()) return;
-    auto& queue = buffer_queues_[worker_idx];
-    auto& permit_queue = worker_permits_[worker_idx];
-    while (true) {
-        auto pic_params = queue.Pop();  // blocking
-        CUDA_CHECK_CALL(cuvidDecodePicture(decoder_, pic_params));
-        permit_queue.Pop();  // blocking, acquire allowance for next decoding
+void CUThreadedDecoder::LaunchThread() {
+    context_.push();
+    while (run_.load()) {
+        bool ret;
+        AVPacketPtr avpkt = nullptr;
+        ret = pkt_queue_.Pop(&avpkt)
+        if (!ret) return;
+
+        CUVIDSOURCEDATAPACKET cupkt = {0};
+
+        if (avpkt && avpkt->size) {
+            cupkt.payload_size = avpkt->size;
+            cupkt.payload = avpkt->data;
+            if (avpkt->pts != AV_NOPTS_VALUE) {
+                cupkt.flags = CUVID_PKT_TIMESTAMP;
+                cupkt.timestamp = avpkt->pts;
+            }
+        } else {
+            cupkt.flags = CUVID_PKT_ENDOFSTREAM;
+            // mark as flushing?
+        }
+
+        if (!CHECK_CUDA_CALL(cuvidParseVideoData(parser_, &cupkt))) {
+            LOG(FATAL) << "Problem decoding packet";
+        }
+    }
+}
+
+void CUThreadedDecoder::ConvertThread() {
+    context_.push();
+    while (run_.load()) {
+        bool ret;
+        CUVIDPARSERDISPINFO *disp_info = nullptr;
+        ret = buffer_queue_.Pop(&disp_info);
+        if (!ret) return;
+        CHECK(disp_info != nullptr);
+        auto frame = CUMappedFrame(disp_info, decoder_, stream_);
+        // conversion to usable format, RGB, HxW, etc...
+        // Output cleared, allow next decoding
+        permits_[disp_info.CurrPicIdx].Push(1);
     }
 }
 

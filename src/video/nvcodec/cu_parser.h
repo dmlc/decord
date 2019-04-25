@@ -38,7 +38,7 @@ class CUVideoParser {
     {
         InitParams(codec, decoder, decode_surfaces, extradata, extradata_size);
 
-        if (CUDA_CHECK_CALL(cuvidCreateVideoParser(&parser_, &parser_info_))) {
+        if (CHECK_CUDA_CALL(cuvidCreateVideoParser(&parser_, &parser_info_))) {
             initialized_ = true;
         } else {
             LOG(FATAL) << "Problem creating video parser" << std::endl;
@@ -53,7 +53,7 @@ class CUVideoParser {
 
     ~CUVideoParser() {
         if (initialized_) {
-            CUDA_CHECK_CALL(cuvidDestroyVideoParser(parser_));
+            CHECK_CUDA_CALL(cuvidDestroyVideoParser(parser_));
         }
     }
 
@@ -66,7 +66,7 @@ class CUVideoParser {
 
     CUVideoParser& operator=(CUVideoParser&& other) {
         if (initialized_) {
-            CUDA_CHECK_CALL(cuvidDestroyVideoParser(parser_));
+            CHECK_CUDA_CALL(cuvidDestroyVideoParser(parser_));
         }
         parser_ = other.parser_;
         parser_info_ = other.parser_info_;

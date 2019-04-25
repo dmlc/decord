@@ -72,7 +72,7 @@ CUVideoDecoder::CUVideoDecoder(CUvideodecoder decoder)
 
 CUVideoDecoder::~CUVideoDecoder() {
     if (initialized_) {
-        CUDA_CHECK_CALL(cuvidDestroyDecoder(decoder_));
+        CHECK_CUDA_CALL(cuvidDestroyDecoder(decoder_));
     }
 }
 
@@ -84,7 +84,7 @@ CUVideoDecoder::CUVideoDecoder(CUVideoDecoder&& other)
 
 CUVideoDecoder& CUVideoDecoder::operator=(CUVideoDecoder&& other) {
     if (initialized_) {
-        CUDA_CHECK_CALL(cuvidDestroyDecoder(decoder_));
+        CHECK_CUDA_CALL(cuvidDestroyDecoder(decoder_));
     }
     log_ = other.log_;
     decoder_ = other.decoder_;
@@ -123,7 +123,7 @@ int CUVideoDecoder::initialize(CUVIDEOFORMAT* format) {
     caps.eCodecType = format->codec;
     caps.eChromaFormat = format->chroma_format;
     caps.nBitDepthMinus8 = format->bit_depth_luma_minus8;
-    if (CUDA_CHECK_CALL(cuvidGetDecoderCaps(&caps))) {
+    if (CHECK_CUDA_CALL(cuvidGetDecoderCaps(&caps))) {
         if (!caps.bIsSupported) {
             std::stringstream ss;
             ss << "Unsupported Codec " << GetVideoCodecString(format->codec)
@@ -173,7 +173,7 @@ int CUVideoDecoder::initialize(CUVIDEOFORMAT* format) {
     decoder_info_.ulCreationFlags = cudaVideoCreate_PreferCUVID;
     decoder_info_.vidLock = nullptr;
 
-    if (CUDA_CHECK_CALL(cuvidCreateDecoder(&decoder_, &decoder_info_))) {
+    if (CHECK_CUDA_CALL(cuvidCreateDecoder(&decoder_, &decoder_info_))) {
         initialized_ = true;
     } else {
         LOG(FATAL) << "Problem creating video decoder";

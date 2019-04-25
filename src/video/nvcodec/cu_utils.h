@@ -13,7 +13,6 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include <dmlc/logging.h>
 
 namespace decord {
 namespace cuda {
@@ -22,7 +21,7 @@ inline bool CHECK(CUresult e, int iLine, const char *szFile) {
     if (e != CUDA_SUCCESS) {
         const char* err;
         cuGetErrorString(e, &err);
-        LOG(FATAL) << "CUDA error " << e << " at line " << iLine << " in file " << szFile
+        std::cerr << "CUDA error " << e << " at line " << iLine << " in file " << szFile
                    << ": " << err << std::endl;
         return false;
     }
@@ -33,7 +32,7 @@ inline bool CHECK(CUresult e, int iLine, const char *szFile) {
 #ifdef __CUDA_RUNTIME_H__
 inline bool CHECK(cudaError_t e, int iLine, const char *szFile) {
     if (e != cudaSuccess) {
-        LOG(FATAL) << "CUDA runtime error " << e << " at line " << iLine
+        std::cerr << "CUDA runtime error " << e << " at line " << iLine
                    << " in file " << szFile
                    << ": " << cudaGetErrorString(e)
                    << std::endl;
@@ -43,7 +42,7 @@ inline bool CHECK(cudaError_t e, int iLine, const char *szFile) {
 }
 #endif
 
-#define CUDA_CHECK_CALL(call) CHECK(call, __LINE__, __FILE__)
+#define CHECK_CUDA_CALL(call) CHECK(call, __LINE__, __FILE__)
 }  // namespace decord
 }  // namespace cuda
 #endif

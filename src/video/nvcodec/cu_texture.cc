@@ -17,7 +17,7 @@ CUTexture::CUTexture(const cudaResourceDesc* pResDesc,
                      const cudaResourceViewDesc* pResViewDesc)
     : valid_{false}
 {
-    if (!CUDA_CHECK_CALL(cudaCreateCUTexture(&object_, pResDesc, pTexDesc, pResViewDesc))) {
+    if (!CHECK_CUDA_CALL(cudaCreateCUTexture(&object_, pResDesc, pTexDesc, pResViewDesc))) {
         LOG(FATAL) << "Unable to create a texture object";
     }
     valid_ = true;

@@ -25,10 +25,11 @@ struct NumberedFrame {
 }
 
 class CUThreadedDecoder {
+    constexpr int kMaxOutputSurfaces = 20;
     using NDArray = runtime::NDArray;
     using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
     using PacketQueuePtr = std::unique_ptr<PacketQueue>;
-    using BufferQueue = dmlc::ConcurrentBlockingQueue<CUVIDPICPARAMS*>;
+    using BufferQueue = dmlc::ConcurrentBlockingQueue<CUVIDPARSERDISPINFO*>;
     using BufferQueuePtr = std::unique_ptr<BufferQueue>;
     using FrameQueue = dmlc::ConcurrentBlockingQueue<NumberedFrame>;
     using FrameQueuePtr = std::unique_ptr<FrameQueue>;
@@ -44,50 +45,51 @@ class CUThreadedDecoder {
         bool Pop(NDArray *frame);
         ~CUThreadedDecoder();
 
-        static int CUDAAPI CallbackSequence(void* user_data, CUVIDEOFORMAT* format);
-        static int CUDAAPI CallbackDecode(void* user_data, CUVIDPICPARAMS* pic_params);
-        static int CUDAAPI CallbackDisplay(void* user_data, CUVIDPARSERDISPINFO* disp_info);
+        static int CUDAAPI HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format);
+        static int CUDAAPI HandlePictureDecode(void* user_data, CUVIDPICPARAMS* pic_params);
+        static int CUDAAPI HandlePictureDisplay(void* user_data, CUVIDPARSERDISPINFO* disp_info);
 
     private:
-        int CallbackSequence_(CUVIDEOFORMAT* format);
-        int CallbackDecode_(CUVIDPICPARAMS* pic_params);
-        int CallbackDisplay_(CUVIDPARSERDISPINFO* disp_info);
-        void FetcherThread();
-        void WorkerThread(int worker_idx);
+        int HandlePictureSequence_(CUVIDEOFORMAT* format);
+        int HandlePictureDecode_(CUVIDPICPARAMS* pic_params);
+        int HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info);
+        void LaunchThread();
+        void ConvertThread();
 
         int device_id_;
+        CUStream stream_;
         CUdevice device_;
         CUContext ctx_;
         CUVideoParser parser_;
         CUVideoDecoderImpl decoder_;
         PacketQueuePtr pkt_queue_;
         FrameQueuePtr frame_queue_;
-        std::vector<BufferQueuePtr> buffer_queues_;
-        std::unordered_map<int64_t, runtime::NDarray> reorder_buffer_;
+        BufferQueuePtr buffer_queue_;
+        std::unordered_map<int64_t, runtime::NDArray> reorder_buffer_;
         std::queue<int> surface_order_;  // read by main thread only, write by fetcher only
-        std::thread fetcher_;
-        std::vector<std::thread> workers_;
-        std::vector<dmlc::ConcurrentBlockingQueue<uint8_t>> worker_permits_;
+        std::thread launcher_t_;
+        std::thread converter_t_;
+        std::vector<dmlc::ConcurrentBlockingQueue<uint8_t>> permits_;
         std::atomic<bool> run_;
     
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
 }；
 
-int CUDAAPI CUThreadedDecoder::CallbackSequence(void* user_data, CUVIDEOFORMAT* format) {
+int CUDAAPI CUThreadedDecoder::HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->CallbackSequence_(format);
+    return decoder->HandlePictureSequence_(format);
 }
 
-int CUDAAPI CUThreadedDecoder::CallbackDecode(void* user_data,
+int CUDAAPI CUThreadedDecoder::HandlePictureDecode(void* user_data,
                                             CUVIDPICPARAMS* pic_params) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->CallbackDecode_(pic_params);
+    return decoder->HandlePictureDecode_(pic_params);
 }
 
-int CUDAAPI CUThreadedDecoder::CallbackDisplay(void* user_data,
+int CUDAAPI CUThreadedDecoder::HandlePictureDisplay(void* user_data,
                                              CUVIDPARSERDISPINFO* disp_info) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->CallbackDisplay_(disp_info);
+    return decoder->HandlePictureDisplay_(disp_info);
 }
 
 }  // namespace decord
