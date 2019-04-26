@@ -22,6 +22,7 @@ void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 
 	DLContext ctx;
 	if (p->hw_frames_ctx) {
+        LOG(FATAL) << "HW ctx not supported";
 		ctx = DLContext({ kDLGPU, 0 });
 	}
 	else {
@@ -43,8 +44,6 @@ void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 
 struct AVFrameManager {
 	AVFramePtr ptr;
-
-
 	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
 };
 
