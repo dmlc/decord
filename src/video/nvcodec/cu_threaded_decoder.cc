@@ -105,6 +105,7 @@ int CUThreadedDecoder::HandlePictureDecode_(CUVIDPICPARAMS* pic_params) {
     if (!run_.load() || !permit_queue.Pop(&tmp)) return 0;
     if (!CHECK_CUDA_CALL(cuvidDecodePicture(decoder_, pic_params))) {
         LOG(FATAL) << "Failed to launch cuvidDecodePicture";
+        return 0;
     }
     return 1;
 }
@@ -113,7 +114,6 @@ int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
     // push to converter
     buffer_queue_.Push(disp_info);
     // finished, send clear msg to allow next decoding
-    permits_[disp_info->CurrPicIdx].Push(1);
 }
 
 void CUThreadedDecoder::LaunchThread() {

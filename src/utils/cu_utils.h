@@ -1,11 +1,11 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_decoder.h
- * \brief NVCUVID based decoder
+ * \file cu_utils.h
+ * \brief CUDA utils
  */
 
-#ifndef DECORD_VIDEO_NVCODEC_CU_DECODER_H_
-#define DECORD_VIDEO_NVCODEC_CU_DECODER_H_
+#ifndef DECORD_UTILS_CU_UTILS_H_
+#define DECORD_UTILS_CU_UTILS_H_
 
 #include <iostream>
 #include <memory>
@@ -45,5 +45,5 @@ inline bool CHECK(cudaError_t e, int iLine, const char *szFile) {
 #define CHECK_CUDA_CALL(call) CHECK(call, __LINE__, __FILE__)
 }  // namespace decord
 }  // namespace cuda
-#endif
+#endif  // DECORD_UTILS_CU_UTILS_H_
 
