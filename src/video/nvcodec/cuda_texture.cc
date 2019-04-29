@@ -1,10 +1,10 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_texture.cc
+ * \file cuda_texture.cc
  * \brief NVCUVID texture objects
  */
 
-#include "cu_texture.h"
+#include "cuda_texture.h"
 
 namespace decord {
 namespace cuda {
@@ -17,7 +17,7 @@ CUTexture::CUTexture(const cudaResourceDesc* pResDesc,
                      const cudaResourceViewDesc* pResViewDesc)
     : valid_{false}
 {
-    if (!CHECK_CUDA_CALL(cudaCreateCUTexture(&object_, pResDesc, pTexDesc, pResViewDesc))) {
+    if (!CUDA_CALL(cudaCreateCUTexture(&object_, pResDesc, pTexDesc, pResViewDesc))) {
         LOG(FATAL) << "Unable to create a texture object";
     }
     valid_ = true;

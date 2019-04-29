@@ -1,14 +1,14 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_decoder.h
+ * \file cuda_decoder.h
  * \brief NVCUVID based decoder
  */
 
-#ifndef DECORD_VIDEO_NVCODEC_CU_THREADED_DECODER_H_
-#define DECORD_VIDEO_NVCODEC_CU_DECODER_H_
+#ifndef DECORD_VIDEO_NVCODEC_CUDA_THREADED_DECODER_H_
+#define DECORD_VIDEO_NVCODEC_CUDA_THREADED_DECODER_H_
 
-#include "cu_parser.h"
-#include "cu_decoder_impl.h"
+#include "cuda_parser.h"
+#include "cuda_decoder_impl.h"
 #include "../ffmpeg/ffmpeg_common.h"
 
 #include <condition_variable>
@@ -94,4 +94,4 @@ int CUDAAPI CUThreadedDecoder::HandlePictureDisplay(void* user_data,
 
 }  // namespace decord
 }  // namespace cuda
-#endif
+#endif  // DECORD_VIDEO_NVCODEC_CUDA_THREADED_DECODER_H_

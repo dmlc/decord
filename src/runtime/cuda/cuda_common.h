@@ -44,11 +44,12 @@ namespace runtime {
     }                                                                   \
   }
 
-#define CUDA_CALL(func)                                            \
-  {                                                                \
-    cudaError_t e = (func);                                        \
-    CHECK(e == cudaSuccess || e == cudaErrorCudartUnloading)       \
-        << "CUDA: " << cudaGetErrorString(e);                      \
+#define CUDA_CALL(func)                                                  \
+  {                                                                      \
+    cudaError_t e = (func);                                              \
+    CHECK(e == cudaSuccess || e == cudaErrorCudartUnloading)             \
+        << "CUDA: " << cudaGetErrorString(e) << " at line: " << __LINE__ \
+        << " in file: " << __FILE__;                                     \
   }
 
 /*! \brief Thread local workspace */

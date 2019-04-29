@@ -1,11 +1,11 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_mapped_frame.h
+ * \file cuda_mapped_frame.h
  * \brief NVCUVID mapped frame
  */
 
-#ifndef DECORD_VIDEO_NVCODEC_CU_MAPPED_FRAME_H_
-#define DECORD_VIDEO_NVCODEC_CU_MAPPED_FRAME_H_
+#ifndef DECORD_VIDEO_NVCODEC_CUDA_MAPPED_FRAME_H_
+#define DECORD_VIDEO_NVCODEC_CUDA_MAPPED_FRAME_H_
 
 #include "nvcuvid/nvcuvid.h"
 
@@ -39,4 +39,4 @@ class CUMappedFrame {
 }  // namespace cuda
 }  // namespace decord
 
-#endif
+#endif  // DECORD_VIDEO_NVCODEC_CUDA_MAPPED_FRAME_H_

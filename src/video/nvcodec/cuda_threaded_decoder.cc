@@ -1,10 +1,10 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_decoder.cc
+ * \file cuda_decoder.cc
  * \brief NVCUVID based decoder impl
  */
 
-#include "cu_threaded_decoder.h"
+#include "cuda_threaded_decoder.h"
 
 
 namespace decord {
@@ -153,7 +153,7 @@ void CUThreadedDecoder::ConvertThread() {
         if (!ret) return;
         CHECK(disp_info != nullptr);
         auto frame = CUMappedFrame(disp_info, decoder_, stream_);
-        // conversion to usable format, RGB, HxW, etc...
+        // conversion to usable format, RGB, resize, etc...
         // Output cleared, allow next decoding
         permits_[disp_info.CurrPicIdx].Push(1);
     }

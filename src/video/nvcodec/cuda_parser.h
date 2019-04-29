@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_parser.h
+ * \file cuda_parser.h
  * \brief NVCUVID based parser
  */
 
@@ -10,7 +10,7 @@
 #include <cstring>
 
 #include "nvcuvid/nvcuvid.h"
-#include "cu_utils.h"
+#include "../../runtime/cuda/cuda_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,7 +38,7 @@ class CUVideoParser {
     {
         InitParams(codec, decoder, decode_surfaces, extradata, extradata_size);
 
-        if (CHECK_CUDA_CALL(cuvidCreateVideoParser(&parser_, &parser_info_))) {
+        if (CUDA_CALL(cuvidCreateVideoParser(&parser_, &parser_info_))) {
             initialized_ = true;
         } else {
             LOG(FATAL) << "Problem creating video parser" << std::endl;
@@ -53,7 +53,7 @@ class CUVideoParser {
 
     ~CUVideoParser() {
         if (initialized_) {
-            CHECK_CUDA_CALL(cuvidDestroyVideoParser(parser_));
+            CUDA_CALL(cuvidDestroyVideoParser(parser_));
         }
     }
 
@@ -66,7 +66,7 @@ class CUVideoParser {
 
     CUVideoParser& operator=(CUVideoParser&& other) {
         if (initialized_) {
-            CHECK_CUDA_CALL(cuvidDestroyVideoParser(parser_));
+            CUDA_CALL(cuvidDestroyVideoParser(parser_));
         }
         parser_ = other.parser_;
         parser_info_ = other.parser_info_;

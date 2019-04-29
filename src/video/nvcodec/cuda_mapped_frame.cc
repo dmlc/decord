@@ -1,12 +1,12 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_mapped_frame.cc
+ * \file cuda_mapped_frame.cc
  * \brief NVCUVID mapped frame
  */
 
 #include "nvcuvid/cuviddec.h"
-#include "cu_mapped_frame.h"
-#include "cu_utils.h"
+#include "cuda_mapped_frame.h"
+#include "cuda_utils.h"
 
 namespace decord {
 namespace cuda {
@@ -29,7 +29,7 @@ CUMappedFrame::CUMappedFrame(CUVIDPARSERDISPINFO* disp_info,
     params_.second_field = 0;
     params_.output_stream = stream;
 
-    if (!CHECK_CUDA_CALL(cuvidMapVideoFrame(decoder_, disp_info->picture_index,
+    if (!CUDA_CALL(cuvidMapVideoFrame(decoder_, disp_info->picture_index,
                                    &ptr_, &pitch_, &params_))) {
         LOG(FATAL) << "Unable to map video frame";
     }
@@ -45,7 +45,7 @@ CUMappedFrame::CUMappedFrame(CUMappedFrame&& other)
 
 CUMappedFrame::~CUMappedFrame() {
     if (valid_) {
-        if (!CHECK_CUDA_CALL(cuvidUnmapVideoFrame(decoder_, ptr_))) {
+        if (!CUDA_CALL(cuvidUnmapVideoFrame(decoder_, ptr_))) {
             LOG(FATAL) << "Error unmapping video frame";
         }
     }

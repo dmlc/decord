@@ -1,11 +1,11 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_texture.h
+ * \file cuda_texture.h
  * \brief NVCUVID texture objects
  */
 
-#ifndef DECORD_VIDEO_NVCODEC_CU_TEXTURE_H_
-#define DECORD_VIDEO_NVCODEC_CU_TEXTURE_H_
+#ifndef DECORD_VIDEO_NVCODEC_CUDA_TEXTURE_H_
+#define DECORD_VIDEO_NVCODEC_CUDA_TEXTURE_H_
 
 #include "nvcuvid/nvcuvid.h"
 

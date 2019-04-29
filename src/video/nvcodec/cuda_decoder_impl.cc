@@ -1,12 +1,10 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_decoder_impl.cc
+ * \file cuda_decoder_impl.cc
  * \brief NVCUVID based decoder implementation details
  */
 
-#include "cu_decoder_impl.h"
-
-#include "cu_utils.h"
+#include "cuda_decoder_impl.h"
 
 namespace decord {
 namespace cuda {
@@ -72,7 +70,7 @@ CUVideoDecoder::CUVideoDecoder(CUvideodecoder decoder)
 
 CUVideoDecoder::~CUVideoDecoder() {
     if (initialized_) {
-        CHECK_CUDA_CALL(cuvidDestroyDecoder(decoder_));
+        CUDA_CALL(cuvidDestroyDecoder(decoder_));
     }
 }
 
@@ -84,7 +82,7 @@ CUVideoDecoder::CUVideoDecoder(CUVideoDecoder&& other)
 
 CUVideoDecoder& CUVideoDecoder::operator=(CUVideoDecoder&& other) {
     if (initialized_) {
-        CHECK_CUDA_CALL(cuvidDestroyDecoder(decoder_));
+        CUDA_CALL(cuvidDestroyDecoder(decoder_));
     }
     log_ = other.log_;
     decoder_ = other.decoder_;
@@ -123,7 +121,7 @@ int CUVideoDecoder::initialize(CUVIDEOFORMAT* format) {
     caps.eCodecType = format->codec;
     caps.eChromaFormat = format->chroma_format;
     caps.nBitDepthMinus8 = format->bit_depth_luma_minus8;
-    if (CHECK_CUDA_CALL(cuvidGetDecoderCaps(&caps))) {
+    if (CUDA_CALL(cuvidGetDecoderCaps(&caps))) {
         if (!caps.bIsSupported) {
             std::stringstream ss;
             ss << "Unsupported Codec " << GetVideoCodecString(format->codec)
@@ -173,7 +171,7 @@ int CUVideoDecoder::initialize(CUVIDEOFORMAT* format) {
     decoder_info_.ulCreationFlags = cudaVideoCreate_PreferCUVID;
     decoder_info_.vidLock = nullptr;
 
-    if (CHECK_CUDA_CALL(cuvidCreateDecoder(&decoder_, &decoder_info_))) {
+    if (CUDA_CALL(cuvidCreateDecoder(&decoder_, &decoder_info_))) {
         initialized_ = true;
     } else {
         LOG(FATAL) << "Problem creating video decoder";

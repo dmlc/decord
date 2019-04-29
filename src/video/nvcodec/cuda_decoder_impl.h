@@ -1,11 +1,11 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_decoder_impl.h
+ * \file cuda_decoder_impl.h
  * \brief NVCUVID based decoder implementation class
  */
 
-#ifndef DECORD_VIDEO_NVCODEC_CU_DECODER_IMPL_H_
-#define DECORD_VIDEO_NVCODEC_CU_DECODER_IMPL_H_
+#ifndef DECORD_VIDEO_NVCODEC_CUDA_DECODER_IMPL_H_
+#define DECORD_VIDEO_NVCODEC_CUDA_DECODER_IMPL_H_
 
 #include "nvcuvid/nvcuvid.h"
 

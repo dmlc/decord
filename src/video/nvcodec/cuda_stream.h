@@ -1,13 +1,13 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_stream.h
+ * \file cuda_stream.h
  * \brief CUDA stream
  */
 
-#ifndef DECORD_VIDEO_NVCODEC_CU_STREAM_H_
-#define DECORD_VIDEO_NVCODEC_CU_STREAM_H_
+#ifndef DECORD_VIDEO_NVCODEC_CUDA_STREAM_H_
+#define DECORD_VIDEO_NVCODEC_CUDA_STREAM_H_
 
-#include "cu_utils.h"
+#include "../../runtime/cuda/cuda_common.h"
 
 namespace decord {
 namespace cuda {

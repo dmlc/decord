@@ -1,10 +1,10 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file cu_stream.cc
+ * \file cuda_stream.cc
  * \brief CUDA stream
  */
 
-#include "cu_stream.h"
+#include "cuda_stream.h"
 
 namespace decord {
 namespace cuda {
