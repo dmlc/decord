@@ -17,13 +17,16 @@ FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(fals
     // Start();
 }
 
-void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, std::string descr) {
+void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
     // LOG(INFO) << "Enter setcontext";
     bool running = run_.load();
-    Stop();
+    Clear();
     dec_ctx_.reset(dec_ctx);
     // LOG(INFO) << dec_ctx->width << " x " << dec_ctx->height << " : " << dec_ctx->time_base.num << " , " << dec_ctx->time_base.den;
     // std::string descr = "scale=320:240";
+    char descr[128];
+    std::snprintf(descr, sizeof(descr),
+            "scale=%d:%d", width, height);
     filter_graph_ = FFMPEGFilterGraphPtr(new FFMPEGFilterGraph(descr, dec_ctx_.get()));
     if (running) {
         Start();
@@ -55,14 +58,19 @@ void FFMPEGThreadedDecoder::Stop() {
 
 void FFMPEGThreadedDecoder::Clear() {
     Stop();
+    frame_count_.store(0);
+    draining_.store(false);
 }
 
 void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt) {
-    pkt_queue_->Push(pkt);
-    ++frame_count_;
+    CHECK(run_.load());
     if (!pkt) {
+        CHECK(!draining_.load()) << "Start draining twice...";
         draining_.store(true);
     }
+    pkt_queue_->Push(pkt);
+    ++frame_count_;
+    
     // LOG(INFO)<< "frame push: " << frame_count_;
     // LOG(INFO) << "Pushed pkt to pkt_queue";
 }

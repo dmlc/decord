@@ -177,10 +177,7 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     actv_stm_idx_ = st_nb;
     // LOG(INFO) << "time base: " << fmt_ctx_->streams[st_nb]->time_base.num << " / " << fmt_ctx_->streams[st_nb]->time_base.den;
     dec_ctx->time_base = fmt_ctx_->streams[st_nb]->time_base;
-    char descr[128];
-    std::snprintf(descr, sizeof(descr),
-            "scale=%d:%d", width_, height_);
-    decoder_->SetCodecContext(dec_ctx, std::string(descr));
+    decoder_->SetCodecContext(dec_ctx, width_, height_);
     IndexKeyframes();
     // LOG(INFO) << "Printing key frames...";
     // for (auto i : key_indices_) {

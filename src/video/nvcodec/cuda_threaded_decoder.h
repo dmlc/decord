@@ -9,6 +9,7 @@
 
 #include "cuda_parser.h"
 #include "cuda_decoder_impl.h"
+#include "cuda_storage_pool.h"
 #include "../ffmpeg/ffmpeg_common.h"
 
 #include <condition_variable>
@@ -20,7 +21,7 @@ namespace decord {
 namespace cuda {
 
 struct NumberedFrame {
-    NDArray arr;
+    DLTensor t;
     int64_t n;
 }
 
@@ -35,14 +36,14 @@ class CUThreadedDecoder {
     using FrameQueuePtr = std::unique_ptr<FrameQueue>;
 
     public:
-        CUThreadedDecoder(int device_id, const AVCodecContext *dec_ctx);
-        void SetCodecContext(AVCodecContext *dec_ctx, int height = -1, int width = -1);
+        CUThreadedDecoder(int device_id);
+        void SetCodecContext(const AVCodecContext *dec_ctx, int width = -1, int height = -1);
         bool Initialized() const;
         void Start();
         void Stop();
         void Clear();
-        void Push(AVPacketPtr pkt);
-        bool Pop(NDArray *frame);
+        void Push(AVPacketPtr pkt, DLTensor buf);
+        bool Pop(DLTensor *frame);
         ~CUThreadedDecoder();
 
         static int CUDAAPI HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format);
@@ -71,6 +72,11 @@ class CUThreadedDecoder {
         std::thread converter_t_;
         std::vector<dmlc::ConcurrentBlockingQueue<uint8_t>> permits_;
         std::atomic<bool> run_;
+        std::atomic<int> frame_count_;
+        CUTextureRegistry tex_registry_;
+        AVRational nv_time_base_ = {1, 10000000};
+        AVRational frame_base_;
+        AVCodecContextPtr dec_ctx_;
     
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
 }；
