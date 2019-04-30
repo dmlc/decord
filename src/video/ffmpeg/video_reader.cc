@@ -30,6 +30,7 @@ void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 	}
 	// LOG(INFO) << p->height << " x";
 	// std::vector<int64_t> shape = { p->height, p->width, p->linesize[0] / p->width };
+    LOG(INFO) << p->height << " x " << p->width;
 	shape[0] = p->height;
 	shape[1] = p->width;
 	shape[2] = p->linesize[0] / p->width;
@@ -75,7 +76,6 @@ NDArray CopyToNDArray(AVFramePtr p) {
     } else {
         ctx = kCPU;
     }
-    // LOG(INFO) << p->height << " x";
     DLTensor dlt;
     std::vector<int64_t> shape = {p->height, p->width, p->linesize[0] / p->width};
     dlt.data = p->data[0];
