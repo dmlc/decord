@@ -77,12 +77,11 @@ class AutoReleaseAVFramePool : public AutoReleasePool<AVFrame, S> {
         }
 
     private:
-        using T = AVFrame;
-        T* Allocate() override {
+        AVFrame* Allocate() final {
             return av_frame_alloc();
         }
 
-        void Delete(T* p) override {
+        void Delete(AVFrame* p) final {
             av_frame_unref(p);
         }
 };
@@ -101,12 +100,11 @@ class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
         }
 
     private:
-        using T = AVPacket;
-        T* Allocate() override {
+        AVPacket* Allocate() final {
             return av_packet_alloc();
         }
 
-        void Delete(T* p) override {
+        void Delete(AVPacket* p) final {
             av_packet_unref(p);
         }
 };
