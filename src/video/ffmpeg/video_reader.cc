@@ -45,6 +45,7 @@ void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 
 struct AVFrameManager {
 	AVFramePtr ptr;
+    int64_t shape[3];
 	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
 };
 
@@ -55,9 +56,9 @@ static void AVFrameManagerDeleter(DLManagedTensor *manager) {
 
 NDArray AsNDArray(AVFramePtr p) {
 	DLManagedTensor* manager = new DLManagedTensor();
-	int64_t shape[3];
-	ToDLTensor(p, manager->dl_tensor, shape);
-	manager->manager_ctx = new AVFrameManager(p);
+    auto av_manager = new AVFrameManager(p);
+	manager->manager_ctx = av_manager;
+	ToDLTensor(p, manager->dl_tensor, av_manager->shape);
 	manager->deleter = AVFrameManagerDeleter;
 	NDArray arr = NDArray::FromDLPack(manager);
 	return arr;
@@ -177,6 +178,12 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     actv_stm_idx_ = st_nb;
     // LOG(INFO) << "time base: " << fmt_ctx_->streams[st_nb]->time_base.num << " / " << fmt_ctx_->streams[st_nb]->time_base.den;
     dec_ctx->time_base = fmt_ctx_->streams[st_nb]->time_base;
+    if (width_ < 1) {
+        width_ = fmt_ctx_->streams[st_nb]->codecpar->width;
+    }
+    if (height_ < 1) {
+        height_ = fmt_ctx_->streams[st_nb]->codecpar->height;
+    }
     decoder_->SetCodecContext(dec_ctx, width_, height_);
     IndexKeyframes();
     // LOG(INFO) << "Printing key frames...";
@@ -328,6 +335,7 @@ NDArray FFMPEGVideoReader::NextFrame() {
     }
     // LOG(INFO) << "pts: " << frame->pts;
     NDArray arr = AsNDArray(frame);
+    // NDArray arr = CopyToNDArray(frame);
     return arr;
 }
 
