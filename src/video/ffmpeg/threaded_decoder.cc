@@ -11,14 +11,10 @@
 namespace decord {
 namespace ffmpeg {
 
-FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false){
-    // LOG(INFO) << "ThreadedDecoder ctor: " << run_.load();
-    
-    // Start();
+FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false) {
 }
 
 void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
-    // LOG(INFO) << "Enter setcontext";
     bool running = run_.load();
     Clear();
     dec_ctx_.reset(dec_ctx);
@@ -37,7 +33,6 @@ void FFMPEGThreadedDecoder::Start() {
     if (!run_.load()) {
         pkt_queue_.reset(new PacketQueue());
         frame_queue_.reset(new FrameQueue());
-        avcodec_flush_buffers(dec_ctx_.get());
         run_.store(true);
         auto t = std::thread(&FFMPEGThreadedDecoder::WorkerThread, this);
         std::swap(t_, t);
@@ -46,9 +41,13 @@ void FFMPEGThreadedDecoder::Start() {
 
 void FFMPEGThreadedDecoder::Stop() {
     if (run_.load()) {
-        pkt_queue_->SignalForKill();
+        if (pkt_queue_) {
+            pkt_queue_->SignalForKill();
+        }
         run_.store(false);
-        frame_queue_->SignalForKill();
+        if (frame_queue_) {
+            frame_queue_->SignalForKill();
+        }
     }
     if (t_.joinable()) {
         // LOG(INFO) << "joining";
@@ -58,11 +57,27 @@ void FFMPEGThreadedDecoder::Stop() {
 
 void FFMPEGThreadedDecoder::Clear() {
     Stop();
+    if (dec_ctx_.get()) {
+        avcodec_flush_buffers(dec_ctx_.get());
+    }
     frame_count_.store(0);
     draining_.store(false);
 }
 
 void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt) {
+    CHECK(run_.load());
+    if (!pkt) {
+        CHECK(!draining_.load()) << "Start draining twice...";
+        draining_.store(true);
+    }
+    pkt_queue_->Push(pkt);
+    ++frame_count_;
+    
+    // LOG(INFO)<< "frame push: " << frame_count_;
+    // LOG(INFO) << "Pushed pkt to pkt_queue";
+}
+
+void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
     CHECK(run_.load());
     if (!pkt) {
         CHECK(!draining_.load()) << "Start draining twice...";
@@ -88,6 +103,25 @@ bool FFMPEGThreadedDecoder::Pop(AVFramePtr *frame) {
         --frame_count_;
     }
     return (ret && (*frame));
+}
+
+bool FFMPEGThreadedDecoder::Pop(runtime::NDArray *frame) {
+    // Pop is blocking operation
+    // unblock and return false if queue has been destroyed.
+    
+    if (!frame_count_.load() && !draining_.load()) {
+        return false;
+    }
+    AVFramePtr ptr = nullptr;
+    bool ret = frame_queue_->Pop(&ptr);
+    
+    if (ret) {
+        --frame_count_;
+    }
+    if (ptr) {
+        *frame = AsNDArray(ptr);
+    }
+    return (ret && ptr);
 }
 
 FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {

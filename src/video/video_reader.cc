@@ -18,86 +18,9 @@ using FFMPEGThreadedDecoder = ffmpeg::FFMPEGThreadedDecoder;
 using AVFramePool = ffmpeg::AVFramePool;
 using AVPacketPool = ffmpeg::AVPacketPool;
 
-void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
-	CHECK(p) << "Error: converting empty AVFrame to DLTensor";
-	// int channel = p->linesize[0] / p->width;
-	CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24)
-		<< "Only support RGB24 image to NDArray conversion, given: "
-		<< AVPixelFormat(p->format);
-
-	DLContext ctx;
-	if (p->hw_frames_ctx) {
-        LOG(FATAL) << "HW ctx not supported";
-		ctx = DLContext({ kDLGPU, 0 });
-	}
-	else {
-		ctx = kCPU;
-	}
-	// LOG(INFO) << p->height << " x";
-	// std::vector<int64_t> shape = { p->height, p->width, p->linesize[0] / p->width };
-    LOG(INFO) << p->height << " x " << p->width;
-	shape[0] = p->height;
-	shape[1] = p->width;
-	shape[2] = p->linesize[0] / p->width;
-	dlt.data = p->data[0];
-	dlt.ctx = ctx;
-	dlt.ndim = 3;
-	dlt.dtype = kUInt8;
-	dlt.shape = shape;
-	dlt.strides = NULL;
-	dlt.byte_offset = 0;
-}
-
-struct AVFrameManager {
-	AVFramePtr ptr;
-    int64_t shape[3];
-	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
-};
-
-static void AVFrameManagerDeleter(DLManagedTensor *manager) {
-	delete static_cast<AVFrameManager*>(manager->manager_ctx);
-	delete manager;
-}
-
-NDArray AsNDArray(AVFramePtr p) {
-	DLManagedTensor* manager = new DLManagedTensor();
-    auto av_manager = new AVFrameManager(p);
-	manager->manager_ctx = av_manager;
-	ToDLTensor(p, manager->dl_tensor, av_manager->shape);
-	manager->deleter = AVFrameManagerDeleter;
-	NDArray arr = NDArray::FromDLPack(manager);
-	return arr;
-}
-
-NDArray CopyToNDArray(AVFramePtr p) {
-    CHECK(p) << "Error: converting empty AVFrame to DLTensor";
-    // int channel = p->linesize[0] / p->width;
-    CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24) 
-        << "Only support RGB24 image to NDArray conversion, given: " 
-        << AVPixelFormat(p->format);
-    
-    DLContext ctx;
-    if (p->hw_frames_ctx) {
-        ctx = DLContext({kDLGPU, 0});
-    } else {
-        ctx = kCPU;
-    }
-    DLTensor dlt;
-    std::vector<int64_t> shape = {p->height, p->width, p->linesize[0] / p->width};
-    dlt.data = p->data[0];
-    dlt.ctx = ctx;
-    dlt.ndim = 3;
-    dlt.dtype = kUInt8;
-    dlt.shape = dmlc::BeginPtr(shape);
-    dlt.strides = NULL;
-    dlt.byte_offset = 0;
-    NDArray arr = NDArray::Empty({p->height, p->width, p->linesize[0] / p->width}, kUInt8, ctx);
-    arr.CopyFrom(&dlt);
-    return arr;
-}
-
-VideoReader::VideoReader(std::string fn, int width, int height)
-     : codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0), width_(width), height_(height), eof_(false) {
+VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height)
+     : ctx_(ctx), codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0), 
+     width_(width), height_(height), eof_(false) {
     // av_register_all deprecated in latest versions
     #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
     av_register_all();
@@ -167,7 +90,18 @@ void VideoReader::SetVideoStream(int stream_nb) {
     // initialize the mem for codec context
     CHECK(codecs_[st_nb] == dec) << "Codecs of " << st_nb << " is NULL";
     // LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
-    decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new FFMPEGThreadedDecoder());
+    if (ctx_.device_type == kDLCPU) {
+        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new FFMPEGThreadedDecoder());
+    } else if (ctx_.device_type == kDLGPU) {
+#ifdef USE_CUDA
+        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new CUThreadedDecoder());
+#else
+        LOG(FATAL) << "CUDA not enabled. Requested context GPU(" << ctx_.device_id << ").";
+#endif
+    } else {
+        LOG(FATAL) << "Unknown device type: " << ctx_.device_type;
+    }
+    
     auto dec_ctx = avcodec_alloc_context3(dec);
 	// LOG(INFO) << "Original decoder multithreading: " << dec_ctx->thread_count;
 	dec_ctx->thread_count = 0;
@@ -339,7 +273,7 @@ NDArray VideoReader::NextFrame() {
         return NDArray::Empty({}, kUInt8, kCPU);
     }
     // LOG(INFO) << "pts: " << frame->pts;
-    NDArray arr = AsNDArray(frame);
+    NDArray arr = ffmpeg::AsNDArray(frame);
     // NDArray arr = CopyToNDArray(frame);
     return arr;
 }

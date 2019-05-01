@@ -14,6 +14,12 @@
 #include "serializer.h"
 
 namespace decord {
+namespace ffmpeg {
+class FFMPEGThreadedDecoder;
+}
+namespace cuda {
+class CUThreadedDecoder;
+}
 namespace runtime {
 /*!
  * \brief Managed NDArray.
@@ -187,6 +193,8 @@ class NDArray {
   friend struct Internal;
   friend class DECORDRetValue;
   friend class DECORDArgsSetter;
+  friend class ffmpeg::FFMPEGThreadedDecoder;
+  friend class cuda::CUThreadedDecoder;
 };
 
 /*!

@@ -9,6 +9,7 @@
 
 #include "filter_graph.h"
 #include "../threaded_decoder_interface.h"
+#include <decord/runtime/ndarray.h>
 
 #include <thread>
 
@@ -31,15 +32,14 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         void Stop();
         void Clear();
         void Push(AVPacketPtr pkt);
-        void Push(ffmpeg::AVPacketPtr pkt, DLTensor buf) { LOG(FATAL) << "Not implemented"; };
+        void Push(ffmpeg::AVPacketPtr pkt, runtime::NDArray buf);
         bool Pop(AVFramePtr *frame);
-        bool Pop(DLTensor *frame) { LOG(FATAL) << "Not implemented"; return false; };
+        bool Pop(runtime::NDArray *frame);
         ~FFMPEGThreadedDecoder();
     private:
         void WorkerThread();
         // void FetcherThread(std::condition_variable& cv, FrameQueuePtr frame_queue);
         PacketQueuePtr pkt_queue_;
-
         FrameQueuePtr frame_queue_;
         std::atomic<int> frame_count_;
         std::atomic<bool> draining_;
