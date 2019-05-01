@@ -8,6 +8,7 @@
 #define DECORD_VIDEO_FFMPEG_THREADED_DECODER_H_
 
 #include "filter_graph.h"
+#include "../threaded_decoder_interface.h"
 
 #include <thread>
 
@@ -16,7 +17,7 @@
 namespace decord {
 namespace ffmpeg {
 
-class FFMPEGThreadedDecoder {
+class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
     using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
     using PacketQueuePtr = std::unique_ptr<PacketQueue>;
     using FrameQueue = dmlc::ConcurrentBlockingQueue<AVFramePtr>;
@@ -30,7 +31,9 @@ class FFMPEGThreadedDecoder {
         void Stop();
         void Clear();
         void Push(AVPacketPtr pkt);
+        void Push(ffmpeg::AVPacketPtr pkt, DLTensor buf) { LOG(FATAL) << "Not implemented"; };
         bool Pop(AVFramePtr *frame);
+        bool Pop(DLTensor *frame) { LOG(FATAL) << "Not implemented"; return false; };
         ~FFMPEGThreadedDecoder();
     private:
         void WorkerThread();

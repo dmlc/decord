@@ -106,8 +106,6 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             return;
         }
         AVFramePtr frame = AVFramePool::Get()->Acquire();
-        AVFramePtr out_frame = AVFramePool::Get()->Acquire();
-        AVFrame *out_frame_p = out_frame.get();
         if (!pkt) {
             // LOG(INFO) << "Draining mode start...";
             // draining mode, pulling buffered frames out
@@ -117,6 +115,8 @@ void FFMPEGThreadedDecoder::WorkerThread() {
                 if (got_picture == AVERROR_EOF) break;
                 // filter image frame (format conversion, scaling...)
                 filter_graph_->Push(frame.get());
+                AVFramePtr out_frame = AVFramePool::Get()->Acquire();
+                AVFrame *out_frame_p = out_frame.get();
                 CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
                 frame_queue_->Push(out_frame);
             }
@@ -129,6 +129,8 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             if (got_picture == 0) {
                 // filter image frame (format conversion, scaling...)
                 filter_graph_->Push(frame.get());
+                AVFramePtr out_frame = AVFramePool::Get()->Acquire();
+                AVFrame *out_frame_p = out_frame.get();
                 CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
                 frame_queue_->Push(out_frame);
                 // LOG(INFO) << "pts: " << out_frame->pts;
