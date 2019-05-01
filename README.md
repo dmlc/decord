@@ -22,15 +22,23 @@ TODO
 Install the system packages for building the shared library, for Debian/Ubuntu users, run:
 
 ```bash
+# official PPA comes with ffmpeg 2.8, which lacks tons of features, we use ffmpeg 4.0 here
+sudo add-apt-repository ppa:jonathonf/ffmpeg-4
 sudo apt-get update
 sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
+```
+
+Clone the repo recursively(important)
+
+```bash
+git clone --recursive https://github.com/zhreshold/decord
 ```
 
 Build the shared library in source root directory:
 
 ```bash
-mkdir build
-cd build
+cd decord
+mkdir build && cd build
 cmake ..
 make
 ```
@@ -65,11 +73,17 @@ After installation of Homebrew, install cmake by:
 brew install cmake
 ```
 
+Clone the repo recursively(important)
+
+```bash
+git clone --recursive https://github.com/zhreshold/decord
+```
+
 Then go to root directory build shared library:
 
 ```bash
-mkdir build
-cd build
+cd decord
+mkdir build && cd build
 cmake ..
 make
 ```
@@ -92,7 +106,20 @@ python3 setup.py install --user
 
 For windows, you will need CMake and Visual Studio for C++ compilation.
 
-TODO
+- First, install `git`, `cmake`, `ffmpeg` and `python`. You can use [Chocolatey](https://chocolatey.org/) to manage packages similar to Linux/Mac OS.
+- Second, install [`Visual Studio 2017 Community`](https://visualstudio.microsoft.com/), this my take some time.
+
+When dependencies are ready, open command line prompt:
+
+```bash
+cd your-workspace
+git clone --recursive https://github.com/zhreshold/decord
+cd decord
+mkdir build
+cd build
+cmake -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -G "Visual Studio 15 2017 Win64" ..
+# open `decord.sln` and build project
+```
 
 
 ## Usage

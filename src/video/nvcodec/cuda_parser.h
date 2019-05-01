@@ -28,22 +28,18 @@ class CUVideoParser {
     CUVideoParser() : parser_{0}, initialized_{false} {}
 
     template<typename Decoder>
-    CUVideoParser(Codec codec, Decoder* decoder, int decode_surfaces)
+    CUVideoParser(int codec, Decoder* decoder, int decode_surfaces)
         : CUVideoParser{codec, decoder, decode_surfaces, nullptr, 0} {}
 
     template<typename Decoder>
-    CUVideoParser(Codec codec, Decoder* decoder, int decode_surfaces,
+    CUVideoParser(int codec, Decoder* decoder, int decode_surfaces,
                   uint8_t* extradata, int extradata_size)
         : parser_{0}, parser_info_{}, parser_extinfo_{}, initialized_{false}
     {
         InitParams(codec, decoder, decode_surfaces, extradata, extradata_size);
 
-        if (CUDA_CALL(cuvidCreateVideoParser(&parser_, &parser_info_))) {
-            initialized_ = true;
-        } else {
-            LOG(FATAL) << "Problem creating video parser" << std::endl;
-        }
-
+        CUDA_CALL(cuvidCreateVideoParser(&parser_, &parser_info_));
+        initialized_ = true;
     }
 
     CUVideoParser(CUvideoparser parser)

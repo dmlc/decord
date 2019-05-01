@@ -22,14 +22,14 @@
  * \file cuda_device_api.cc
  * \brief GPU specific API
  */
-#include <tvm/runtime/device_api.h>
+#include <decord/runtime/device_api.h>
 
 #include <dmlc/thread_local.h>
-#include <tvm/runtime/registry.h>
+#include <decord/runtime/registry.h>
 #include <cuda_runtime.h>
 #include "cuda_common.h"
 
-namespace tvm {
+namespace decord {
 namespace runtime {
 
 class CUDADeviceAPI final : public DeviceAPI {
@@ -233,4 +233,4 @@ DECORD_REGISTER_GLOBAL("device_api.gpu")
   });
 
 }  // namespace runtime
-}  // namespace tvm
+}  // namespace decord

@@ -17,17 +17,17 @@ CUStream::CUStream(int device_id, bool default_stream) : created_{false}, stream
             set_device = true;
             cudaSetDevice(device_id);
         }
-        cucall(cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking));
+        CUDA_CALL(cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking));
         created_ = true;
         if (set_device) {
-            cucall(cudaSetDevice(orig_device));
+            CUDA_CALL(cudaSetDevice(orig_device));
         }
     }
 }
 
 CUStream::~CUStream() {
     if (created_) {
-        cucall(cudaStreamDestroy(stream_));
+        CUDA_CALL(cudaStreamDestroy(stream_));
     }
 }
 

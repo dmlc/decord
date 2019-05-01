@@ -23,7 +23,7 @@
  */
 #include "cuda_module.h"
 
-#include <tvm/runtime/registry.h>
+#include <decord/runtime/registry.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <vector>
@@ -37,7 +37,7 @@
 #include "../meta_data.h"
 #include "../file_util.h"
 
-namespace tvm {
+namespace decord {
 namespace runtime {
 
 // Module to support thread-safe multi-GPU execution.
@@ -316,4 +316,4 @@ DECORD_REGISTER_GLOBAL("module.loadfile_ptx")
 DECORD_REGISTER_GLOBAL("module.loadbinary_cuda")
 .set_body_typed(CUDAModuleLoadBinary);
 }  // namespace runtime
-}  // namespace tvm
+}  // namespace decord

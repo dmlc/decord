@@ -26,11 +26,11 @@
 #define DECORD_RUNTIME_CUDA_CUDA_COMMON_H_
 
 #include <cuda_runtime.h>
-#include <tvm/runtime/packed_func.h>
+#include <decord/runtime/packed_func.h>
 #include <string>
 #include "../workspace_pool.h"
 
-namespace tvm {
+namespace decord {
 namespace runtime {
 
 #define CUDA_DRIVER_CALL(x)                                             \
@@ -65,5 +65,5 @@ class CUDAThreadEntry {
   static CUDAThreadEntry* ThreadLocal();
 };
 }  // namespace runtime
-}  // namespace tvm
+}  // namespace decord
 #endif  // DECORD_RUNTIME_CUDA_CUDA_COMMON_H_

@@ -79,7 +79,7 @@ class CUThreadedDecoder {
         AVCodecContextPtr dec_ctx_;
     
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
-}；
+};
 
 int CUDAAPI CUThreadedDecoder::HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
