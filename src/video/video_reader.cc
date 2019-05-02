@@ -123,6 +123,7 @@ void VideoReader::SetVideoStream(int stream_nb) {
     if (height_ < 1) {
         height_ = fmt_ctx_->streams[st_nb]->codecpar->height;
     }
+    ndarray_pool_ = NDArrayPool(32, {height_, width_, 3}, kUInt8, ctx_);
     decoder_->SetCodecContext(dec_ctx, width_, height_);
     IndexKeyframes();
     // LOG(INFO) << "Printing key frames...";

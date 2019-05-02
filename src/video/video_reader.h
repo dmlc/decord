@@ -38,7 +38,7 @@ class VideoReader : public VideoReaderInterface {
         bool SeekAccurate(int64_t pos);
         runtime::NDArray GetKeyIndices();
     protected:
-        friend class FFMPEGVideoLoader;
+        friend class VideoLoader;
         std::vector<int64_t> GetKeyIndicesVector() const;
     private:
         void IndexKeyframes();

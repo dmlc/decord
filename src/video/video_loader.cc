@@ -10,13 +10,12 @@
 #include <algorithm>
 
 namespace decord {
-namespace ffmpeg {
 
-FFMPEGVideoLoader::FFMPEGVideoLoader(std::vector<std::string> filenames, 
+VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLContext> ctxs,
                                      std::vector<int> shape, int interval, 
                                      int skip, int shuffle, int prefetch) 
     : readers_(), shape_(shape), intvl_(interval), skip_(skip), shuffle_(shuffle), 
-    prefetch_(prefetch), visit_order_(), visit_bounds_(), visit_buffer_(), curr_(0) {
+    prefetch_(prefetch), visit_order_(), visit_bounds_(), visit_buffer_(), curr_(0), ctxs_(ctxs) {
     // Validate parameters
     intvl_ = std::max(0, intvl_);
     skip_ = std::max(0, skip_);
@@ -34,9 +33,10 @@ FFMPEGVideoLoader::FFMPEGVideoLoader(std::vector<std::string> filenames,
 
     // Initialize readers
     CHECK_GE(filenames.size(), 1) << "At least one video is required for video loader!";
+    CHECK_GE(ctxs.size(), 1) << "At least one context is required to decode videos!";
 
     for (std::string filename : filenames) {
-       ReaderPtr ptr = std::make_shared<FFMPEGVideoReader>(filename, shape_[2], shape_[1]);
+       ReaderPtr ptr = std::make_shared<VideoReader>(filename, ctxs[0], shape_[2], shape_[1]);
        auto key_indices = ptr->GetKeyIndicesVector();
        CHECK_GT(key_indices.size(), 0) << "Error getting key frame info from " << filename;
        auto frame_count = ptr->GetFrameCount(); 
@@ -71,7 +71,7 @@ FFMPEGVideoLoader::FFMPEGVideoLoader(std::vector<std::string> filenames,
     Reset();
 }
 
-void FFMPEGVideoLoader::Reset() {
+void VideoLoader::Reset() {
     curr_ = 0;
 
     // basic case: no shuffle at all, sequentially read frames in filename order
@@ -113,15 +113,15 @@ void FFMPEGVideoLoader::Reset() {
     }
 }
 
-FFMPEGVideoLoader::~FFMPEGVideoLoader() {
+VideoLoader::~VideoLoader() {
 
 }
 
-bool FFMPEGVideoLoader::HasNext() const {
+bool VideoLoader::HasNext() const {
     return (curr_ < visit_order_.size());
 }
 
-runtime::NDArray FFMPEGVideoLoader::Next() {
+runtime::NDArray VideoLoader::Next() {
     if (!HasNext()) return NDArray::Empty({}, kUInt8, kCPU);
     CHECK(curr_ < visit_order_.size());
     auto pair = visit_order_[curr_];
@@ -138,9 +138,8 @@ runtime::NDArray FFMPEGVideoLoader::Next() {
     return batch;
 }
 
-int64_t FFMPEGVideoLoader::Length() const {
+int64_t VideoLoader::Length() const {
     return visit_order_.size();
 }
 
-}  // namespace ffmpeg
 }  // namespace decord

@@ -4,8 +4,8 @@
  * \brief Video file reader implementations
  */
 
-#include "./ffmpeg/video_reader.h"
-#include "./ffmpeg/video_loader.h"
+#include "video_reader.h"
+#include "video_loader.h"
 #include "../runtime/str_util.h"
 
 #include <decord/video_interface.h>
@@ -20,8 +20,7 @@ namespace decord {
 VideoReaderPtr GetVideoReader(std::string fn, Decoder be) {
     std::shared_ptr<VideoReaderInterface> ptr;
     if (be == Decoder::FFMPEG()) {
-        // ptr = std::shared_ptr<VideoReaderInterface>(new ffmpeg::FFMPEGVideoReader(fn));
-        ptr = std::make_shared<ffmpeg::FFMPEGVideoReader>(fn);
+        ptr = std::make_shared<VideoReader>(fn, kCPU);
     } else {
         LOG(FATAL) << "Not supported Decoder type " << be;
     }
@@ -34,7 +33,7 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetVideoReader")
     std::string fn = args[0];
     int width = args[1];
     int height = args[2];
-    VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(new ffmpeg::FFMPEGVideoReader(fn, width, height));
+    VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(new VideoReader(fn, kCPU, width, height));
     *rv = handle;
   });
 
@@ -99,7 +98,7 @@ DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderGetVideoLoader")
     int prefetch = args[8];
     auto fns = SplitString(filenames, ',');
     std::vector<int> shape({bs, height, width, channel});
-    VideoLoaderInterfaceHandle handle = static_cast<VideoLoaderInterfaceHandle>(new ffmpeg::FFMPEGVideoLoader(fns, shape, intvl, skip, shuffle, prefetch));
+    VideoLoaderInterfaceHandle handle = static_cast<VideoLoaderInterfaceHandle>(new VideoLoader(fns, {kCPU}, shape, intvl, skip, shuffle, prefetch));
     *rv = handle;
   });
 

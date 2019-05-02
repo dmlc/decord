@@ -4,32 +4,31 @@
  * \brief FFmpeg video loader, implements VideoLoaderInterface
  */
 
-#ifndef DECORD_VIDEO_FFMPEG_VIDEO_LOADER_H_
-#define DECORD_VIDEO_FFMPEG_VIDEO_LOADER_H_
-
-#include <decord/video_interface.h>
-
-#include <vector>
+#ifndef DECORD_VIDEO_VIDEO_LOADER_H_
+#define DECORD_VIDEO_VIDEO_LOADER_H_
 
 #include "video_reader.h"
 
-namespace decord {
-namespace ffmpeg {
+#include <vector>
 
-class FFMPEGVideoLoader : public VideoLoaderInterface {
+#include <decord/video_interface.h>
+
+namespace decord {
+
+class VideoLoader : public VideoLoaderInterface {
 public:
-        FFMPEGVideoLoader(std::vector<std::string> filenames, 
+        VideoLoader(std::vector<std::string> filenames, std::vector<DLContext> ctxs,
                           std::vector<int> shape, int interval, 
                           int skip, int shuffle, 
                           int prefetch);
-        ~FFMPEGVideoLoader();
+        ~VideoLoader();
         void Reset();
         bool HasNext() const;
         int64_t Length() const;
         NDArray Next();
     
     private:
-        using ReaderPtr = std::shared_ptr<FFMPEGVideoReader>;
+        using ReaderPtr = std::shared_ptr<VideoReader>;
         struct Entry {
             ReaderPtr ptr;
             std::vector<int64_t> key_indices;
@@ -48,9 +47,8 @@ public:
         std::vector<std::size_t> visit_bounds_;
         std::vector<std::vector<std::pair<std::size_t, int64_t> > > visit_buffer_;
         std::size_t curr_;
-};  // class FFMPEGVideoLoader
-
-}  // namespace ffmpeg
+        std::vector<DLContext> ctxs_;
+};  // class VideoLoader
 }  // namespace decord
 
-#endif  //  DECORD_VIDEO_FFMPEG_VIDEO_LOADER_H_
+#endif  //  DECORD_VIDEO_VIDEO_LOADER_H_
