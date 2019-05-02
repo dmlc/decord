@@ -8,6 +8,7 @@
 #define DECORD_VIDEO_VIDEO_READER_H_
 
 #include "threaded_decoder_interface.h"
+#include "storage_pool.h"
 #include <decord/video_interface.h>
 
 #include <string>
@@ -42,7 +43,7 @@ class VideoReader : public VideoReaderInterface {
     private:
         void IndexKeyframes();
         int64_t LocateKeyframe(int64_t pos);
-        ffmpeg::AVFramePtr NextFrameImpl();
+        NDArray NextFrameImpl();
 
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
@@ -67,9 +68,7 @@ class VideoReader : public VideoReaderInterface {
         int width_;   // output video width
         int height_;  // output video height
         bool eof_;  // end of file indicator
+        NDArrayPool ndarray_pool_;
 };  // class VideoReader
-
-
 }  // namespace decord
-
 #endif  // DECORD_VIDEO_VIDEO_READER_H_

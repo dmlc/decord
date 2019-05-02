@@ -18,6 +18,8 @@ namespace decord {
  * \brief Forward declarations
  */
 class NDArrayPool;
+class VideoReader;
+class VideoLoader;
 namespace ffmpeg {
 class FFMPEGThreadedDecoder;
 class FFMPEGVideoReader;
@@ -202,6 +204,8 @@ class NDArray {
   friend class ffmpeg::FFMPEGVideoReader;
   friend class cuda::CUThreadedDecoder;
   friend class decord::NDArrayPool;
+  friend class decord::VideoReader;
+  friend class decord::VideoLoader;
 };
 
 /*!

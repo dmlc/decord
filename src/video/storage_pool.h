@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
- * \file ndarray_pool.h
- * \brief Simple pool for ndarray
+ * \file storage_pool.h
+ * \brief Simple storage pool
  */
 
 #ifndef DECORD_VIDEO_STORAGE_POOL_H_
