@@ -106,6 +106,7 @@ void FFMPEGVideoReader::SetVideoStream(int stream_nb) {
     }
     decoder_->SetCodecContext(dec_ctx, width_, height_);
     IndexKeyframes();
+    ndarray_pool_ = NDArrayPool(32, {height_, width_, 3}, kUInt8, kCPU);
     // LOG(INFO) << "Printing key frames...";
     // for (auto i : key_indices_) {
     //     LOG(INFO) << i;
@@ -212,7 +213,7 @@ void FFMPEGVideoReader::PushNext() {
             if (ret == AVERROR_EOF) {
                 eof_ = true;
                 // flush buffer
-                decoder_->Push(nullptr);
+                decoder_->Push(nullptr, ndarray_pool_.Acquire());
                 return;
             } else {
                 LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
@@ -224,39 +225,40 @@ void FFMPEGVideoReader::PushNext() {
             // av_packet_unref(packet);
             // LOG(INFO) << "Successfully load packet";
             // LOG(FATAL) << packet->pts << " dts: " << packet->dts;
-            decoder_->Push(packet);
+            decoder_->Push(packet, ndarray_pool_.Acquire());
             // LOG(INFO) << "Pushed packet to decoder.";
             break;
         }
     }
 }
 
-AVFramePtr FFMPEGVideoReader::NextFrameImpl() {
-    AVFramePtr frame;
+NDArray FFMPEGVideoReader::NextFrameImpl() {
+    NDArray frame;
     decoder_->Start();
     bool ret = false;
     while (!ret) {
         PushNext();
         ret = decoder_->Pop(&frame);
         if (!ret && eof_) {
-            return nullptr;
+            return NDArray::Empty({}, kUInt8, kCPU);
         }
     }
-    if (frame != nullptr) {
+    if (frame.defined()) {
         ++curr_frame_;
     }
     return frame;
 }
 
 NDArray FFMPEGVideoReader::NextFrame() {
-    AVFramePtr frame = NextFrameImpl();
-    if (frame == nullptr) {
-        return NDArray::Empty({}, kUInt8, kCPU);
-    }
-    // LOG(INFO) << "pts: " << frame->pts;
-    NDArray arr = AsNDArray(frame);
-    // NDArray arr = CopyToNDArray(frame);
-    return arr;
+    NDArray frame = NextFrameImpl();
+    return frame;
+    // if (frame == nullptr) {
+    //     return NDArray::Empty({}, kUInt8, kCPU);
+    // }
+    // // LOG(INFO) << "pts: " << frame->pts;
+    // NDArray arr = AsNDArray(frame);
+    // // NDArray arr = CopyToNDArray(frame);
+    // return arr;
 }
 
 void FFMPEGVideoReader::IndexKeyframes() {
@@ -373,12 +375,13 @@ NDArray FFMPEGVideoReader::GetBatch(std::vector<int64_t> indices) {
             SeekAccurate(pos);
         }
 #endif
-        AVFramePtr frame = NextFrameImpl();
-        if (frame == nullptr && eof_) {
+        NDArray frame = NextFrameImpl();
+        if (frame.Size() < 1 && eof_) {
             LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
         }
         // copy frame to buffer
-        std::copy(frame->data[0], frame->data[0] + sz, buffer.begin() + i * sz);
+        auto raw_data = static_cast<uint8_t*>(frame.data_->dl_tensor.data);
+        std::copy(raw_data, raw_data + sz, buffer.begin() + i * sz);
     }
     std::vector<int64_t> shape({static_cast<int64_t>(bs), height_, width_, 3});
     NDArray batch = NDArray::Empty(shape, kUInt8, kCPU);

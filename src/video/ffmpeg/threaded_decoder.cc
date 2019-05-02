@@ -33,6 +33,7 @@ void FFMPEGThreadedDecoder::Start() {
     if (!run_.load()) {
         pkt_queue_.reset(new PacketQueue());
         frame_queue_.reset(new FrameQueue());
+        buffer_queue_.reset(new BufferQueue());
         run_.store(true);
         auto t = std::thread(&FFMPEGThreadedDecoder::WorkerThread, this);
         std::swap(t_, t);
@@ -43,6 +44,9 @@ void FFMPEGThreadedDecoder::Stop() {
     if (run_.load()) {
         if (pkt_queue_) {
             pkt_queue_->SignalForKill();
+        }
+        if (buffer_queue_) {
+            buffer_queue_->SignalForKill();
         }
         run_.store(false);
         if (frame_queue_) {
@@ -64,18 +68,18 @@ void FFMPEGThreadedDecoder::Clear() {
     draining_.store(false);
 }
 
-void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt) {
-    CHECK(run_.load());
-    if (!pkt) {
-        CHECK(!draining_.load()) << "Start draining twice...";
-        draining_.store(true);
-    }
-    pkt_queue_->Push(pkt);
-    ++frame_count_;
+// void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt) {
+//     CHECK(run_.load());
+//     if (!pkt) {
+//         CHECK(!draining_.load()) << "Start draining twice...";
+//         draining_.store(true);
+//     }
+//     pkt_queue_->Push(pkt);
+//     ++frame_count_;
     
-    // LOG(INFO)<< "frame push: " << frame_count_;
-    // LOG(INFO) << "Pushed pkt to pkt_queue";
-}
+//     // LOG(INFO)<< "frame push: " << frame_count_;
+//     // LOG(INFO) << "Pushed pkt to pkt_queue";
+// }
 
 void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
     CHECK(run_.load());
@@ -84,26 +88,27 @@ void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
         draining_.store(true);
     }
     pkt_queue_->Push(pkt);
+    buffer_queue_->Push(buf);
     ++frame_count_;
     
     // LOG(INFO)<< "frame push: " << frame_count_;
     // LOG(INFO) << "Pushed pkt to pkt_queue";
 }
 
-bool FFMPEGThreadedDecoder::Pop(AVFramePtr *frame) {
-    // Pop is blocking operation
-    // unblock and return false if queue has been destroyed.
+// bool FFMPEGThreadedDecoder::Pop(AVFramePtr *frame) {
+//     // Pop is blocking operation
+//     // unblock and return false if queue has been destroyed.
     
-    if (!frame_count_.load() && !draining_.load()) {
-        return false;
-    }
-    bool ret = frame_queue_->Pop(frame);
+//     if (!frame_count_.load() && !draining_.load()) {
+//         return false;
+//     }
+//     bool ret = frame_queue_->Pop(frame);
     
-    if (ret){
-        --frame_count_;
-    }
-    return (ret && (*frame));
-}
+//     if (ret){
+//         --frame_count_;
+//     }
+//     return (ret && (*frame));
+// }
 
 bool FFMPEGThreadedDecoder::Pop(runtime::NDArray *frame) {
     // Pop is blocking operation
@@ -112,16 +117,12 @@ bool FFMPEGThreadedDecoder::Pop(runtime::NDArray *frame) {
     if (!frame_count_.load() && !draining_.load()) {
         return false;
     }
-    AVFramePtr ptr = nullptr;
-    bool ret = frame_queue_->Pop(&ptr);
+    bool ret = frame_queue_->Pop(frame);
     
     if (ret) {
         --frame_count_;
     }
-    if (ptr) {
-        *frame = AsNDArray(ptr);
-    }
-    return (ret && ptr);
+    return (ret && frame->data_);
 }
 
 FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
@@ -152,10 +153,16 @@ void FFMPEGThreadedDecoder::WorkerThread() {
                 AVFramePtr out_frame = AVFramePool::Get()->Acquire();
                 AVFrame *out_frame_p = out_frame.get();
                 CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
-                frame_queue_->Push(out_frame);
+                NDArray out_buf;
+                bool get_buf = buffer_queue_->Pop(&out_buf);
+                if (!get_buf) return;
+                auto tmp = AsNDArray(out_frame);
+                CHECK(out_buf.Size() == tmp.Size());
+                out_buf.CopyFrom(tmp);
+                frame_queue_->Push(out_buf);
             }
             draining_.store(false);
-            frame_queue_->Push(AVFramePtr(nullptr, [](AVFrame *p){}));
+            frame_queue_->Push(NDArray());
         } else {
             // normal mode, push in valid packets and retrieve frames
             CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
@@ -166,10 +173,16 @@ void FFMPEGThreadedDecoder::WorkerThread() {
                 AVFramePtr out_frame = AVFramePool::Get()->Acquire();
                 AVFrame *out_frame_p = out_frame.get();
                 CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
-                frame_queue_->Push(out_frame);
-                // LOG(INFO) << "pts: " << out_frame->pts;
+                NDArray out_buf;
+                bool get_buf = buffer_queue_->Pop(&out_buf);
+                if (!get_buf) return;
+                auto tmp = AsNDArray(out_frame);
+                CHECK(out_buf.Size() == tmp.Size());
+                out_buf.CopyFrom(tmp);
+                frame_queue_->Push(out_buf);
+                // LOG(INFO) << "pts: " <<out_frame->pts;
             } else if (AVERROR(EAGAIN) == got_picture || AVERROR_EOF == got_picture) {
-                frame_queue_->Push(AVFramePtr(nullptr, [](AVFrame *p){}));
+                frame_queue_->Push(NDArray());
             } else {
                 LOG(FATAL) << "Thread worker: Error decoding frame: " << got_picture;
             }

@@ -14,8 +14,13 @@
 #include "serializer.h"
 
 namespace decord {
+/**
+ * \brief Forward declarations
+ */
+class NDArrayPool;
 namespace ffmpeg {
 class FFMPEGThreadedDecoder;
+class FFMPEGVideoReader;
 }
 namespace cuda {
 class CUThreadedDecoder;
@@ -194,7 +199,9 @@ class NDArray {
   friend class DECORDRetValue;
   friend class DECORDArgsSetter;
   friend class ffmpeg::FFMPEGThreadedDecoder;
+  friend class ffmpeg::FFMPEGVideoReader;
   friend class cuda::CUThreadedDecoder;
+  friend class decord::NDArrayPool;
 };
 
 /*!

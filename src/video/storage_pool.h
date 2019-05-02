@@ -11,8 +11,10 @@
 #include <vector>
 
 #include <decord/runtime/ndarray.h>
+#include <decord/runtime/device_api.h>
 
 #include <dmlc/thread_local.h>
+#include <dlpack/dlpack.h>
 
 namespace decord {
 
@@ -97,6 +99,25 @@ class AutoReleasePool {
 
     DISALLOW_COPY_AND_ASSIGN(AutoReleasePool);
 };
+
+class NDArrayPool {
+    using NDArray = runtime::NDArray;
+    public: 
+        NDArrayPool();
+        NDArrayPool(std::size_t sz, std::vector<int64_t> shape, DLDataType dtype, DLContext ctx);
+        NDArray Acquire();
+        ~NDArrayPool();
+        static void Deleter(NDArray::Container* ptr);
+        // static void DefaultDeleter(NDArray::Container* ptr);
+    
+    private:
+        std::size_t size_;
+        std::vector<int64_t> shape_;
+        DLDataType dtype_;
+        DLContext ctx_;
+        std::queue<runtime::NDArray> queue_;
+        bool init_;
+};  // NDArrayPool
 
 }  // namespace decord 
 

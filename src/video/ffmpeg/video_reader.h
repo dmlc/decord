@@ -8,6 +8,7 @@
 #define DECORD_VIDEO_FFMPEG_VIDEO_READER_H_
 
 #include "threaded_decoder.h"
+#include "../storage_pool.h"
 #include <decord/video_interface.h>
 
 #include <string>
@@ -43,7 +44,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
     private:
         void IndexKeyframes();
         int64_t LocateKeyframe(int64_t pos);
-        AVFramePtr NextFrameImpl();
+        NDArray NextFrameImpl();
         std::vector<int64_t> key_indices_;
         /*! \brief Get or Create SwsContext by dtype */
         // struct SwsContext* GetSwsContext(FrameTransform out_fmt);
@@ -66,6 +67,7 @@ class FFMPEGVideoReader : public VideoReaderInterface {
         int width_;   // output video width
         int height_;  // output video height
         bool eof_;  // end of file indicator
+        NDArrayPool ndarray_pool_;
 };  // class FFMPEGVideoReader
 
 

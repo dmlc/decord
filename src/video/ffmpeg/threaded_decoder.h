@@ -21,8 +21,10 @@ namespace ffmpeg {
 class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
     using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
     using PacketQueuePtr = std::unique_ptr<PacketQueue>;
-    using FrameQueue = dmlc::ConcurrentBlockingQueue<AVFramePtr>;
+    using FrameQueue = dmlc::ConcurrentBlockingQueue<NDArray>;
     using FrameQueuePtr = std::unique_ptr<FrameQueue>;
+    using BufferQueue = dmlc::ConcurrentBlockingQueue<NDArray>;
+    using BufferQueuePtr = std::unique_ptr<BufferQueue>;
     using FFMPEGFilterGraphPtr = std::shared_ptr<FFMPEGFilterGraph>;
 
     public:
@@ -31,9 +33,9 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         void Start();
         void Stop();
         void Clear();
-        void Push(AVPacketPtr pkt);
+        void Push(AVPacketPtr pkt) {LOG(FATAL);};
         void Push(ffmpeg::AVPacketPtr pkt, runtime::NDArray buf);
-        bool Pop(AVFramePtr *frame);
+        bool Pop(AVFramePtr *frame) {LOG(FATAL); return false; };
         bool Pop(runtime::NDArray *frame);
         ~FFMPEGThreadedDecoder();
     private:
@@ -41,6 +43,7 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         // void FetcherThread(std::condition_variable& cv, FrameQueuePtr frame_queue);
         PacketQueuePtr pkt_queue_;
         FrameQueuePtr frame_queue_;
+        BufferQueuePtr buffer_queue_;
         std::atomic<int> frame_count_;
         std::atomic<bool> draining_;
         std::thread t_;

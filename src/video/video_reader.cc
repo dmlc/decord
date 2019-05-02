@@ -90,9 +90,9 @@ void VideoReader::SetVideoStream(int stream_nb) {
     // initialize the mem for codec context
     CHECK(codecs_[st_nb] == dec) << "Codecs of " << st_nb << " is NULL";
     // LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
-    if (ctx_.device_type == kDLCPU) {
+    if (kDLCPU == ctx_.device_type) {
         decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new FFMPEGThreadedDecoder());
-    } else if (ctx_.device_type == kDLGPU) {
+    } else if (kDLGPU == ctx_.device_type) {
 #ifdef USE_CUDA
         decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new CUThreadedDecoder());
 #else

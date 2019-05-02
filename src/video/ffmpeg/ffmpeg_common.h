@@ -8,6 +8,7 @@
 #define DECORD_VIDEO_FFMPEG_COMMON_H_
 
 #include "../storage_pool.h"
+#include <decord/base.h>
 #include <decord/runtime/ndarray.h>
 
 #include <memory>
@@ -33,6 +34,7 @@ extern "C" {
 
 #include <dmlc/logging.h>
 #include <dmlc/thread_local.h>
+#include <dlpack/dlpack.h>
 
 namespace decord {
 namespace ffmpeg {
@@ -174,7 +176,7 @@ using AVFilterContextPtr = std::unique_ptr<
     AVFilterContext, Deleter<AVFilterContext, void, avfilter_free> >;
 
 
-void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
+inline void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 	CHECK(p) << "Error: converting empty AVFrame to DLTensor";
 	// int channel = p->linesize[0] / p->width;
 	CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24)
@@ -191,7 +193,7 @@ void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 	}
 	// LOG(INFO) << p->height << " x";
 	// std::vector<int64_t> shape = { p->height, p->width, p->linesize[0] / p->width };
-    LOG(INFO) << p->height << " x " << p->width;
+    // LOG(INFO) << p->height << " x " << p->width;
 	shape[0] = p->height;
 	shape[1] = p->width;
 	shape[2] = p->linesize[0] / p->width;
@@ -215,7 +217,7 @@ static void AVFrameManagerDeleter(DLManagedTensor *manager) {
 	delete manager;
 }
 
-NDArray AsNDArray(AVFramePtr p) {
+inline NDArray AsNDArray(AVFramePtr p) {
 	DLManagedTensor* manager = new DLManagedTensor();
     auto av_manager = new AVFrameManager(p);
 	manager->manager_ctx = av_manager;
@@ -225,7 +227,7 @@ NDArray AsNDArray(AVFramePtr p) {
 	return arr;
 }
 
-NDArray CopyToNDArray(AVFramePtr p) {
+inline NDArray CopyToNDArray(AVFramePtr p) {
     CHECK(p) << "Error: converting empty AVFrame to DLTensor";
     // int channel = p->linesize[0] / p->width;
     CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24) 
