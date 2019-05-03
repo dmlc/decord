@@ -5,9 +5,12 @@
  */
 
 #include "cuda_decoder_impl.h"
+#include "../../runtime/cuda/cuda_common.h"
+#include <ostream>
 
 namespace decord {
 namespace cuda {
+using namespace runtime;
 
 const char * GetVideoCodecString(cudaVideoCodec eCodec) {
     static struct {
@@ -61,30 +64,29 @@ const char * GetVideoChromaFormatString(cudaVideoChromaFormat eChromaFormat) {
     return "Unknown";
 }
 
-CUVideoDecoder::CUVideoDecoder() : decoder_{0}, decoder_info_{}, initialized_{false} {
+CUVideoDecoderImpl::CUVideoDecoderImpl() : decoder_{0}, decoder_info_{}, initialized_{false} {
 }
 
-CUVideoDecoder::CUVideoDecoder(CUvideodecoder decoder)
+CUVideoDecoderImpl::CUVideoDecoderImpl(CUvideodecoder decoder)
     : decoder_{decoder}, decoder_info_{}, initialized_{true} {
 }
 
-CUVideoDecoder::~CUVideoDecoder() {
+CUVideoDecoderImpl::~CUVideoDecoderImpl() {
     if (initialized_) {
-        CUDA_CALL(cuvidDestroyDecoder(decoder_));
+        CHECK_CUDA_CALL(cuvidDestroyDecoder(decoder_));
     }
 }
 
-CUVideoDecoder::CUVideoDecoder(CUVideoDecoder&& other)
-    : log_{other.log_}, decoder_{other.decoder_}, initialized_{other.initialized_} {
+CUVideoDecoderImpl::CUVideoDecoderImpl(CUVideoDecoderImpl&& other)
+    : decoder_{other.decoder_}, initialized_{other.initialized_} {
     other.decoder_ = 0;
     other.initialized_ = false;
 }
 
-CUVideoDecoder& CUVideoDecoder::operator=(CUVideoDecoder&& other) {
+CUVideoDecoderImpl& CUVideoDecoderImpl::operator=(CUVideoDecoderImpl&& other) {
     if (initialized_) {
-        CUDA_CALL(cuvidDestroyDecoder(decoder_));
+        CHECK_CUDA_CALL(cuvidDestroyDecoder(decoder_));
     }
-    log_ = other.log_;
     decoder_ = other.decoder_;
     initialized_ = other.initialized_;
     other.decoder_ = 0;
@@ -92,7 +94,7 @@ CUVideoDecoder& CUVideoDecoder::operator=(CUVideoDecoder&& other) {
     return *this;
 }
 
-int CUVideoDecoder::initialize(CUVIDEOFORMAT* format) {
+int CUVideoDecoderImpl::Initialize(CUVIDEOFORMAT* format) {
     if (initialized_) {
         if ((format->codec != decoder_info_.CodecType) ||
             (format->coded_width != decoder_info_.ulWidth) ||
@@ -121,7 +123,7 @@ int CUVideoDecoder::initialize(CUVIDEOFORMAT* format) {
     caps.eCodecType = format->codec;
     caps.eChromaFormat = format->chroma_format;
     caps.nBitDepthMinus8 = format->bit_depth_luma_minus8;
-    if (CUDA_CALL(cuvidGetDecoderCaps(&caps))) {
+    if (CHECK_CUDA_CALL(cuvidGetDecoderCaps(&caps))) {
         if (!caps.bIsSupported) {
             std::stringstream ss;
             ss << "Unsupported Codec " << GetVideoCodecString(format->codec)
@@ -138,14 +140,14 @@ int CUVideoDecoder::initialize(CUVIDEOFORMAT* format) {
         
         if (format->coded_width < caps.nMinWidth ||
             format->coded_height < caps.nMinHeight) {
-            throw std::runtime_error("Video is too small in at least one dimension.");
+            LOG(FATAL) << "Video is too small in at least one dimension.";
         }
         if (format->coded_width > caps.nMaxWidth ||
             format->coded_height > caps.nMaxHeight) {
-            throw std::runtime_error("Video is too large in at least one dimension.");
+            LOG(FATAL) << "Video is too large in at least one dimension.";
         }
         if (format->coded_width * format->coded_height / 256 > caps.nMaxMBCount) {
-            throw std::runtime_error("Video is too large (too many macroblocks).");
+            LOG(FATAL) << "Video is too large (too many macroblocks).";
         }
     }
 
@@ -171,7 +173,7 @@ int CUVideoDecoder::initialize(CUVIDEOFORMAT* format) {
     decoder_info_.ulCreationFlags = cudaVideoCreate_PreferCUVID;
     decoder_info_.vidLock = nullptr;
 
-    if (CUDA_CALL(cuvidCreateDecoder(&decoder_, &decoder_info_))) {
+    if (CHECK_CUDA_CALL(cuvidCreateDecoder(&decoder_, &decoder_info_))) {
         initialized_ = true;
     } else {
         LOG(FATAL) << "Problem creating video decoder";
@@ -179,19 +181,19 @@ int CUVideoDecoder::initialize(CUVIDEOFORMAT* format) {
     return 1;
 }
 
-bool CUVideoDecoder::Initialized() const {
+bool CUVideoDecoderImpl::Initialized() const {
     return initialized_;
 }
 
-CUVideoDecoder::operator CUvideodecoder() const {
+CUVideoDecoderImpl::operator CUvideodecoder() const {
     return decoder_;
 }
 
-uint16_t CUVideoDecoder::Width() const {
+uint16_t CUVideoDecoderImpl::Width() const {
     return static_cast<uint16_t>(decoder_info_.ulTargetWidth);
 }
 
-uint16_t CUVideoDecoder::Height() const {
+uint16_t CUVideoDecoderImpl::Height() const {
     return static_cast<uint16_t>(decoder_info_.ulTargetHeight);
 }
 

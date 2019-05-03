@@ -6,6 +6,9 @@
 
 #include "video_reader.h"
 #include "ffmpeg/threaded_decoder.h"
+#if DECORD_USE_CUDA
+#include "nvcodec/cuda_threaded_decoder.h"
+#endif
 #include <algorithm>
 #include <decord/runtime/ndarray.h>
 
@@ -93,8 +96,8 @@ void VideoReader::SetVideoStream(int stream_nb) {
     if (kDLCPU == ctx_.device_type) {
         decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new FFMPEGThreadedDecoder());
     } else if (kDLGPU == ctx_.device_type) {
-#ifdef USE_CUDA
-        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new CUThreadedDecoder());
+#ifdef DECORD_USE_CUDA
+        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new cuda::CUThreadedDecoder(ctx_.device_id));
 #else
         LOG(FATAL) << "CUDA not enabled. Requested context GPU(" << ctx_.device_id << ").";
 #endif

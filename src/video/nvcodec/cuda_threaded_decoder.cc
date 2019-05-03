@@ -5,33 +5,27 @@
  */
 
 #include "cuda_threaded_decoder.h"
+#include "cuda_mapped_frame.h"
+#include "cuda_texture.h"
+#include "../../improc/improc.h"
+#include "nvcuvid/nvcuvid.h"
+#include <nvml.h>
 
 
 namespace decord {
 namespace cuda {
+using namespace runtime;
 
 CUThreadedDecoder::CUThreadedDecoder(int device_id) 
-    : device_id_(device_id), device_{}, ctx_{}, parser_{}, decoder_{}, 
-    occupied_frames_(32), // 32 is cuvid's max number of decode surfaces
+    : device_id_(device_id), device_{}, ctx_{}, parser_{}, decoder_{}, stream_({-1, false}),
     pkt_queue_{}, buffer_queue_{}, frame_queue_{}, run_(false), frame_count_(0),
     tex_registry_() {
     
-    if (!CHECK_CUDA_CALL(cuInit(0))) {
-        LOG(FATAL) << "Unable to initial cuda driver. Is the kernel module installed?";
-    }
-
-    if (!CHECK_CUDA_CALL(cuDeviceGet(&device_, device_id_))) {
-        LOG(FATAL) << "Problem getting device info for device "
-                  << device_id_ << ", not initializing VideoDecoder\n";
-        return;
-    }
+    CHECK_CUDA_CALL(cuInit(0));
+    CHECK_CUDA_CALL(cuDeviceGet(&device_, device_id_));
 
     char device_name[100];
-    if (!CHECK_CUDA_CALL(cuDeviceGetName(device_name, 100, device_))) {
-        LOG(FATAL) << "Problem getting device name for device "
-                  << device_id_ << ", not initializing VideoDecoder\n";
-        return;
-    }
+    CHECK_CUDA_CALL(cuDeviceGetName(device_name, 100, device_));
     DLOG(INFO) << "Using device: " << device_name;
 
     try {
@@ -50,7 +44,7 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id)
             LOG(INFO) << "Older kernel module version " << nvmod_version
                         << " so using the default stream."
                         << std::endl;
-            use_default_stream();
+            stream_ = CUStream(device_id_, true);
         } else {
             LOG(INFO) << "Kernel module version " << nvmod_version
                         << ", so using our own stream."
@@ -61,30 +55,29 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id)
                     << "conservatively assuming it is an older version.\n"
                     << "The error was: " << e.what()
                     << std::endl;
-        use_default_stream();
+        stream_ = CUStream(device_id_, true);
     }
 
     ctx_ = CUContext(device_);
-    if (!ctx_.initialized()) {
+    if (!ctx_.Initialized()) {
         LOG(FATAL) << "Problem initializing context";
-        return;
-    }
-
-    parser_ = CUVideoParser(dec_ctx->codec, this, 20, dec_ctx->codecpar->extradata,
-                            dec_ctx->codecpar->extradata_size);
-    if (!parser_.Initialized()) {
-        LOG(FATAL) << "Problem creating video parser";
         return;
     }
 }
 
-void CUThreadedDecoder::SetCodecContext(const AVCodecContext *dec_ctx, int width, int height) {
+void CUThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
     CHECK(dec_ctx);
     width_ = width;
     height_ = height;
     bool running = run_.load();
     Clear();
     dec_ctx_.reset(dec_ctx);
+    parser_ = CUVideoParser(dec_ctx->codec_id, this, kMaxOutputSurfaces, dec_ctx->extradata,
+                            dec_ctx->extradata_size);
+    if (!parser_.Initialized()) {
+        LOG(FATAL) << "Problem creating video parser";
+        return;
+    }
     if (running) {
         Start();
     }
@@ -98,8 +91,8 @@ void CUThreadedDecoder::Start() {
     avcodec_flush_buffers(dec_ctx_.get());
     CHECK(permits_.size() == 0);
     permits_.resize(kMaxOutputSurfaces);
-    for (auto& p : permits_) {
-        p.Push(1);
+    for (auto p : permits_) {
+        p->Push(1);
     }
     run_.store(true);
     // launch worker threads
@@ -126,9 +119,11 @@ void CUThreadedDecoder::Clear() {
     Stop();
     frame_count_.store(0);
     reorder_buffer_.clear();
-    surface_order_.clear();
+    std::queue<int> tmp_queue;
+    std::swap(tmp_queue, surface_order_);
+    // surface_order_.clear();
     for (auto& p : permits_) {
-        p.SignalForKill();
+        p->SignalForKill();
     }
     permits_.clear();
 }
@@ -155,18 +150,19 @@ int CUDAAPI CUThreadedDecoder::HandlePictureDisplay(void* user_data,
 }
 
 int CUThreadedDecoder::HandlePictureSequence_(CUVIDEOFORMAT* format) {
+    width_ = format->coded_width;
+    height_ = format->coded_height;
     frame_base_ = {static_cast<int>(format->frame_rate.denominator),
                    static_cast<int>(format->frame_rate.numerator)};
-    return decoder_.initialize(format);
+    return decoder_.Initialize(format);
 }
 
 int CUThreadedDecoder::HandlePictureDecode_(CUVIDPICPARAMS* pic_params) {
-    CHECK_GE(pic_pararms->CurrPicIdx, 0);
-    CHECK_LT(pic_pararms->CurrPicIdx, permits_.size());
-    auto& permit_queue = permits_[pic_pararms->CurrPicIdx];
-    bool ret;
-    uint8_t tmp;
-    if (!run_.load() || !permit_queue.Pop(&tmp)) return 0;
+    CHECK_GE(pic_params->CurrPicIdx, 0);
+    CHECK_LT(pic_params->CurrPicIdx, permits_.size());
+    auto permit_queue = permits_[pic_params->CurrPicIdx];
+    int tmp;
+    if (!run_.load() || !permit_queue->Pop(&tmp)) return 0;
     if (!CHECK_CUDA_CALL(cuvidDecodePicture(decoder_, pic_params))) {
         LOG(FATAL) << "Failed to launch cuvidDecodePicture";
         return 0;
@@ -176,46 +172,45 @@ int CUThreadedDecoder::HandlePictureDecode_(CUVIDPICPARAMS* pic_params) {
 
 int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
     // push to converter
-    buffer_queue_.Push(disp_info);
+    buffer_queue_->Push(disp_info);
     // finished, send clear msg to allow next decoding
+    return 1;
 }
 
-void CUThreadedDecoder::Push(AVPacketPtr pkt, DLTensor buf) {
+void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
     CHECK(run_.load());
     if (!pkt) {
         CHECK(!draining_.load()) << "Start draining twice...";
         draining_.store(true);
     }
-    pkt_queue_.Push(pkt);
-    NumberedFrame nf = {};
-    nf.t = buf;
-    nf.n = -1;
-    frame_queue_.Push(nf);  // push memory buffer
+    pkt_queue_->Push(pkt);
+    frame_queue_->Push(buf);  // push memory buffer
     ++frame_count_;
 }
 
-bool CUThreadedDecoder::Pop(DLTensor *frame) {
+bool CUThreadedDecoder::Pop(NDArray *frame) {
     if (!frame_count_.load() && !draining_.load()) {
         return false;
     }
     CHECK(surface_order_.size() > 0);
-    int frame_num = surface_order_.pop_front();
+    int frame_num = surface_order_.front();
+    surface_order_.pop();
     auto r = reorder_buffer_.find(frame_num);
     if (r == reorder_buffer_.end()) {
         return false;
     }
-    *frame = (*r).t;
+    *frame = (*r).second;
     reorder_buffer_.erase(r);
-    --frame_count;
+    --frame_count_;
     return true;
 }
 
 void CUThreadedDecoder::LaunchThread() {
-    context_.push();
+    ctx_.Push();
     while (run_.load()) {
         bool ret;
         AVPacketPtr avpkt = nullptr;
-        ret = pkt_queue_.Pop(&avpkt)
+        ret = pkt_queue_->Pop(&avpkt);
         if (!ret) return;
 
         CUVIDSOURCEDATAPACKET cupkt = {0};
@@ -237,24 +232,24 @@ void CUThreadedDecoder::LaunchThread() {
         }
 
         // calculate frame number for output order
-        auto frame_num = av_rescale_q(pkt->pts, AV_TIME_BASE_Q, dec_ctx_->time_base);
+        auto frame_num = av_rescale_q(avpkt->pts, AV_TIME_BASE_Q, dec_ctx_->time_base);
         surface_order_.push(frame_num);
     }
 }
 
 void CUThreadedDecoder::ConvertThread() {
-    context_.push();
+    ctx_.Push();
     while (run_.load()) {
         bool ret;
         CUVIDPARSERDISPINFO *disp_info = nullptr;
-        NumberedFrame nf;
-        ret = buffer_queue_.Pop(&disp_info);
+        NDArray arr;
+        ret = buffer_queue_->Pop(&disp_info);
         if (!ret) return;
         CHECK(disp_info != nullptr);
         // CUDA mem buffer
-        ret = frame_queue_.Pop(&nf);
-        CHECK(nf.t.data != nullptr);
-        uint8_t* dst = static_cast<uint8_t>(nf.t.data);
+        ret = frame_queue_->Pop(&arr);
+        CHECK(arr.defined());
+        uint8_t* dst = static_cast<uint8_t*>(arr.data_->dl_tensor.data);
         auto frame = CUMappedFrame(disp_info, decoder_, stream_);
         // conversion to usable format, RGB, resize, etc...
         auto input_width = decoder_.Width();
@@ -265,14 +260,13 @@ void CUThreadedDecoder::ConvertThread() {
                                                   input_height,
                                                   ScaleMethod_Linear,
                                                   ChromaUpMethod_Linear);
-        ProcessFrame(textures.chroma, textures.luma, dst, stream_, input_width, input_height, width_, height_);
+        imp::ProcessFrame(textures.chroma, textures.luma, dst, stream_, input_width, input_height, width_, height_);
         int frame_num = av_rescale_q(frame.disp_info->timestamp,
                                       nv_time_base_, frame_base_);
-        nf.n = frame_num;
-        reorder_buffer_[frame_num] = nf;
+        reorder_buffer_[frame_num] = arr;
 
         // Output cleared, allow next decoding
-        permits_[disp_info.CurrPicIdx].Push(1);
+        permits_[disp_info->picture_index]->Push(1);
     }
 }
 

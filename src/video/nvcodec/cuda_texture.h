@@ -8,6 +8,7 @@
 #define DECORD_VIDEO_NVCODEC_CUDA_TEXTURE_H_
 
 #include "nvcuvid/nvcuvid.h"
+#include "../../runtime/cuda/cuda_common.h"
 
 #include <unordered_map>
 

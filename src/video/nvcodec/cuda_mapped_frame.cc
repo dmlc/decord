@@ -6,10 +6,12 @@
 
 #include "nvcuvid/cuviddec.h"
 #include "cuda_mapped_frame.h"
-#include "cuda_utils.h"
+#include "../../runtime/cuda/cuda_common.h"
+#include <dmlc/logging.h>
 
 namespace decord {
 namespace cuda {
+using namespace runtime;
 
 CUMappedFrame::CUMappedFrame()
     : disp_info{nullptr}, valid_{false} {
@@ -29,7 +31,7 @@ CUMappedFrame::CUMappedFrame(CUVIDPARSERDISPINFO* disp_info,
     params_.second_field = 0;
     params_.output_stream = stream;
 
-    if (!CUDA_CALL(cuvidMapVideoFrame(decoder_, disp_info->picture_index,
+    if (!CHECK_CUDA_CALL(cuvidMapVideoFrame(decoder_, disp_info->picture_index,
                                    &ptr_, &pitch_, &params_))) {
         LOG(FATAL) << "Unable to map video frame";
     }
@@ -45,7 +47,7 @@ CUMappedFrame::CUMappedFrame(CUMappedFrame&& other)
 
 CUMappedFrame::~CUMappedFrame() {
     if (valid_) {
-        if (!CUDA_CALL(cuvidUnmapVideoFrame(decoder_, ptr_))) {
+        if (!CHECK_CUDA_CALL(cuvidUnmapVideoFrame(decoder_, ptr_))) {
             LOG(FATAL) << "Error unmapping video frame";
         }
     }

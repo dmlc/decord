@@ -5,9 +5,13 @@
  */
 
 #include "cuda_texture.h"
+#include "nvcuvid/nvcuvid.h"
+
+#include "../../runtime/cuda/cuda_common.h"
 
 namespace decord {
 namespace cuda {
+using namespace runtime;
 
 CUTexture::CUTexture() : valid_{false} {
 }
@@ -17,7 +21,7 @@ CUTexture::CUTexture(const cudaResourceDesc* pResDesc,
                      const cudaResourceViewDesc* pResViewDesc)
     : valid_{false}
 {
-    if (!CUDA_CALL(cudaCreateCUTexture(&object_, pResDesc, pTexDesc, pResViewDesc))) {
+    if (!CHECK_CUDA_CALL(cudaCreateTextureObject(&object_, pResDesc, pTexDesc, pResViewDesc))) {
         LOG(FATAL) << "Unable to create a texture object";
     }
     valid_ = true;
@@ -25,7 +29,7 @@ CUTexture::CUTexture(const cudaResourceDesc* pResDesc,
 
 CUTexture::~CUTexture() {
     if (valid_) {
-        cudaDestroyCUTexture(object_);
+        cudaDestroyTextureObject(object_);
     }
 }
 
@@ -42,11 +46,11 @@ CUTexture& CUTexture::operator=(CUTexture&& other) {
     return *this;
 }
 
-CUTexture::operator cudaCUTexture_t() const {
+CUTexture::operator cudaTextureObject_t() const {
     if (valid_) {
         return object_;
     } else {
-        return cudaCUTexture_t{};
+        return cudaTextureObject_t{};
     }
 }
 
@@ -57,7 +61,7 @@ CUTextureRegistry::CUTextureRegistry() {
 const CUImageTexture& CUTextureRegistry::GetTexture(uint8_t* ptr, unsigned int input_pitch, 
                                                     uint16_t input_width, uint16_t input_height,
                                                     ScaleMethod scale_method, ChromaUpMethod chroma_up_method) {
-    auto tex_id = std::make_tuple(ptr, scale_method, chroma_method);
+    auto tex_id = std::make_tuple(ptr, scale_method, chroma_up_method);
 
     // find existing registed texture, if so return directly
     auto tex = textures_.find(tex_id);
@@ -66,7 +70,7 @@ const CUImageTexture& CUTextureRegistry::GetTexture(uint8_t* ptr, unsigned int i
     }
 
     // not found, create new texture object
-    CUTexture tex;
+    CUImageTexture tex_object;
     cudaTextureDesc tex_desc = {};
     tex_desc.addressMode[0]   = cudaAddressModeClamp;
     tex_desc.addressMode[1]   = cudaAddressModeClamp;
@@ -80,13 +84,13 @@ const CUImageTexture& CUTextureRegistry::GetTexture(uint8_t* ptr, unsigned int i
 
     cudaResourceDesc res_desc = {};
     res_desc.resType = cudaResourceTypePitch2D;
-    res_desc.res.pitch2D.devPtr = input;
+    res_desc.res.pitch2D.devPtr = ptr;
     res_desc.res.pitch2D.desc = cudaCreateChannelDesc<uchar1>();
     res_desc.res.pitch2D.width = input_width;
     res_desc.res.pitch2D.height = input_height;
     res_desc.res.pitch2D.pitchInBytes = input_pitch;
 
-    tex.luma = CUTexture{&res_desc, &tex_desc, nullptr};
+    tex_object.luma = CUTexture{&res_desc, &tex_desc, nullptr};
 
     tex_desc.addressMode[0]   = cudaAddressModeClamp;
     tex_desc.addressMode[1]   = cudaAddressModeClamp;
@@ -96,15 +100,15 @@ const CUImageTexture& CUTextureRegistry::GetTexture(uint8_t* ptr, unsigned int i
     tex_desc.normalizedCoords = 0;
 
     res_desc.resType = cudaResourceTypePitch2D;
-    res_desc.res.pitch2D.devPtr = input + (input_height * input_pitch);
+    res_desc.res.pitch2D.devPtr = ptr + (input_height * input_pitch);
     res_desc.res.pitch2D.desc = cudaCreateChannelDesc<uchar2>();
     res_desc.res.pitch2D.width = input_width;
     res_desc.res.pitch2D.height = input_height / 2;
     res_desc.res.pitch2D.pitchInBytes = input_pitch;
 
-    tex.chroma = CUTexture{&res_desc, &tex_desc, nullptr};
+    tex_object.chroma = CUTexture{&res_desc, &tex_desc, nullptr};
 
-    auto p = textures_.emplace(tex_id, std::move(objects));
+    auto p = textures_.emplace(tex_id, std::move(tex_object));
     if (!p.second) {
         LOG(FATAL) << "Unable to cache a new texture object.";
     }

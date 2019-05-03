@@ -7,43 +7,47 @@
 #ifndef DECORD_VIDEO_NVCODEC_CUDA_THREADED_DECODER_H_
 #define DECORD_VIDEO_NVCODEC_CUDA_THREADED_DECODER_H_
 
+#include "cuda_stream.h"
 #include "cuda_parser.h"
+#include "cuda_context.h"
 #include "cuda_decoder_impl.h"
-#include "cuda_storage_pool.h"
+#include "cuda_texture.h"
 #include "../ffmpeg/ffmpeg_common.h"
+#include "../threaded_decoder_interface.h"
 
 #include <condition_variable>
 #include <thread>
 
 #include <decord/runtime/ndarray.h>
+#include <dmlc/concurrency.h>
+#include <dlpack/dlpack.h>
 
 namespace decord {
 namespace cuda {
 
-struct NumberedFrame {
-    DLTensor t;
-    int64_t n;
-}
-
-class CUThreadedDecoder {
-    constexpr int kMaxOutputSurfaces = 20;
+class CUThreadedDecoder : public ThreadedDecoderInterface {
+    constexpr static int kMaxOutputSurfaces = 20;
     using NDArray = runtime::NDArray;
+    using AVPacketPtr = ffmpeg::AVPacketPtr;
+    using AVCodecContextPtr = ffmpeg::AVCodecContextPtr;
     using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
     using PacketQueuePtr = std::unique_ptr<PacketQueue>;
     using BufferQueue = dmlc::ConcurrentBlockingQueue<CUVIDPARSERDISPINFO*>;
     using BufferQueuePtr = std::unique_ptr<BufferQueue>;
-    using FrameQueue = dmlc::ConcurrentBlockingQueue<NumberedFrame>;
+    using FrameQueue = dmlc::ConcurrentBlockingQueue<NDArray>;
     using FrameQueuePtr = std::unique_ptr<FrameQueue>;
+    using PermitQueue = dmlc::ConcurrentBlockingQueue<int>;
+    using PermitQueuePtr = std::shared_ptr<PermitQueue>;
 
     public:
         CUThreadedDecoder(int device_id);
-        void SetCodecContext(const AVCodecContext *dec_ctx, int width = -1, int height = -1);
+        void SetCodecContext(AVCodecContext *dec_ctx, int width = -1, int height = -1);
         bool Initialized() const;
         void Start();
         void Stop();
         void Clear();
-        void Push(AVPacketPtr pkt, DLTensor buf);
-        bool Pop(DLTensor *frame);
+        void Push(AVPacketPtr pkt, NDArray buf);
+        bool Pop(NDArray *frame);
         ~CUThreadedDecoder();
 
         static int CUDAAPI HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format);
@@ -70,34 +74,19 @@ class CUThreadedDecoder {
         std::queue<int> surface_order_;  // read by main thread only, write by fetcher only
         std::thread launcher_t_;
         std::thread converter_t_;
-        std::vector<dmlc::ConcurrentBlockingQueue<uint8_t>> permits_;
+        std::vector<PermitQueuePtr> permits_;
         std::atomic<bool> run_;
         std::atomic<int> frame_count_;
+        std::atomic<bool> draining_;
         CUTextureRegistry tex_registry_;
         AVRational nv_time_base_ = {1, 10000000};
         AVRational frame_base_;
         AVCodecContextPtr dec_ctx_;
+        unsigned int width_;
+        unsigned int height_;
     
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
 };
-
-int CUDAAPI CUThreadedDecoder::HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format) {
-    auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->HandlePictureSequence_(format);
-}
-
-int CUDAAPI CUThreadedDecoder::HandlePictureDecode(void* user_data,
-                                            CUVIDPICPARAMS* pic_params) {
-    auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->HandlePictureDecode_(pic_params);
-}
-
-int CUDAAPI CUThreadedDecoder::HandlePictureDisplay(void* user_data,
-                                             CUVIDPARSERDISPINFO* disp_info) {
-    auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
-    return decoder->HandlePictureDisplay_(disp_info);
-}
-
-}  // namespace decord
 }  // namespace cuda
+}  // namespace decord
 #endif  // DECORD_VIDEO_NVCODEC_CUDA_THREADED_DECODER_H_

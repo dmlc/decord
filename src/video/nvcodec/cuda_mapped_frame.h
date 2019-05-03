@@ -20,6 +20,10 @@ class CUMappedFrame {
         CUMappedFrame(CUVIDPARSERDISPINFO* disp_info, CUvideodecoder decoder,
                     CUstream stream);
         ~CUMappedFrame();
+        CUMappedFrame(const CUMappedFrame&) = delete;
+        CUMappedFrame& operator=(const CUMappedFrame&) = delete;
+        CUMappedFrame(CUMappedFrame&& other);
+        CUMappedFrame& operator=(CUMappedFrame&&) = delete;
 
         uint8_t* get_ptr() const;
         unsigned int get_pitch() const;
@@ -33,7 +37,6 @@ class CUMappedFrame {
         unsigned int pitch_;
         CUVIDPROCPARAMS params_;
 
-    DISALLOW_COPY_AND_ASSIGN(CUMappedFrame);
 };
 
 }  // namespace cuda

@@ -10,11 +10,13 @@
 namespace decord {
 namespace imp {
 
-#ifdef USE_CUDA
+#ifdef DECORD_USE_CUDA
 template<typename T>
 void ProcessFrame(cudaTextureObject_t chroma, cudaTextureObject_t luma, 
                   T* dst, cudaStream_t stream, uint16_t input_width, uint16_t input_height,
                   int output_width, int output_height);
+#else
+#pragma message("No USE_CUDA defined")
 #endif
 
 }  // namespace imp

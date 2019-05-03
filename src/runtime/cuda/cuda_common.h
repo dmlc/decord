@@ -25,6 +25,7 @@
 #ifndef DECORD_RUNTIME_CUDA_CUDA_COMMON_H_
 #define DECORD_RUNTIME_CUDA_CUDA_COMMON_H_
 
+#include <cuda.h>
 #include <cuda_runtime.h>
 #include <decord/runtime/packed_func.h>
 #include <string>
@@ -33,6 +34,32 @@
 namespace decord {
 namespace runtime {
 
+#ifdef __cuda_cuda_h__
+inline bool check_cuda_call(CUresult e, int iLine, const char *szFile) {
+    if (e != CUDA_SUCCESS) {
+        const char* err;
+        cuGetErrorString(e, &err);
+        std::cerr << "CUDA error " << e << " at line " << iLine << " in file " << szFile
+                  << ": " << err << std::endl;
+        return false;
+    }
+    return true;
+}
+#endif
+
+#ifdef __CUDA_RUNTIME_H__
+inline bool check_cuda_call(cudaError_t e, int iLine, const char *szFile) {
+    if (e != cudaSuccess) {
+        std::cerr << "CUDA runtime error " << e << " at line " << iLine
+                  << " in file " << szFile
+                  << ": " << cudaGetErrorString(e)
+                  << std::endl;
+        return false;
+    }
+    return true;
+}
+#endif
+
 #define CUDA_DRIVER_CALL(x)                                             \
   {                                                                     \
     CUresult result = x;                                                \
@@ -40,7 +67,8 @@ namespace runtime {
       const char *msg;                                                  \
       cuGetErrorName(result, &msg);                                     \
       LOG(FATAL)                                                        \
-          << "CUDAError: " #x " failed with error: " << msg;            \
+          << "CUDAError: " #x " failed with error: " << msg             \
+          << " at line: " << __LINE__ << " in file: " << __FILE__;      \
     }                                                                   \
   }
 
@@ -51,6 +79,8 @@ namespace runtime {
         << "CUDA: " << cudaGetErrorString(e) << " at line: " << __LINE__ \
         << " in file: " << __FILE__;                                     \
   }
+
+#define CHECK_CUDA_CALL(x) check_cuda_call(x, __LINE__, __FILE__)
 
 /*! \brief Thread local workspace */
 class CUDAThreadEntry {
