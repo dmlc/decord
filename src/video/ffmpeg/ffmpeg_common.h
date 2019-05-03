@@ -42,7 +42,7 @@ using NDArray = runtime::NDArray;
 
 /**
  * \brief Deleter adaptor for functions like av_free that take a pointer.
- * 
+ *
  * \tparam T Pointer type
  * \tparam R Deleter return type
  * \tparam R(*Fn)(T*) Real deteter function
@@ -55,7 +55,7 @@ template<typename T, typename R, R(*Fn)(T*)> struct Deleter {
 
 /**
  * \brief Deleter adaptor for functions like av_freep that take a pointer to a pointer.
- * 
+ *
  * \tparam T Pointer type
  * \tparam R Deleter return type
  * \tparam R(*Fn)(T*) Real deteter function
@@ -70,7 +70,7 @@ template<typename T, typename R, R(*Fn)(T**)> struct Deleterp {
 
 /**
  * \brief AutoReleasePool for AVFrame
- * 
+ *
  * \tparam S Pool size
  */
 template<int S>
@@ -93,7 +93,7 @@ class AutoReleaseAVFramePool : public AutoReleasePool<AVFrame, S> {
 
 /**
  * \brief AutoReleasePool for AVPacket
- * 
+ *
  * \tparam S Pool size
  */
 template<int S>
@@ -118,59 +118,59 @@ class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
 
 /**
  * \brief maximum pool size for AVFrame, per thread
- * 
+ *
  */
 static const int kAVFramePoolMaxSize = 32;
 /**
  * \brief maximum pool size for AVPacket, per thread
- * 
+ *
  */
 static const int kAVPacketPoolMaxSize = 32;
 /**
  * \brief AVFramePool
- * 
+ *
  */
 using AVFramePool = AutoReleaseAVFramePool<kAVFramePoolMaxSize>;
 /**
  * \brief AVPacketPool
- * 
+ *
  */
 using AVPacketPool = AutoReleaseAVPacketPool<kAVPacketPoolMaxSize>;
 /**
  * \brief Smart pointer for AVFrame
- * 
+ *
  */
 using AVFramePtr = std::shared_ptr<AVFrame>;
 /**
  * \brief Smart pointer for AVPacket
- * 
+ *
  */
 using AVPacketPtr = std::shared_ptr<AVPacket>;
 
 /**
  * \brief Smart pointer for AVFormatContext, non copyable
- * 
+ *
  */
 using AVFormatContextPtr = std::unique_ptr<
     AVFormatContext, Deleter<AVFormatContext, void, avformat_free_context> >;
 
 /**
  * \brief Smart pointer for AVCodecContext, non copyable
- * 
+ *
  */
 using AVCodecContextPtr = std::unique_ptr<
     AVCodecContext, Deleter<AVCodecContext, int, avcodec_close> >;
 
 /**
  * \brief Smart pointer for AVFilterGraph, non copyable
- * 
+ *
  */
 using AVFilterGraphPtr = std::unique_ptr<
     AVFilterGraph, Deleterp<AVFilterGraph, void, avfilter_graph_free> >;
 
 /**
  * \brief Smart pointer for AVFilterContext, non copyable
- * 
+ *
  */
 using AVFilterContextPtr = std::unique_ptr<
     AVFilterContext, Deleter<AVFilterContext, void, avfilter_free> >;
@@ -230,10 +230,10 @@ inline NDArray AsNDArray(AVFramePtr p) {
 inline NDArray CopyToNDArray(AVFramePtr p) {
     CHECK(p) << "Error: converting empty AVFrame to DLTensor";
     // int channel = p->linesize[0] / p->width;
-    CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24) 
-        << "Only support RGB24 image to NDArray conversion, given: " 
+    CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24)
+        << "Only support RGB24 image to NDArray conversion, given: "
         << AVPixelFormat(p->format);
-    
+
     DLContext ctx;
     if (p->hw_frames_ctx) {
         ctx = DLContext({kDLGPU, 0});

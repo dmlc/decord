@@ -22,24 +22,22 @@ using AVFramePool = ffmpeg::AVFramePool;
 using AVPacketPool = ffmpeg::AVPacketPool;
 
 VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height)
-     : ctx_(ctx), codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0), 
+     : ctx_(ctx), codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0),
      width_(width), height_(height), eof_(false) {
     // av_register_all deprecated in latest versions
     #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
     av_register_all();
     #endif
-    // allocate format context
-    fmt_ctx_.reset(avformat_alloc_context());
-    if (!fmt_ctx_) {
-        LOG(FATAL) << "ERROR allocating memory for Format Context";
-    }
-    // LOG(INFO) << "opened fmt ctx";
-    // open file
-    auto fmt_ctx = fmt_ctx_.get();
+
+    AVFormatContext *fmt_ctx = nullptr;
     int open_ret = avformat_open_input(&fmt_ctx, fn.c_str(), NULL, NULL);
     if( open_ret != 0 ) {
-        LOG(FATAL) << "ERROR opening file: " << fn.c_str() << ", " << open_ret;
+        char errstr[200];
+        av_strerror(open_ret, errstr, 200);
+        LOG(FATAL) << "ERROR opening file: " << fn.c_str() << ", " << errstr;
+        return;
     }
+    fmt_ctx_.reset(fmt_ctx);
 
     // LOG(INFO) << "opened input";
 
@@ -104,7 +102,7 @@ void VideoReader::SetVideoStream(int stream_nb) {
     } else {
         LOG(FATAL) << "Unknown device type: " << ctx_.device_type;
     }
-    
+
     auto dec_ctx = avcodec_alloc_context3(dec);
 	// LOG(INFO) << "Original decoder multithreading: " << dec_ctx->thread_count;
 	dec_ctx->thread_count = 0;
@@ -133,7 +131,7 @@ void VideoReader::SetVideoStream(int stream_nb) {
     // for (auto i : key_indices_) {
     //     LOG(INFO) << i;
     // }
-    
+
 }
 
 unsigned int VideoReader::QueryStreams() const {
@@ -145,7 +143,7 @@ unsigned int VideoReader::QueryStreams() const {
         AVCodec *codec = codecs_[i];
         if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             LOG(INFO) << "video stream [" << i << "]:"
-                << " Average FPS: " 
+                << " Average FPS: "
                 << static_cast<float>(st->avg_frame_rate.num) / st->avg_frame_rate.den
                 << " Start time: "
                 << st->start_time
@@ -166,7 +164,7 @@ unsigned int VideoReader::QueryStreams() const {
             codec_type = codec_type? codec_type : "unknown type";
             LOG(INFO) << codec_type << " stream [" << i << "].";
         }
-        
+
     }
     return fmt_ctx_->nb_streams;
 }
@@ -191,13 +189,13 @@ bool VideoReader::Seek(int64_t pos) {
     int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / GetFrameCount();
     // LOG(INFO) << "ts as by seek: " << ts;
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
-    // int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, 
-    //                             ts-1, ts, ts+1, 
+    // int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_,
+    //                             ts-1, ts, ts+1,
     //                             AVSEEK_FLAG_BACKWARD);
     // int tm = av_rescale(pos, fmt_ctx_->streams[actv_stm_idx_]->time_base.den, fmt_ctx_->streams[actv_stm_idx_]->time_base.num) / 1000;
     // LOG(INFO) << "TM: " << tm;
-    // int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_, 
-    //                             tm, tm, tm, 
+    // int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_,
+    //                             tm, tm, tm,
     //                             0);
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << pos;
     // LOG(INFO) << "seek return: " << ret;
