@@ -98,9 +98,8 @@ int DivUp(int total, int grain) {
     return (total + grain - 1) / grain;
 }
 
-template<typename T>
 void ProcessFrame(cudaTextureObject_t chroma, cudaTextureObject_t luma, 
-    T* dst, cudaStream_t stream, uint16_t input_width, uint16_t input_height,
+    uint8_t* dst, cudaStream_t stream, uint16_t input_width, uint16_t input_height,
     int output_width, int output_height) {
     // resize factor
     auto fx = static_cast<float>(input_width) / output_width;
@@ -109,13 +108,8 @@ void ProcessFrame(cudaTextureObject_t chroma, cudaTextureObject_t luma,
     dim3 block(32, 8);
     dim3 grid(DivUp(output_width, block.x), DivUp(output_height, block.y));
 
-    process_frame_kernel<<<grid, block, 0, stream>>>
+    detail::process_frame_kernel<<<grid, block, 0, stream>>>
             (luma, chroma, dst, input_width, input_height, output_width, output_height, fx, fy);
 }
-
-template<typename uint8_t>
-void ProcessFrame(cudaTextureObject_t chroma, cudaTextureObject_t luma, 
-    uint8_t* dst, cudaStream_t stream, uint16_t input_width, uint16_t input_height,
-    int output_width, int output_height);
 }  // namespace cuda
 }  // namespace decord

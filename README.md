@@ -25,7 +25,9 @@ Install the system packages for building the shared library, for Debian/Ubuntu u
 # official PPA comes with ffmpeg 2.8, which lacks tons of features, we use ffmpeg 4.0 here
 sudo add-apt-repository ppa:jonathonf/ffmpeg-4
 sudo apt-get update
-sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
+sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake 
+libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
+# note: make sure you have cmake 3.8 or later, you can install from cmake official website if it's too old
 ```
 
 Clone the repo recursively(important)
@@ -71,6 +73,7 @@ After installation of Homebrew, install cmake by:
 
 ```bash
 brew install cmake
+# note: make sure you have cmake 3.8 or later, you can install from cmake official website if it's too old
 ```
 
 Clone the repo recursively(important)

@@ -251,7 +251,7 @@ void CUThreadedDecoder::ConvertThread() {
         // CUDA mem buffer
         ret = frame_queue_->Pop(&arr);
         CHECK(arr.defined());
-        uint8_t* dst = static_cast<uint8_t*>(arr.data_->dl_tensor.data);
+        uint8_t* dst_ptr = static_cast<uint8_t*>(arr.data_->dl_tensor.data);
         auto frame = CUMappedFrame(disp_info, decoder_, stream_);
         // conversion to usable format, RGB, resize, etc...
         auto input_width = decoder_.Width();
@@ -262,7 +262,7 @@ void CUThreadedDecoder::ConvertThread() {
                                                   input_height,
                                                   ScaleMethod_Linear,
                                                   ChromaUpMethod_Linear);
-        imp::ProcessFrame(textures.chroma, textures.luma, dst, stream_, input_width, input_height, width_, height_);
+        ProcessFrame(textures.chroma, textures.luma, dst_ptr, stream_, input_width, input_height, width_, height_);
         int frame_num = av_rescale_q(frame.disp_info->timestamp,
                                       nv_time_base_, frame_base_);
         reorder_buffer_[frame_num] = arr;

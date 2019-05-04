@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.2)
-project(decord C CXX)
+cmake_minimum_required(VERSION 3.8)
+project(decord C CXX CUDA)
 
 # Utility functions
 include(cmake/util/Util.cmake)
@@ -82,13 +82,11 @@ file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc)
 include(cmake/modules/FFmpeg.cmake)
 include(cmake/modules/CUDA.cmake)
 
+# Targets
 
-if(USE_CUDA)
-  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_30,code=sm_30)
-  cuda_add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS} ${NVDEC_CUDA_SRCS})
-else()
-  add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS})
-endif(USE_CUDA)
+add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS} ${NVDEC_CUDA_SRCS})
+
+target_compile_features(decord PUBLIC cxx_std_11)
 
 target_link_libraries(decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS})
 
