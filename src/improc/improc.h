@@ -7,6 +7,8 @@
 #ifndef DECORD_IMPROC_IMPROC_H_
 #define DECORD_IMPROC_IMPROC_H_
 
+#include <stdint.h>
+
 namespace decord {
 namespace imp {
 

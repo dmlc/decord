@@ -243,7 +243,7 @@ class CUDAPrepGlobalBarrier {
     CUDA_CALL(cudaGetDevice(&device_id));
     if (pcache_[device_id] == 0) {
       pcache_[device_id] = m_->GetGlobal(
-          device_id, runtime::symbol::tvm_global_barrier_state, sizeof(unsigned));
+          device_id, runtime::symbol::decord_global_barrier_state, sizeof(unsigned));
     }
     CUDA_DRIVER_CALL(cuMemsetD32(pcache_[device_id], 0, 1));
   }
@@ -261,9 +261,9 @@ PackedFunc CUDAModuleNode::GetFunction(
       const std::string& name,
       const std::shared_ptr<ModuleNode>& sptr_to_self) {
   CHECK_EQ(sptr_to_self.get(), this);
-  CHECK_NE(name, symbol::tvm_module_main)
+  CHECK_NE(name, symbol::decord_module_main)
       << "Device function do not have main";
-  if (name == symbol::tvm_prepare_global_barrier) {
+  if (name == symbol::decord_prepare_global_barrier) {
     return PackedFunc(CUDAPrepGlobalBarrier(this, sptr_to_self));
   }
   auto it = fmap_.find(name);

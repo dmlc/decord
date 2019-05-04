@@ -4,8 +4,7 @@
  * \brief CUDA image processing kernels
  */
 
-#include "../video/nvcodec/cu_utils.h"
-
+#include "improc.h"
 #include <cuda_fp16.h>
 
 namespace decord {
@@ -93,6 +92,7 @@ __global__ void process_frame_kernel(
 
     yuv2rgb(yuv, dst, 1, false);
 }
+}  // namespace detail
 
 int DivUp(int total, int grain) {
     return (total + grain - 1) / grain;
@@ -117,6 +117,5 @@ template<typename uint8_t>
 void ProcessFrame(cudaTextureObject_t chroma, cudaTextureObject_t luma, 
     uint8_t* dst, cudaStream_t stream, uint16_t input_width, uint16_t input_height,
     int output_width, int output_height);
-}  // namespace detail
 }  // namespace cuda
 }  // namespace decord

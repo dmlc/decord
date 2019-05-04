@@ -5,6 +5,7 @@ project(decord C CXX)
 include(cmake/util/Util.cmake)
 include(cmake/util/FindFFmpeg.cmake)
 include(cmake/util/FindCUDA.cmake)
+# include(cmake/util/FindCUDAArchFlags.cmake)
 
 if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
   include(${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
@@ -77,13 +78,17 @@ assign_source_group("Include" ${GROUP_INCLUDE})
 # Source file lists
 file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc)
 
-# Package runtime rules
-
 # Module rules
 include(cmake/modules/FFmpeg.cmake)
 include(cmake/modules/CUDA.cmake)
 
-add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS})
+
+if(USE_CUDA)
+  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_30,code=sm_30)
+  cuda_add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS} ${NVDEC_CUDA_SRCS})
+else()
+  add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS})
+endif(USE_CUDA)
 
 target_link_libraries(decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS})
 
