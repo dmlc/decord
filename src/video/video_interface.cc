@@ -12,7 +12,7 @@
 #include <decord/runtime/registry.h>
 
 
-
+#include <dlpack/dlpack.h>
 #include <dmlc/logging.h>
 
 namespace decord {
@@ -31,9 +31,14 @@ namespace runtime {
 DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetVideoReader")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
     std::string fn = args[0];
-    int width = args[1];
-    int height = args[2];
-    VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(new VideoReader(fn, kCPU, width, height));
+    int device_type = args[1];
+    int device_id = args[2];
+    int width = args[3];
+    int height = args[4];
+    DLContext ctx;
+    ctx.device_type = static_cast<DLDeviceType>(device_type);
+    ctx.device_id = device_id;
+    VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(new VideoReader(fn, ctx, width, height));
     *rv = handle;
   });
 

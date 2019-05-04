@@ -6,17 +6,19 @@ import numpy as np
 
 from ._ffi.base import c_array, c_str
 from ._ffi.function import _init_api
+from ._ffi.ndarray import DECORDContext
 from .base import DECORDError
-from . import ndarray as _nd
+from .ndarray import cpu, gpu
 
 VideoReaderHandle = ctypes.c_void_p
 
 
 class VideoReader(object):
-    def __init__(self, uri, width=-1, height=-1):
+    def __init__(self, uri, ctx=cpu(0), width=-1, height=-1):
+        assert isinstance(ctx, DECORDContext)
         self._handle = None
         self._handle = _CAPI_VideoReaderGetVideoReader(
-            uri, width, height)
+            uri, ctx.device_type, ctx.device_id, width, height)
         self._num_frame = _CAPI_VideoReaderGetFrameCount(self._handle)
         assert self._num_frame > 0
     

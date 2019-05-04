@@ -69,6 +69,7 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id)
 
 void CUThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
     CHECK(dec_ctx);
+    LOG(INFO) << "SetCodecContext";
     width_ = width;
     height_ = height;
     bool running = run_.load();
@@ -83,23 +84,32 @@ void CUThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int 
     if (running) {
         Start();
     }
+    LOG(INFO) << "Finish SetCOdecContext...";
 }
 
 void CUThreadedDecoder::Start() {
     if (run_.load()) return;
 
+    LOG(INFO) << "Starting...";
     pkt_queue_.reset(new PacketQueue());
     frame_queue_.reset(new FrameQueue());
+    LOG(INFO) << "Reset done.";
     avcodec_flush_buffers(dec_ctx_.get());
     CHECK(permits_.size() == 0);
+    LOG(INFO) << "resizing permits";
     permits_.resize(kMaxOutputSurfaces);
+    LOG(INFO) << "init permits";
     for (auto p : permits_) {
+        p.reset(new PermitQueue());
         p->Push(1);
     }
+    LOG(INFO) << "permits initied.";
     run_.store(true);
     // launch worker threads
+    LOG(INFO) << "launching workers";
     launcher_t_ = std::thread{&CUThreadedDecoder::LaunchThread, this};
-    converter_t_ = std::thread{&CUThreadedDecoder::ConvertThread, this};
+    // converter_t_ = std::thread{&CUThreadedDecoder::ConvertThread, this};
+    LOG(INFO) << "finish launching workers";
 }
 
 void CUThreadedDecoder::Stop() {
@@ -108,6 +118,9 @@ void CUThreadedDecoder::Stop() {
         run_.store(false);
         frame_queue_->SignalForKill();
         buffer_queue_->SignalForKill();
+        for (auto p : permits_) {
+            if (p) p->SignalForKill();
+        }
     }
     if (launcher_t_.joinable()) {
         launcher_t_.join();
@@ -181,6 +194,7 @@ int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
 
 void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
     CHECK(run_.load());
+    LOG(INFO) << "Pusing CUDecoder";
     if (!pkt) {
         CHECK(!draining_.load()) << "Start draining twice...";
         draining_.store(true);
@@ -209,10 +223,13 @@ bool CUThreadedDecoder::Pop(NDArray *frame) {
 
 void CUThreadedDecoder::LaunchThread() {
     ctx_.Push();
+    LOG(INFO) << "LaunchThread, pushed";
     while (run_.load()) {
         bool ret;
         AVPacketPtr avpkt = nullptr;
+        LOG(INFO) << "LaunchThread, poping";
         ret = pkt_queue_->Pop(&avpkt);
+        LOG(INFO) << "LaunchThread, poped";
         if (!ret) return;
 
         CUVIDSOURCEDATAPACKET cupkt = {0};
@@ -241,11 +258,14 @@ void CUThreadedDecoder::LaunchThread() {
 
 void CUThreadedDecoder::ConvertThread() {
     ctx_.Push();
+    LOG(INFO) << "ConvertThrad, pushed";
     while (run_.load()) {
         bool ret;
         CUVIDPARSERDISPINFO *disp_info = nullptr;
         NDArray arr;
+        LOG(INFO) << "ConvertThrad, poping";
         ret = buffer_queue_->Pop(&disp_info);
+        LOG(INFO) << "ConvertThrad, poped";
         if (!ret) return;
         CHECK(disp_info != nullptr);
         // CUDA mem buffer
