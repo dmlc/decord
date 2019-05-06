@@ -30,6 +30,7 @@ void CUVideoParser::InitParams(AVCodecID codec, CUThreadedDecoder* decoder, int 
     parser_info_.pfnSequenceCallback = CUThreadedDecoder::HandlePictureSequence;
     parser_info_.pfnDecodePicture = CUThreadedDecoder::HandlePictureDecode;
     parser_info_.pfnDisplayPicture = CUThreadedDecoder::HandlePictureDisplay;
+    LOG(INFO) << parser_info_.pfnSequenceCallback << " " << parser_info_.pfnDecodePicture << " " << parser_info_.pfnDisplayPicture;
     parser_info_.pExtVideoInfo = &parser_extinfo_;
     if (extradata_size > 0) {
         auto hdr_size = std::min(sizeof(parser_extinfo_.raw_seqhdr_data),

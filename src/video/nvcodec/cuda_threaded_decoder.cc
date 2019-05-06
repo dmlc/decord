@@ -18,7 +18,7 @@ using namespace runtime;
 
 CUThreadedDecoder::CUThreadedDecoder(int device_id) 
     : device_id_(device_id), stream_({-1, false}), device_{}, ctx_{}, parser_{}, decoder_{}, 
-    pkt_queue_{}, frame_queue_{}, buffer_queue_{}, reorder_buffer_{}, surface_order_{},
+    pkt_queue_{}, frame_queue_{}, buffer_queue_{}, reorder_buffer_{}, reorder_queue_{}, frame_order_{},
     permits_{}, run_(false), frame_count_(0), draining_(false),
     tex_registry_(), nv_time_base_({1, 10000000}), frame_base_({1, 1000000}),
     dec_ctx_(nullptr), width_(-1), height_(-1) {
@@ -93,6 +93,8 @@ void CUThreadedDecoder::Start() {
     LOG(INFO) << "Starting...";
     pkt_queue_.reset(new PacketQueue());
     frame_queue_.reset(new FrameQueue());
+    buffer_queue_.reset(new BufferQueue());
+    reorder_queue_.reset(new ReorderQueue());
     LOG(INFO) << "Reset done.";
     avcodec_flush_buffers(dec_ctx_.get());
     CHECK(permits_.size() == 0);
@@ -108,7 +110,7 @@ void CUThreadedDecoder::Start() {
     // launch worker threads
     LOG(INFO) << "launching workers";
     launcher_t_ = std::thread{&CUThreadedDecoder::LaunchThread, this};
-    // converter_t_ = std::thread{&CUThreadedDecoder::ConvertThread, this};
+    converter_t_ = std::thread{&CUThreadedDecoder::ConvertThread, this};
     LOG(INFO) << "finish launching workers";
 }
 
@@ -118,6 +120,9 @@ void CUThreadedDecoder::Stop() {
         run_.store(false);
         frame_queue_->SignalForKill();
         buffer_queue_->SignalForKill();
+        reorder_queue_->SignalForKill();
+        auto tmp = std::queue<long int>();
+        std::swap(tmp, frame_order_);
         for (auto p : permits_) {
             if (p) p->SignalForKill();
         }
@@ -134,11 +139,8 @@ void CUThreadedDecoder::Clear() {
     Stop();
     frame_count_.store(0);
     reorder_buffer_.clear();
-    std::queue<int> tmp_queue;
-    std::swap(tmp_queue, surface_order_);
-    // surface_order_.clear();
     for (auto& p : permits_) {
-        p->SignalForKill();
+        if (p) p->SignalForKill();
     }
     permits_.clear();
 }
@@ -149,18 +151,21 @@ CUThreadedDecoder::~CUThreadedDecoder() {
 
 int CUDAAPI CUThreadedDecoder::HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
+    LOG(INFO) << "HandlePictureSequence";
     return decoder->HandlePictureSequence_(format);
 }
 
 int CUDAAPI CUThreadedDecoder::HandlePictureDecode(void* user_data,
                                             CUVIDPICPARAMS* pic_params) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
+    LOG(INFO) << "HandlePictureDecode";
     return decoder->HandlePictureDecode_(pic_params);
 }
 
 int CUDAAPI CUThreadedDecoder::HandlePictureDisplay(void* user_data,
                                              CUVIDPARSERDISPINFO* disp_info) {
     auto decoder = reinterpret_cast<CUThreadedDecoder*>(user_data);
+    LOG(INFO) << "HandlePictureDisplay";
     return decoder->HandlePictureDisplay_(disp_info);
 }
 
@@ -182,6 +187,7 @@ int CUThreadedDecoder::HandlePictureDecode_(CUVIDPICPARAMS* pic_params) {
         LOG(FATAL) << "Failed to launch cuvidDecodePicture";
         return 0;
     }
+    LOG(INFO) << " decoder sended.";
     return 1;
 }
 
@@ -189,12 +195,12 @@ int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
     // push to converter
     buffer_queue_->Push(disp_info);
     // finished, send clear msg to allow next decoding
+    LOG(INFO) << "finished, send clear msg to allow next decoding";
     return 1;
 }
 
 void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
     CHECK(run_.load());
-    LOG(INFO) << "Pusing CUDecoder";
     if (!pkt) {
         CHECK(!draining_.load()) << "Start draining twice...";
         draining_.store(true);
@@ -208,28 +214,18 @@ bool CUThreadedDecoder::Pop(NDArray *frame) {
     if (!frame_count_.load() && !draining_.load()) {
         return false;
     }
-    CHECK(surface_order_.size() > 0);
-    int frame_num = surface_order_.front();
-    surface_order_.pop();
-    auto r = reorder_buffer_.find(frame_num);
-    if (r == reorder_buffer_.end()) {
-        return false;
-    }
-    *frame = (*r).second;
-    reorder_buffer_.erase(r);
+    int ret = reorder_queue_->Pop(frame);
+    if (!ret) return false;
     --frame_count_;
     return true;
 }
 
 void CUThreadedDecoder::LaunchThread() {
     ctx_.Push();
-    LOG(INFO) << "LaunchThread, pushed";
     while (run_.load()) {
         bool ret;
         AVPacketPtr avpkt = nullptr;
-        LOG(INFO) << "LaunchThread, poping";
         ret = pkt_queue_->Pop(&avpkt);
-        LOG(INFO) << "LaunchThread, poped";
         if (!ret) return;
 
         CUVIDSOURCEDATAPACKET cupkt = {0};
@@ -246,31 +242,32 @@ void CUThreadedDecoder::LaunchThread() {
             // mark as flushing?
         }
 
+        // calculate frame number for output order
+        auto frame_num = av_rescale_q(avpkt->pts, AV_TIME_BASE_Q, dec_ctx_->time_base);
+        frame_order_.push(frame_num);
+        LOG(INFO) << "frame_order pushed " << frame_num;
+
         if (!CHECK_CUDA_CALL(cuvidParseVideoData(parser_, &cupkt))) {
             LOG(FATAL) << "Problem decoding packet";
         }
 
-        // calculate frame number for output order
-        auto frame_num = av_rescale_q(avpkt->pts, AV_TIME_BASE_Q, dec_ctx_->time_base);
-        surface_order_.push(frame_num);
+        LOG(INFO) << "cuvid parser set";
     }
 }
 
 void CUThreadedDecoder::ConvertThread() {
     ctx_.Push();
-    LOG(INFO) << "ConvertThrad, pushed";
     while (run_.load()) {
         bool ret;
         CUVIDPARSERDISPINFO *disp_info = nullptr;
         NDArray arr;
-        LOG(INFO) << "ConvertThrad, poping";
         ret = buffer_queue_->Pop(&disp_info);
-        LOG(INFO) << "ConvertThrad, poped";
         if (!ret) return;
         CHECK(disp_info != nullptr);
         // CUDA mem buffer
         ret = frame_queue_->Pop(&arr);
         CHECK(arr.defined());
+        LOG(INFO) << "COnvert thread, ndarray buffer get";
         uint8_t* dst_ptr = static_cast<uint8_t*>(arr.data_->dl_tensor.data);
         auto frame = CUMappedFrame(disp_info, decoder_, stream_);
         // conversion to usable format, RGB, resize, etc...
@@ -283,9 +280,25 @@ void CUThreadedDecoder::ConvertThread() {
                                                   ScaleMethod_Linear,
                                                   ChromaUpMethod_Linear);
         ProcessFrame(textures.chroma, textures.luma, dst_ptr, stream_, input_width, input_height, width_, height_);
-        int frame_num = av_rescale_q(frame.disp_info->timestamp,
+        auto frame_num = av_rescale_q(frame.disp_info->timestamp,
                                       nv_time_base_, frame_base_);
-        reorder_buffer_[frame_num] = arr;
+        CHECK(frame_order_.size() > 0);
+        auto desired_frame = frame_order_.front();
+        if (desired_frame == frame_num) {
+            // queue top is current array
+            reorder_queue_->Push(arr);
+            frame_order_.pop();
+        } else {
+            // store current arr to map
+            reorder_buffer_[frame_num] = arr;
+            auto r = reorder_buffer_.find(static_cast<int64_t>(frame_num));
+            if (r != reorder_buffer_.end()) {
+                // queue top is stored in map
+                reorder_queue_->Push(r->second);
+                reorder_buffer_.erase(r);
+                frame_order_.pop();
+            }
+        }
 
         // Output cleared, allow next decoding
         permits_[disp_info->picture_index]->Push(1);

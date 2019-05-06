@@ -38,6 +38,8 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
     using FrameQueuePtr = std::unique_ptr<FrameQueue>;
     using PermitQueue = dmlc::ConcurrentBlockingQueue<int>;
     using PermitQueuePtr = std::shared_ptr<PermitQueue>;
+    using ReorderQueue = dmlc::ConcurrentBlockingQueue<NDArray>;
+    using ReorderQueuePtr = std::unique_ptr<ReorderQueue>;
 
     public:
         CUThreadedDecoder(int device_id);
@@ -71,7 +73,8 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         FrameQueuePtr frame_queue_;
         BufferQueuePtr buffer_queue_;
         std::unordered_map<int64_t, runtime::NDArray> reorder_buffer_;
-        std::queue<int> surface_order_;  // read by main thread only, write by fetcher only
+        ReorderQueuePtr reorder_queue_;
+        std::queue<long int> frame_order_;
         std::thread launcher_t_;
         std::thread converter_t_;
         std::vector<PermitQueuePtr> permits_;

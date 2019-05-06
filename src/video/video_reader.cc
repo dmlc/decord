@@ -65,7 +65,7 @@ VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height)
     // find best video stream (-1 means auto, relay on FFMPEG)
     SetVideoStream(-1);
     // LOG(INFO) << "Set video stream";
-    // decoder_->Start();
+    decoder_->Start();
 
     // // allocate AVFrame buffer
     // frame_ = av_frame_alloc();
@@ -174,7 +174,6 @@ int64_t VideoReader::GetFrameCount() const {
    CHECK(actv_stm_idx_ >= 0);
    CHECK(actv_stm_idx_ >= 0 && static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
    int64_t cnt = fmt_ctx_->streams[actv_stm_idx_]->nb_frames;
-   LOG(INFO) << "CNT: " << cnt;
    if (cnt < 1) {
        AVStream *stm = fmt_ctx_->streams[actv_stm_idx_];
        // many formats do not provide accurate frame count, use duration and FPS to approximate
@@ -300,7 +299,6 @@ void VideoReader::IndexKeyframes() {
     }
     curr_frame_ = GetFrameCount();
 	ret = Seek(0);
-    LOG(INFO) << "Keyframe indexed";
 }
 
 runtime::NDArray VideoReader::GetKeyIndices() {
