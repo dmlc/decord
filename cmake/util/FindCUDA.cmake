@@ -100,7 +100,9 @@ macro(find_cuda use_cuda)
       find_library(CUDA_NVCUVID_LIBRARY nvcuvid
         PATHS ${CUDA_TOOLKIT_ROOT_DIR}
           PATH_SUFFIXES lib lib64 targets/x86_64-linux/lib targets/x86_64-linux/lib/stubs lib64/stubs lib/x86_64-linux-gnu
-          NO_DEFAULT_PATH)
+          NO_DEFAULT_PATH
+        PATHS /usr
+          PATH_SUFFIXES lib/x86_64-linux-gnu NO_DEFAULT_PATH)
     endif(MSVC)
     message(STATUS "Found CUDA_TOOLKIT_ROOT_DIR=" ${CUDA_TOOLKIT_ROOT_DIR})
     message(STATUS "Found CUDA_CUDA_LIBRARY=" ${CUDA_CUDA_LIBRARY})

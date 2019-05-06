@@ -30,3 +30,10 @@
 # - OFF: disable CUDA
 # - /path/to/cuda: use specific path to cuda toolkit
 set(USE_CUDA OFF)
+
+# Whether build with MT mode on Windows
+#
+# Possible values:
+# - ON: enable MT
+# - OFF: disalbe MT
+set(USE_MSVC_MT OFF)
