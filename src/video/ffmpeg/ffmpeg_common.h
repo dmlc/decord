@@ -176,6 +176,10 @@ using AVFilterContextPtr = std::unique_ptr<
     AVFilterContext, Deleter<AVFilterContext, void, avfilter_free> >;
 
 
+using AVBSFContextPtr = std::unique_ptr<
+    AVBSFContext, Deleterp<AVBSFContext, void, av_bsf_free> >;
+
+
 inline void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 	CHECK(p) << "Error: converting empty AVFrame to DLTensor";
 	// int channel = p->linesize[0] / p->width;

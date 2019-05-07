@@ -30,7 +30,8 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
     using NDArray = runtime::NDArray;
     using AVPacketPtr = ffmpeg::AVPacketPtr;
     using AVCodecContextPtr = ffmpeg::AVCodecContextPtr;
-    using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
+    // using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
+    using PacketQueue = std::queue<AVPacketPtr>;
     using PacketQueuePtr = std::unique_ptr<PacketQueue>;
     using BufferQueue = dmlc::ConcurrentBlockingQueue<CUVIDPARSERDISPINFO*>;
     using BufferQueuePtr = std::unique_ptr<BufferQueue>;

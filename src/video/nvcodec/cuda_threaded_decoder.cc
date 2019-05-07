@@ -116,7 +116,7 @@ void CUThreadedDecoder::Start() {
 
 void CUThreadedDecoder::Stop() {
     if (run_.load()) {
-        pkt_queue_->SignalForKill();
+        // pkt_queue_->SignalForKill();
         run_.store(false);
         frame_queue_->SignalForKill();
         buffer_queue_->SignalForKill();
@@ -205,7 +205,7 @@ void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
         CHECK(!draining_.load()) << "Start draining twice...";
         draining_.store(true);
     }
-    pkt_queue_->Push(pkt);
+    pkt_queue_->push(pkt);
     frame_queue_->Push(buf);  // push memory buffer
     ++frame_count_;
 }
@@ -225,8 +225,11 @@ void CUThreadedDecoder::LaunchThread() {
     while (run_.load()) {
         bool ret;
         AVPacketPtr avpkt = nullptr;
-        ret = pkt_queue_->Pop(&avpkt);
-        if (!ret) return;
+        if (pkt_queue_->size() < 1) continue;
+        avpkt = pkt_queue_->front();
+        pkt_queue_->pop();
+        // ret = pkt_queue_->pop(&avpkt);
+        // if (!ret) return;
 
         CUVIDSOURCEDATAPACKET cupkt = {0};
 
