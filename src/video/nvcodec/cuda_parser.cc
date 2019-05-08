@@ -26,6 +26,8 @@ void CUVideoParser::InitParams(AVCodecID codec, CUThreadedDecoder* decoder, int 
             return;
     }
     parser_info_.ulMaxNumDecodeSurfaces = decode_surfaces;
+    parser_info_.ulErrorThreshold = 0;
+    parser_info_.ulMaxDisplayDelay = 0;
     parser_info_.pUserData = decoder;
     parser_info_.pfnSequenceCallback = CUThreadedDecoder::HandlePictureSequence;
     parser_info_.pfnDecodePicture = CUThreadedDecoder::HandlePictureDecode;

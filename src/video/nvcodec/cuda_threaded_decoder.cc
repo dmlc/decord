@@ -18,10 +18,10 @@ using namespace runtime;
 
 CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar) 
     : device_id_(device_id), stream_({-1, false}), device_{}, ctx_{}, parser_{}, decoder_{}, 
-    pkt_queue_{}, frame_queue_{}, buffer_queue_{}, reorder_buffer_{}, reorder_queue_{}, frame_order_{},
+    pkt_queue_{}, frame_queue_{}, buffer_queue_{}, reorder_buffer_{}, reorder_queue_(), frame_order_(), last_pts_(-1),
     permits_{}, run_(false), frame_count_(0), draining_(false),
     tex_registry_(), nv_time_base_({1, 10000000}), frame_base_({1, 1000000}),
-    dec_ctx_(nullptr), bsf_ctx_(nullptr), width_(-1), height_(-1), decoded_cnt_(0) {
+    dec_ctx_(nullptr), bsf_ctx_(nullptr), width_(-1), height_(-1) {
 
     // initialize bitstream filters
     InitBitStreamFilter(codecpar);
@@ -216,7 +216,7 @@ int CUThreadedDecoder::HandlePictureDecode_(CUVIDPICPARAMS* pic_params) {
         LOG(FATAL) << "Failed to launch cuvidDecodePicture";
         return 0;
     }
-    decoded_cnt_++;
+    // decoded_cnt_++;
     return 1;
 }
 
@@ -236,11 +236,22 @@ void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
         CHECK(!draining_.load()) << "Start draining twice...";
         draining_.store(true);
     }
+    // if (pkt) {
+    //     // calculate frame number for output order
+    //     auto frame_num = av_rescale_q(pkt->pts, AV_TIME_BASE_Q, dec_ctx_->time_base);
+    //     frame_order_->Push(frame_num);
+    // }
     if (pkt) {
-        // calculate frame number for output order
-        auto frame_num = av_rescale_q(pkt->pts, AV_TIME_BASE_Q, dec_ctx_->time_base);
-        frame_order_->Push(frame_num);
+        if (last_pts_ < 0) {
+            last_pts_ = pkt->pts;
+            frame_order_->Push(last_pts_);
+        } else {
+            last_pts_ += pkt->duration;
+            frame_order_->Push(last_pts_);
+        }
     }
+    
+    
     pkt_queue_->Push(pkt);
     frame_queue_->Push(buf);  // push memory buffer
     ++frame_count_;
@@ -324,18 +335,19 @@ void CUThreadedDecoder::ConvertThread() {
                                                   ScaleMethod_Linear,
                                                   ChromaUpMethod_Linear);
         ProcessFrame(textures.chroma, textures.luma, dst_ptr, stream_, input_width, input_height, width_, height_);
-        auto frame_num = av_rescale_q(frame.disp_info->timestamp,
-                                      nv_time_base_, frame_base_);
-        long int desired_frame;
-        int fo_ret = frame_order_->Pop(&desired_frame);
+        int64_t frame_pts = static_cast<int64_t>(frame.disp_info->timestamp);
+        // auto frame_num = av_rescale_q(frame.disp_info->timestamp,
+        //                               nv_time_base_, frame_base_);
+        int64_t desired_pts;
+        int fo_ret = frame_order_->Pop(&desired_pts);
         if (!fo_ret) return;
-        if (desired_frame == frame_num) {
+        if (desired_pts == frame_pts) {
             // queue top is current array
             reorder_queue_->Push(arr);
         } else {
             // store current arr to map
-            reorder_buffer_[frame_num] = arr;
-            auto r = reorder_buffer_.find(static_cast<int64_t>(frame_num));
+            reorder_buffer_[frame_pts] = arr;
+            auto r = reorder_buffer_.find(static_cast<int64_t>(frame_pts));
             if (r != reorder_buffer_.end()) {
                 // queue top is stored in map
                 reorder_queue_->Push(r->second);

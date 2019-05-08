@@ -41,7 +41,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
     using PermitQueuePtr = std::shared_ptr<PermitQueue>;
     using ReorderQueue = dmlc::ConcurrentBlockingQueue<NDArray>;
     using ReorderQueuePtr = std::unique_ptr<ReorderQueue>;
-    using FrameOrderQueue = dmlc::ConcurrentBlockingQueue<long int>;
+    using FrameOrderQueue = dmlc::ConcurrentBlockingQueue<int64_t>;
     using FrameOrderQueuePtr = std::unique_ptr<FrameOrderQueue>;
 
     public:
@@ -79,6 +79,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         std::unordered_map<int64_t, runtime::NDArray> reorder_buffer_;
         ReorderQueuePtr reorder_queue_;
         FrameOrderQueuePtr frame_order_;
+        int64_t last_pts_;
         std::thread launcher_t_;
         std::thread converter_t_;
         std::vector<PermitQueuePtr> permits_;
@@ -94,7 +95,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         AVBSFContextPtr bsf_ctx_;
         unsigned int width_;
         unsigned int height_;
-        uint64_t decoded_cnt_;
+        // uint64_t decoded_cnt_;
     
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
 };
