@@ -30,8 +30,8 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
     using NDArray = runtime::NDArray;
     using AVPacketPtr = ffmpeg::AVPacketPtr;
     using AVCodecContextPtr = ffmpeg::AVCodecContextPtr;
-    // using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
-    using PacketQueue = std::queue<AVPacketPtr>;
+    using AVBSFContextPtr = ffmpeg::AVBSFContextPtr;
+    using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
     using PacketQueuePtr = std::unique_ptr<PacketQueue>;
     using BufferQueue = dmlc::ConcurrentBlockingQueue<CUVIDPARSERDISPINFO*>;
     using BufferQueuePtr = std::unique_ptr<BufferQueue>;
@@ -41,9 +41,11 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
     using PermitQueuePtr = std::shared_ptr<PermitQueue>;
     using ReorderQueue = dmlc::ConcurrentBlockingQueue<NDArray>;
     using ReorderQueuePtr = std::unique_ptr<ReorderQueue>;
+    using FrameOrderQueue = dmlc::ConcurrentBlockingQueue<long int>;
+    using FrameOrderQueuePtr = std::unique_ptr<FrameOrderQueue>;
 
     public:
-        CUThreadedDecoder(int device_id);
+        CUThreadedDecoder(int device_id, AVCodecParameters *codecpar);
         void SetCodecContext(AVCodecContext *dec_ctx, int width = -1, int height = -1);
         bool Initialized() const;
         void Start();
@@ -63,6 +65,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         int HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info);
         void LaunchThread();
         void ConvertThread();
+        void InitBitStreamFilter(AVCodecParameters *codecpar);
 
         int device_id_;
         CUStream stream_;
@@ -75,10 +78,11 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         BufferQueuePtr buffer_queue_;
         std::unordered_map<int64_t, runtime::NDArray> reorder_buffer_;
         ReorderQueuePtr reorder_queue_;
-        std::queue<long int> frame_order_;
+        FrameOrderQueuePtr frame_order_;
         std::thread launcher_t_;
         std::thread converter_t_;
         std::vector<PermitQueuePtr> permits_;
+        // std::vector<uint8_t> frame_in_use_;
         std::atomic<bool> run_;
         std::atomic<int> frame_count_;
         std::atomic<bool> draining_;
@@ -86,8 +90,11 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         AVRational nv_time_base_;
         AVRational frame_base_;
         AVCodecContextPtr dec_ctx_;
+        /*! \brief AV bitstream filter context */
+        AVBSFContextPtr bsf_ctx_;
         unsigned int width_;
         unsigned int height_;
+        uint64_t decoded_cnt_;
     
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
 };

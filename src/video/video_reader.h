@@ -55,8 +55,6 @@ class VideoReader : public VideoReaderInterface {
         int actv_stm_idx_;
         /*! \brief AV format context holder */
         ffmpeg::AVFormatContextPtr fmt_ctx_;
-        /*! \brief AV bitstream filter context */
-        ffmpeg::AVBSFContextPtr bsf_ctx_;
         /*! \brief AVPacket buffer */
         // AVPacket *pkt_;
         /*! \brief AVFrame buffer */

@@ -91,11 +91,17 @@ void VideoReader::SetVideoStream(int stream_nb) {
     // initialize the mem for codec context
     CHECK(codecs_[st_nb] == dec) << "Codecs of " << st_nb << " is NULL";
     // LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
+    ffmpeg::AVCodecParametersPtr codecpar; 
+    codecpar.reset(avcodec_parameters_alloc());
+    CHECK_GE(avcodec_parameters_copy(codecpar.get(), fmt_ctx_->streams[st_nb]->codecpar), 0)
+        << "Error copy stream->codecpar to buffer codecpar";
     if (kDLCPU == ctx_.device_type) {
         decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new FFMPEGThreadedDecoder());
     } else if (kDLGPU == ctx_.device_type) {
 #ifdef DECORD_USE_CUDA
-        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new cuda::CUThreadedDecoder(ctx_.device_id));
+        // note: cuda threaded decoder will modify codecpar
+        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new cuda::CUThreadedDecoder(
+            ctx_.device_id, codecpar.get()));
 #else
         LOG(FATAL) << "CUDA not enabled. Requested context GPU(" << ctx_.device_id << ").";
 #endif
@@ -109,7 +115,7 @@ void VideoReader::SetVideoStream(int stream_nb) {
     // CHECK_GE(avcodec_copy_context(dec_ctx, fmt_ctx_->streams[stream_nb]->codec), 0) << "Error: copy context";
     // CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0) << "Error: copy parameters to codec context.";
     // copy codec parameters to context
-    CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0)
+    CHECK_GE(avcodec_parameters_to_context(dec_ctx, codecpar.get()), 0)
         << "ERROR copying codec parameters to context";
     // initialize AVCodecContext to use given AVCodec
     CHECK_GE(avcodec_open2(dec_ctx, codecs_[st_nb], NULL), 0)
@@ -119,10 +125,10 @@ void VideoReader::SetVideoStream(int stream_nb) {
     // LOG(INFO) << "time base: " << fmt_ctx_->streams[st_nb]->time_base.num << " / " << fmt_ctx_->streams[st_nb]->time_base.den;
     dec_ctx->time_base = fmt_ctx_->streams[st_nb]->time_base;
     if (width_ < 1) {
-        width_ = fmt_ctx_->streams[st_nb]->codecpar->width;
+        width_ = codecpar->width;
     }
     if (height_ < 1) {
-        height_ = fmt_ctx_->streams[st_nb]->codecpar->height;
+        height_ = codecpar->height;
     }
     ndarray_pool_ = NDArrayPool(32, {height_, width_, 3}, kUInt8, ctx_);
     decoder_->SetCodecContext(dec_ctx, width_, height_);
