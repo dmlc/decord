@@ -6,6 +6,7 @@
 
 #include "improc.h"
 #include <cuda_fp16.h>
+#include <stdio.h>
 
 namespace decord {
 namespace cuda {
@@ -90,7 +91,8 @@ __global__ void process_frame_kernel(
     yuv.u = uv.x;
     yuv.v = uv.y;
 
-    yuv2rgb(yuv, dst, 1, false);
+    T* out = dst + (dst_x + dst_y * output_width) * 3;
+    yuv2rgb(yuv, out, 1, false);
 }
 }  // namespace detail
 

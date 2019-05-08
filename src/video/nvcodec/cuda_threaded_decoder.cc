@@ -10,7 +10,6 @@
 #include "../../improc/improc.h"
 #include "nvcuvid/nvcuvid.h"
 #include <nvml.h>
-#include <unistd.h>
 
 
 namespace decord {
