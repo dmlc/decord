@@ -6,7 +6,7 @@
 
 #include "improc.h"
 #include <cuda_fp16.h>
-#include <stdio.h>
+// #include <stdio.h>
 
 namespace decord {
 namespace cuda {

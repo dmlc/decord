@@ -197,8 +197,8 @@ int CUDAAPI CUThreadedDecoder::HandlePictureDisplay(void* user_data,
 }
 
 int CUThreadedDecoder::HandlePictureSequence_(CUVIDEOFORMAT* format) {
-    width_ = format->coded_width;
-    height_ = format->coded_height;
+    // width_ = format->coded_width;
+    // height_ = format->coded_height;
     frame_base_ = {static_cast<int>(format->frame_rate.denominator),
                    static_cast<int>(format->frame_rate.numerator)};
     return decoder_.Initialize(format);
@@ -282,6 +282,9 @@ void CUThreadedDecoder::LaunchThread() {
         if (avpkt && avpkt->size) {
             // bitstream filter raw packet
             AVPacketPtr filtered_avpkt = ffmpeg::AVPacketPool::Get()->Acquire();
+            if (filtered_avpkt->data) {
+                av_packet_unref(filtered_avpkt.get());
+            }
             CHECK(av_bsf_send_packet(bsf_ctx_.get(), avpkt.get()) == 0) << "Error sending BSF packet";
             int bsf_ret;
             while ((bsf_ret = av_bsf_receive_packet(bsf_ctx_.get(), filtered_avpkt.get())) == 0) {
