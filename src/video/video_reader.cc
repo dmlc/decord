@@ -239,7 +239,13 @@ void VideoReader::PushNext() {
             if (ret == AVERROR_EOF) {
                 eof_ = true;
                 // flush buffer
-                decoder_->Push(nullptr, ndarray_pool_.Acquire());
+                if (ctx_.device_type != kDLGPU) {
+                    // no preallocated memory and memory pool, use FFMPEG AVFrame pool
+                    decoder_->Push(nullptr, NDArray());
+                } else {
+                    // use preallocated memory pool for GPU
+                    decoder_->Push(nullptr, ndarray_pool_.Acquire());
+                }
                 return;
             } else {
                 LOG(FATAL) << "Error: av_read_frame failed with " << AVERROR(ret);
@@ -251,7 +257,13 @@ void VideoReader::PushNext() {
             // av_packet_unref(packet);
             // LOG(INFO) << "Successfully load packet";
             // LOG(FATAL) << packet->pts << " dts: " << packet->dts;
-            decoder_->Push(packet, ndarray_pool_.Acquire());
+            if (ctx_.device_type != kDLGPU) {
+                    // no preallocated memory and memory pool, use FFMPEG AVFrame pool
+                    decoder_->Push(packet, NDArray());
+                } else {
+                    // use preallocated memory pool for GPU
+                    decoder_->Push(packet, ndarray_pool_.Acquire());
+                }
             // LOG(INFO) << "Pushed packet to decoder.";
             break;
         }

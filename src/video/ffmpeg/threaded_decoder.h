@@ -33,9 +33,9 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         void Start();
         void Stop();
         void Clear();
-        void Push(AVPacketPtr pkt) {LOG(FATAL);};
+        // void Push(AVPacketPtr pkt) {LOG(FATAL);};
         void Push(ffmpeg::AVPacketPtr pkt, runtime::NDArray buf);
-        bool Pop(AVFramePtr *frame) {LOG(FATAL); return false; };
+        // bool Pop(AVFramePtr *frame) {LOG(FATAL); return false; };
         bool Pop(runtime::NDArray *frame);
         ~FFMPEGThreadedDecoder();
     private:

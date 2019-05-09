@@ -157,9 +157,14 @@ void FFMPEGThreadedDecoder::WorkerThread() {
                 bool get_buf = buffer_queue_->Pop(&out_buf);
                 if (!get_buf) return;
                 auto tmp = AsNDArray(out_frame);
-                CHECK(out_buf.Size() == tmp.Size());
-                out_buf.CopyFrom(tmp);
-                frame_queue_->Push(out_buf);
+                if (out_buf.defined()) {
+                    CHECK(out_buf.Size() == tmp.Size());
+                    out_buf.CopyFrom(tmp);
+                    frame_queue_->Push(out_buf);
+                } else {
+                    frame_queue_->Push(tmp);
+                }
+                
             }
             draining_.store(false);
             frame_queue_->Push(NDArray());
@@ -177,9 +182,13 @@ void FFMPEGThreadedDecoder::WorkerThread() {
                 bool get_buf = buffer_queue_->Pop(&out_buf);
                 if (!get_buf) return;
                 auto tmp = AsNDArray(out_frame);
-                CHECK(out_buf.Size() == tmp.Size());
-                out_buf.CopyFrom(tmp);
-                frame_queue_->Push(out_buf);
+                if (out_buf.defined()) {
+                    CHECK(out_buf.Size() == tmp.Size());
+                    out_buf.CopyFrom(tmp);
+                    frame_queue_->Push(out_buf);
+                } else {
+                    frame_queue_->Push(tmp);
+                }
                 // LOG(INFO) << "pts: " <<out_frame->pts;
             } else if (AVERROR(EAGAIN) == got_picture || AVERROR_EOF == got_picture) {
                 frame_queue_->Push(NDArray());

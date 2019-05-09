@@ -10,6 +10,7 @@
 #include "../../improc/improc.h"
 #include "nvcuvid/nvcuvid.h"
 #include <nvml.h>
+#include <chrono>
 
 
 namespace decord {
@@ -241,6 +242,10 @@ void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
         }
     }
     
+    while (kpt_queue_.Size() > kMaxOutputSurfaces) {
+        // too many in queue to be processed, wait here
+        std::this_thread::sleep_for(2us);
+    }
     
     pkt_queue_->Push(pkt);
     frame_queue_->Push(buf);  // push memory buffer
