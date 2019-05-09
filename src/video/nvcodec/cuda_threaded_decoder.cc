@@ -46,20 +46,18 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar)
         }
         auto nvmod_version = std::stof(nvmod_version_string);
         if (nvmod_version < 384.0f) {
-            LOG(INFO) << "Older kernel module version " << nvmod_version
+            DLOG(INFO) << "Older kernel module version " << nvmod_version
                         << " so using the default stream."
                         << std::endl;
             stream_ = CUStream(device_id_, true);
         } else {
-            LOG(INFO) << "Kernel module version " << nvmod_version
-                        << ", so using our own stream."
-                        << std::endl;
+            DLOG(INFO) << "Kernel module version " << nvmod_version
+                        << ", so using our own stream.";
         }
     } catch(const std::exception& e) {
-        LOG(INFO) << "Unable to get nvidia kernel module version from NVML, "
+        DLOG(INFO) << "Unable to get nvidia kernel module version from NVML, "
                     << "conservatively assuming it is an older version.\n"
-                    << "The error was: " << e.what()
-                    << std::endl;
+                    << "The error was: " << e.what();
         stream_ = CUStream(device_id_, true);
     }
 
@@ -93,7 +91,6 @@ void CUThreadedDecoder::InitBitStreamFilter(AVCodecParameters *codecpar) {
 
 void CUThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
     CHECK(dec_ctx);
-    LOG(INFO) << "SetCodecContext";
     width_ = width;
     height_ = height;
     bool running = run_.load();
@@ -108,25 +105,20 @@ void CUThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int 
     if (running) {
         Start();
     }
-    LOG(INFO) << "Finish SetCOdecContext...";
 }
 
 void CUThreadedDecoder::Start() {
     if (run_.load()) return;
 
-    LOG(INFO) << "Starting...";
     pkt_queue_.reset(new PacketQueue());
     frame_queue_.reset(new FrameQueue());
     buffer_queue_.reset(new BufferQueue());
     reorder_queue_.reset(new ReorderQueue());
     frame_order_.reset(new FrameOrderQueue());
-    LOG(INFO) << "Reset done.";
     avcodec_flush_buffers(dec_ctx_.get());
     // frame_in_use_.resize(kMaxOutputSurfaces, 0);
     CHECK(permits_.size() == 0);
-    LOG(INFO) << "resizing permits";
     permits_.resize(kMaxOutputSurfaces);
-    LOG(INFO) << "init permits";
     for (auto& p : permits_) {
         p.reset(new PermitQueue());
         p->Push(1);
@@ -134,10 +126,8 @@ void CUThreadedDecoder::Start() {
     // LOG(INFO) << "permits initied.";
     run_.store(true);
     // launch worker threads
-    LOG(INFO) << "launching workers";
     launcher_t_ = std::thread{&CUThreadedDecoder::LaunchThread, this};
     converter_t_ = std::thread{&CUThreadedDecoder::ConvertThread, this};
-    LOG(INFO) << "finish launching workers";
 }
 
 void CUThreadedDecoder::Stop() {
@@ -301,7 +291,6 @@ void CUThreadedDecoder::LaunchThread() {
                 }
             }
         } else {
-            LOG(INFO) << "draining cu parser";
             CUVIDSOURCEDATAPACKET cupkt = {0};
             cupkt.flags = CUVID_PKT_ENDOFSTREAM;
             if (!CHECK_CUDA_CALL(cuvidParseVideoData(parser_, &cupkt))) {
