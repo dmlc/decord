@@ -5,7 +5,7 @@
 `Decord` is a reverse procedure of `Record`. It provides convenient video slicing methods based on a thin wrapper on top of hardware accelerated video decoders, e.g.
 
 - FFMPEG/LibAV(On going)
-- Nvidia Codecs(Planed)
+- Nvidia Codecs(On going)
 - Intel Codecs
 
 `Decord` was designed to handle awkward video shuffling experience in order to provide smooth experiences similar to random image loader for deep learning.
@@ -135,8 +135,9 @@ VideoReader is used to access frames directly from video files.
 
 ```python
 from decord import VideoReader
+from decord import cpu, gpu
 
-reader = VideoReader('xxx.mp4')
+reader = VideoReader('xxx.mp4', ctx=cpu(0))
 print('video frames:', len(reader))
 print('frame shape:', vr.next().asnumpy().shape)
 
