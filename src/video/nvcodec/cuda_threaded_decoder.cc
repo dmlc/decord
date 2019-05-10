@@ -242,9 +242,9 @@ void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
         }
     }
     
-    while (kpt_queue_.Size() > kMaxOutputSurfaces) {
+    while (pkt_queue_->Size() > kMaxOutputSurfaces) {
         // too many in queue to be processed, wait here
-        std::this_thread::sleep_for(2us);
+        std::this_thread::sleep_for(std::chrono::nanoseconds(1));
     }
     
     pkt_queue_->Push(pkt);
