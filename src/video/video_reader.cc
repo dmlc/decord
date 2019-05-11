@@ -375,7 +375,7 @@ void VideoReader::SkipFrames(int64_t num) {
     // LOG(INFO) << " stopped skipframes: " << curr_frame_;
 }
 
-NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
+NDArray VideoReader::GetBatch(std::vector<int64_t> indices) {
     std::size_t bs = indices.size();
     int sz = height_ * width_ * 3;
     std::vector<uint8_t> buffer(bs * sz);
@@ -385,15 +385,6 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
         // LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
         CHECK_LT(pos, frame_count);
         CHECK_GE(pos, 0);
-#if 0
-        // TODO(zhreshold): make sure this seek strategy is useful.
-        if (curr_frame_ == pos) {
-            // no need to seek
-        } else {
-            // seek no matter what
-            Seek(pos);
-        }
-#else
         if (curr_frame_ == pos) {
             // no need to seek
         } else if (pos > curr_frame_) {
@@ -403,7 +394,6 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
             // seek no matter what
             SeekAccurate(pos);
         }
-#endif
         NDArray frame = NextFrameImpl();
         if (frame.Size() < 1 && eof_) {
             LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
@@ -416,6 +406,13 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     NDArray batch = NDArray::Empty(shape, kUInt8, kCPU);
     batch.CopyFrom(buffer, shape);
     return batch;
+}
+
+NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
+    std::size_t bs = indices.size();
+    if (!buf.defined()) {
+        buf = NDArray::Empty({static_cast<int64_t>(bs), height_, width_, 3}, kUInt8, ctx_);
+    }
 }
 
 }  // namespace decord
