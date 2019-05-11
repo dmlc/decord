@@ -10,6 +10,7 @@
 #include <vector>
 #include <utility>
 #include <numeric>
+#include <type_traits>
 #include "c_runtime_api.h"
 #include "serializer.h"
 
@@ -22,7 +23,6 @@ class VideoReader;
 class VideoLoader;
 namespace ffmpeg {
 class FFMPEGThreadedDecoder;
-class FFMPEGVideoReader;
 }
 namespace cuda {
 class CUThreadedDecoder;
@@ -127,6 +127,8 @@ class NDArray {
    */
   inline void CopyTo(DLTensor* other) const;
   inline void CopyTo(const NDArray& other) const;
+  template<typename T>
+  inline void CopyTo(std::vector<T>& other) const;
   // template<typename T>
   // inline void CopyTo(std::vector<T>& other, std::vector<int64_t>& shape);
   /*!
@@ -201,7 +203,6 @@ class NDArray {
   friend class DECORDRetValue;
   friend class DECORDArgsSetter;
   friend class ffmpeg::FFMPEGThreadedDecoder;
-  friend class ffmpeg::FFMPEGVideoReader;
   friend class cuda::CUThreadedDecoder;
   friend class decord::NDArrayPool;
   friend class decord::VideoReader;
@@ -323,6 +324,33 @@ inline size_t GetDataSize(const DLTensor& arr) {
   return size;
 }
 
+template<typename T>
+inline DLTensor CreateDLTensorView(std::vector<T>& other, std::vector<int64_t>& shape) {
+  // Create view as DLTensor
+  DLTensor dlt;
+  dlt.data = dmlc::BeginPtr(other);
+  DLContext cpu_ctx;
+  cpu_ctx.device_type = kDLCPU;
+  cpu_ctx.device_id = 0;
+  dlt.ctx = cpu_ctx;
+  DLDataType dtype;
+  dtype.bits = 8U * sizeof(T);
+  if (std::is_floating_point<T>::value) {
+    dtype.code = kDLFloat;
+  } else if (std::is_signed<T>::value) {
+    dtype.code = kDLInt;
+  } else {
+    dtype.code = kDLUInt;
+  }
+  dtype.lanes = 1U;
+  dlt.dtype = dtype;
+  dlt.ndim = static_cast<int>(shape.size());
+  dlt.shape = dmlc::BeginPtr(shape);
+  dlt.strides = nullptr;
+  dlt.byte_offset = 0;
+  return dlt;
+}
+
 inline void NDArray::CopyFrom(DLTensor* other) {
   CHECK(data_ != nullptr);
   CopyFromTo(other, &(data_->dl_tensor));
@@ -342,22 +370,7 @@ inline void NDArray::CopyFrom(std::vector<T>& other, std::vector<int64_t>& shape
     size *= s;
   }
   CHECK(other.size() == size);
-  // Create view as DLTensor
-  DLTensor dlt;
-  dlt.data = dmlc::BeginPtr(other);
-  DLContext cpu_ctx;
-  cpu_ctx.device_type = kDLCPU;
-  cpu_ctx.device_id = 0;
-  dlt.ctx = cpu_ctx;
-  DLDataType uint8_type;
-  uint8_type.bits = 8U;
-  uint8_type.code = kDLUInt;
-  uint8_type.lanes = 1U;
-  dlt.dtype = uint8_type;
-  dlt.ndim = static_cast<int>(shape.size());
-  dlt.shape = dmlc::BeginPtr(shape);
-  dlt.strides = nullptr;
-  dlt.byte_offset = 0;
+  DLTensor dlt = CreateDLTensorView(other, shape); 
   CopyFromTo(&dlt, &(data_->dl_tensor));
 }
 
@@ -370,6 +383,14 @@ inline void NDArray::CopyTo(const NDArray& other) const {
   CHECK(data_ != nullptr);
   CHECK(other.data_ != nullptr);
   CopyFromTo(&(data_->dl_tensor), &(other.data_->dl_tensor));
+}
+
+template<typename T>
+inline void NDArray::CopyTo(std::vector<T>& other) const {
+  CHECK(data_ != nullptr);
+  other.resize(this->Size());
+  DLTensor dlt = CreateDLTensorView(other, data_->shape_);
+  CopyFromTo(&(data_->dl_tensor), &dlt);
 }
 
 inline NDArray NDArray::CopyTo(const DLContext& ctx) const {

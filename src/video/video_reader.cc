@@ -375,7 +375,7 @@ void VideoReader::SkipFrames(int64_t num) {
     // LOG(INFO) << " stopped skipframes: " << curr_frame_;
 }
 
-NDArray VideoReader::GetBatch(std::vector<int64_t> indices) {
+NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     std::size_t bs = indices.size();
     int sz = height_ * width_ * 3;
     std::vector<uint8_t> buffer(bs * sz);

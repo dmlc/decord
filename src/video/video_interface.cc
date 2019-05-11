@@ -90,20 +90,38 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderSkipFrames")
 // VideoLoader
 DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderGetVideoLoader")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
-    CHECK_EQ(args.size(), 9);
+    CHECK_EQ(args.size(), 11);
     // for convenience, pass in comma separated filenames
-    std::string filenames = args[0];
-    int bs = args[1];
-    int height = args[2];
-    int width = args[3];
-    int channel = args[4];
-    int intvl = args[5];
-    int skip = args[6];
-    int shuffle = args[7];
-    int prefetch = args[8];
+    int idx = 0;
+    std::string filenames = args[idx++];
+    NDArray device_types = args[idx++];
+    NDArray device_ids = args[idx++];
+    int bs = args[idx++];
+    int height = args[idx++];
+    int width = args[idx++];
+    int channel = args[idx++];
+    int intvl = args[idx++];
+    int skip = args[idx++];
+    int shuffle = args[idx++];
+    int prefetch = args[idx++];
     auto fns = SplitString(filenames, ',');
     std::vector<int> shape({bs, height, width, channel});
-    VideoLoaderInterfaceHandle handle = static_cast<VideoLoaderInterfaceHandle>(new VideoLoader(fns, {kCPU}, shape, intvl, skip, shuffle, prefetch));
+    // list of context
+    std::vector<long int> dev_types;
+    device_types.CopyTo(dev_types);
+    std::vector<long int> dev_ids;
+    device_ids.CopyTo(dev_ids);
+    std::vector<DLContext> ctxs;
+    ctxs.reserve(dev_ids.size());
+    CHECK(dev_types.size() > 0);
+    CHECK_EQ(dev_types.size(), dev_ids.size());
+    for (std::size_t i = 0; i < dev_types.size(); ++i) {
+      DLContext ctx;
+      ctx.device_type = static_cast<DLDeviceType>(dev_types[i]);
+      ctx.device_id = static_cast<int>(dev_ids[i]);
+      ctxs.emplace_back(ctx);
+    }
+    VideoLoaderInterfaceHandle handle = static_cast<VideoLoaderInterfaceHandle>(new VideoLoader(fns, ctxs, shape, intvl, skip, shuffle, prefetch));
     *rv = handle;
   });
 

@@ -8,20 +8,27 @@ from ._ffi.base import c_array, c_str
 from ._ffi.function import _init_api
 from .base import DECORDError
 from . import ndarray as _nd
+from .ndarray import DECORDContext
 
 VideoLoaderHandle = ctypes.c_void_p
 
 
 class VideoLoader(object):
-    def __init__(self, uris, shape, interval, skip, shuffle, prefetch=0):
+    def __init__(self, uris, ctx, shape, interval, skip, shuffle, prefetch=0):
         self._handle = None
         assert isinstance(uris, (list, tuple))
         assert (len(uris) > 0)
         uri = ','.join([x.strip() for x in uris])
+        if isinstance(ctx, DECORDContext):
+            ctx = [ctx]
+        for _ctx in ctx:
+            assert isinstance(_ctx, DECORDContext)
+        device_types = _nd.array([x.device_type for x in ctx])
+        device_ids = _nd.array([x.device_id for x in ctx])
         assert isinstance(shape, (list, tuple))
         assert len(shape) == 4, "expected shape: [bs, height, width, 3], given {}".format(shape)
         self._handle = _CAPI_VideoLoaderGetVideoLoader(
-            uri, shape[0], shape[1], shape[2], shape[3], interval, skip, shuffle, prefetch)
+            uri, device_types, device_ids, shape[0], shape[1], shape[2], shape[3], interval, skip, shuffle, prefetch)
         assert self._handle is not None
         self._len = _CAPI_VideoLoaderLength(self._handle)
         self._curr = 0
