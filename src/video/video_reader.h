@@ -31,7 +31,6 @@ class VideoReader : public VideoReaderInterface {
         unsigned int QueryStreams() const;
         int64_t GetFrameCount() const;
         NDArray NextFrame();
-        // NDArray GetBatch(std::vector<int64_t> indices);
         NDArray GetBatch(std::vector<int64_t> indices, NDArray buf);
         void SkipFrames(int64_t num = 1);
         bool Seek(int64_t pos);
@@ -48,22 +47,12 @@ class VideoReader : public VideoReaderInterface {
 
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
-        /*! \brief Get or Create SwsContext by dtype */
-        // struct SwsContext* GetSwsContext(FrameTransform out_fmt);
         /*! \brief Video Streams Codecs in original videos */
         std::vector<AVCodec*> codecs_;
         /*! \brief Currently active video stream index */
         int actv_stm_idx_;
         /*! \brief AV format context holder */
         ffmpeg::AVFormatContextPtr fmt_ctx_;
-        /*! \brief AVPacket buffer */
-        // AVPacket *pkt_;
-        /*! \brief AVFrame buffer */
-        // AVFrame *frame_;
-        /*! \brief AV dodec context for decoding related info */
-        // AVCodecContext *dec_ctx_;
-        /*! \brief Container for various FFMPEG swsContext */
-        // std::unordered_map<FrameTransform, struct SwsContext*> sws_ctx_map_;
         ThreadedDecoderPtr decoder_;
         int64_t curr_frame_;  // current frame location
         int width_;   // output video width
