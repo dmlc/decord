@@ -276,10 +276,10 @@ NDArray VideoReader::NextFrameImpl() {
     bool ret = false;
     while (!ret) {
         PushNext();
-        ret = decoder_->Pop(&frame);
-        if (!ret && eof_) {
-            return NDArray::Empty({}, kUInt8, kCPU);
+        if (curr_frame_ >= GetFrameCount()) {
+            return NDArray::Empty({}, kUInt8, ctx_);
         }
+        ret = decoder_->Pop(&frame);
     }
     if (frame.defined()) {
         ++curr_frame_;
@@ -375,11 +375,47 @@ void VideoReader::SkipFrames(int64_t num) {
     // LOG(INFO) << " stopped skipframes: " << curr_frame_;
 }
 
-NDArray VideoReader::GetBatch(std::vector<int64_t> indices) {
+// NDArray VideoReader::GetBatch(std::vector<int64_t> indices) {
+//     std::size_t bs = indices.size();
+//     int sz = height_ * width_ * 3;
+//     std::vector<uint8_t> buffer(bs * sz);
+//     int64_t frame_count = GetFrameCount();
+//     for (std::size_t i = 0; i < indices.size(); ++i) {
+//         int64_t pos = indices[i];
+//         // LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
+//         CHECK_LT(pos, frame_count);
+//         CHECK_GE(pos, 0);
+//         if (curr_frame_ == pos) {
+//             // no need to seek
+//         } else if (pos > curr_frame_) {
+//             // skip positive number of frames
+//             SkipFrames(pos - curr_frame_);
+//         } else {
+//             // seek no matter what
+//             SeekAccurate(pos);
+//         }
+//         NDArray frame = NextFrameImpl();
+//         if (frame.Size() < 1 && eof_) {
+//             LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
+//         }
+//         // copy frame to buffer
+//         auto raw_data = static_cast<uint8_t*>(frame.data_->dl_tensor.data);
+//         std::copy(raw_data, raw_data + sz, buffer.begin() + i * sz);
+//     }
+//     std::vector<int64_t> shape({static_cast<int64_t>(bs), height_, width_, 3});
+//     NDArray batch = NDArray::Empty(shape, kUInt8, kCPU);
+//     batch.CopyFrom(buffer, shape);
+//     return batch;
+// }
+
+NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     std::size_t bs = indices.size();
-    int sz = height_ * width_ * 3;
-    std::vector<uint8_t> buffer(bs * sz);
+    if (!buf.defined()) {
+        buf = NDArray::Empty({static_cast<int64_t>(bs), height_, width_, 3}, kUInt8, ctx_);
+    }
     int64_t frame_count = GetFrameCount();
+    uint64_t offset = 0;
+    std::vector<int64_t> frame_shape = {height_, width_, 3};
     for (std::size_t i = 0; i < indices.size(); ++i) {
         int64_t pos = indices[i];
         // LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
@@ -399,20 +435,11 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices) {
             LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
         }
         // copy frame to buffer
-        auto raw_data = static_cast<uint8_t*>(frame.data_->dl_tensor.data);
-        std::copy(raw_data, raw_data + sz, buffer.begin() + i * sz);
+        // LOG(INFO) << "offset: " << offset;
+        auto view = buf.CreateOffsetView(frame_shape, frame.data_->dl_tensor.dtype, &offset);
+        frame.CopyTo(view);
     }
-    std::vector<int64_t> shape({static_cast<int64_t>(bs), height_, width_, 3});
-    NDArray batch = NDArray::Empty(shape, kUInt8, kCPU);
-    batch.CopyFrom(buffer, shape);
-    return batch;
-}
-
-NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
-    std::size_t bs = indices.size();
-    if (!buf.defined()) {
-        buf = NDArray::Empty({static_cast<int64_t>(bs), height_, width_, 3}, kUInt8, ctx_);
-    }
+    return buf;
 }
 
 }  // namespace decord

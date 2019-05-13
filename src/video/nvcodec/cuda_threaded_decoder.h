@@ -87,6 +87,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         std::atomic<bool> run_;
         std::atomic<int> frame_count_;
         std::atomic<bool> draining_;
+        
         CUTextureRegistry tex_registry_;
         AVRational nv_time_base_;
         AVRational frame_base_;

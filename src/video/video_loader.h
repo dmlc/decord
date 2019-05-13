@@ -48,6 +48,7 @@ public:
         std::vector<std::vector<std::pair<std::size_t, int64_t> > > visit_buffer_;
         std::size_t curr_;
         std::vector<DLContext> ctxs_;
+        NDArrayPool ndarray_pool_;
 };  // class VideoLoader
 }  // namespace decord
 

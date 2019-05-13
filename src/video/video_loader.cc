@@ -12,10 +12,11 @@
 namespace decord {
 
 VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLContext> ctxs,
-                                     std::vector<int> shape, int interval, 
-                                     int skip, int shuffle, int prefetch) 
+                         std::vector<int> shape, int interval, 
+                         int skip, int shuffle, int prefetch) 
     : readers_(), shape_(shape), intvl_(interval), skip_(skip), shuffle_(shuffle), 
-    prefetch_(prefetch), visit_order_(), visit_bounds_(), visit_buffer_(), curr_(0), ctxs_(ctxs) {
+    prefetch_(prefetch), visit_order_(), visit_bounds_(), visit_buffer_(), curr_(0), 
+    ctxs_(ctxs), ndarray_pool_() {
     // Validate parameters
     intvl_ = std::max(0, intvl_);
     skip_ = std::max(0, skip_);
@@ -30,6 +31,8 @@ VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLConte
         ss << (")");
         LOG(FATAL) << "Shape must be of dim 4, in [Batchsize, H, W, C], given " << ss.str();
     } 
+
+    // initialize ndarray buffer pool
 
     // Initialize readers
     CHECK_GE(filenames.size(), 1) << "At least one video is required for video loader!";
@@ -133,7 +136,7 @@ runtime::NDArray VideoLoader::Next() {
         indices.emplace_back(frame_idx);
         frame_idx += intvl_ + 1;
     }
-    auto batch = readers_[reader_idx].ptr->GetBatch(indices);
+    auto batch = readers_[reader_idx].ptr->GetBatch(indices, NDArray());
     ++curr_;
     return batch;
 }

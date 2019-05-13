@@ -117,6 +117,26 @@ NDArray NDArray::CreateView(std::vector<int64_t> shape,
   return ret;
 }
 
+NDArray NDArray::CreateOffsetView(std::vector<int64_t> shape,
+                                  DLDataType dtype, uint64_t* offset) {
+  CHECK(data_ != nullptr);
+  CHECK(data_->dl_tensor.strides == nullptr)
+      << "Can only create offset view for compact tensor";
+  NDArray ret = Internal::Create(shape, dtype, data_->dl_tensor.ctx);
+  ret.data_->dl_tensor.byte_offset =
+      this->data_->dl_tensor.byte_offset;
+  size_t curr_size = GetDataSize(this->data_->dl_tensor);
+  size_t view_size = GetDataSize(ret.data_->dl_tensor);
+  CHECK_LE(view_size + (*offset), curr_size)
+      << "Tries to create a view that has bigger memory than current one with offset: " << *offset;
+  // increase ref count
+  this->data_->IncRef();
+  ret.data_->manager_ctx = this->data_;
+  ret.data_->dl_tensor.data = static_cast<char*>(this->data_->dl_tensor.data) + (*offset);
+  *offset += view_size;
+  return ret;
+}
+
 DLManagedTensor* NDArray::ToDLPack() const {
   return Internal::ToDLPack(data_);
 }

@@ -157,6 +157,15 @@ class NDArray {
   DECORD_DLL NDArray CreateView(
       std::vector<int64_t> shape, DLDataType dtype);
   /*!
+   * \brief Create a NDArray that shares the data memory with the current one with offset start.
+   * \param shape The shape of the new array.
+   * \param dtype The data type of the new array.
+   * \param offset The pointer to the byte offset, offset will be overwriten after this operation.
+   * \note The memory size of new array must be smaller than the current one minus the offset.
+   */
+  DECORD_DLL NDArray CreateOffsetView(
+      std::vector<int64_t> shape, DLDataType dtype, uint64_t* offset);
+  /*!
    * \brief Create a reference view of NDArray that
    *  represents as DLManagedTensor.
    * \return A DLManagedTensor

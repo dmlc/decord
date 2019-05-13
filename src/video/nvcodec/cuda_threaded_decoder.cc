@@ -19,8 +19,8 @@ using namespace runtime;
 
 CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar) 
     : device_id_(device_id), stream_({-1, false}), device_{}, ctx_{}, parser_{}, decoder_{}, 
-    pkt_queue_{}, frame_queue_{}, buffer_queue_{}, reorder_buffer_{}, reorder_queue_(), frame_order_(), last_pts_(-1),
-    permits_{}, run_(false), frame_count_(0), draining_(false),
+    pkt_queue_{}, frame_queue_{}, buffer_queue_{}, reorder_buffer_{}, reorder_queue_(), frame_order_(), 
+    last_pts_(-1), permits_{}, run_(false), frame_count_(0), draining_(false),
     tex_registry_(), nv_time_base_({1, 10000000}), frame_base_({1, 1000000}),
     dec_ctx_(nullptr), bsf_ctx_(nullptr), width_(-1), height_(-1) {
 
@@ -224,7 +224,7 @@ int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
 void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
     CHECK(run_.load());
     if (!pkt) {
-        CHECK(!draining_.load()) << "Start draining twice...";
+        if (draining_.load()) return;
         draining_.store(true);
     }
     // if (pkt) {
@@ -240,7 +240,7 @@ void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
             last_pts_ += pkt->duration;
             frame_order_->Push(last_pts_);
         }
-    }
+    } 
     
     while (pkt_queue_->Size() > kMaxOutputSurfaces) {
         // too many in queue to be processed, wait here
@@ -299,7 +299,7 @@ void CUThreadedDecoder::LaunchThread() {
             CUVIDSOURCEDATAPACKET cupkt = {0};
             cupkt.flags = CUVID_PKT_ENDOFSTREAM;
             if (!CHECK_CUDA_CALL(cuvidParseVideoData(parser_, &cupkt))) {
-                    LOG(FATAL) << "Problem decoding packet";
+                LOG(FATAL) << "Problem decoding packet";
             }
             // mark as flushing?
         }
