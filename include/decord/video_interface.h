@@ -17,36 +17,12 @@ namespace decord {
 typedef void* VideoReaderInterfaceHandle;
 typedef void* VideoLoaderInterfaceHandle;
 
-// enum AccessType {
-//     kVideoReaderRandomAccess = 0U,
-//     kVideoReaderSequential = 1U,
-// };
-
-// enum InterpolationType {
-//     kInterpolationLinear = 0U,
-//     kInterpolationBicubic = 1U,
-//     kInterpolationArea = 2U,
-// };
-
 enum VideoLoaderShuffleType {
     kSequential = 0U,
     kShuffleVideoOrderOnly,
     kShuffleBoth,
     kShuffleInsideVideoOnly,
 };
-
-// struct Size {
-//     uint32_t width;
-//     uint32_t height;
-// };
-
-// struct FrameProperty {
-//     uint32_t width;
-//     uint32_t height;
-//     uint32_t channel;
-//     DLDataType dtype;
-//     InterpolationType itype;
-// };
 
 class VideoReaderInterface;
 typedef std::shared_ptr<VideoReaderInterface> VideoReaderPtr;
@@ -108,7 +84,9 @@ class VideoLoaderInterface {
         virtual ~VideoLoaderInterface() = default;
         virtual void Reset() = 0;
         virtual bool HasNext() const = 0;
-        virtual NDArray Next() = 0;
+        virtual void Next() = 0;
+        virtual NDArray NextData() = 0;
+        virtual NDArray NextIndices() = 0;
         virtual int64_t Length() const = 0;
 };  // class VideoLoaderInterface
 

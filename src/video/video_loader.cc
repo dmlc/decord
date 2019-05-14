@@ -15,7 +15,8 @@ VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLConte
                          std::vector<int> shape, int interval, 
                          int skip, int shuffle, int prefetch) 
     : readers_(), shape_(shape), intvl_(interval), skip_(skip), shuffle_(shuffle), 
-    prefetch_(prefetch), visit_order_(), visit_bounds_(), visit_buffer_(), curr_(0), 
+    prefetch_(prefetch), next_ready_(0), next_data_(), next_indices_(),
+    visit_order_(), visit_bounds_(), visit_buffer_(), curr_(0), 
     ctxs_(ctxs), ndarray_pool_() {
     // Validate parameters
     intvl_ = std::max(0, intvl_);
@@ -124,8 +125,13 @@ bool VideoLoader::HasNext() const {
     return (curr_ < visit_order_.size());
 }
 
-runtime::NDArray VideoLoader::Next() {
-    if (!HasNext()) return NDArray::Empty({}, kUInt8, kCPU);
+void VideoLoader::Next() {
+    if (!HasNext()) {
+        next_data_ = NDArray::Empty({}, kUInt8, ctxs_[0]);
+        next_indices_.clear();
+        next_ready_ = 3;
+        return;
+    };
     CHECK(curr_ < visit_order_.size());
     auto pair = visit_order_[curr_];
     std::vector<int64_t> indices;
@@ -138,7 +144,24 @@ runtime::NDArray VideoLoader::Next() {
     }
     auto batch = readers_[reader_idx].ptr->GetBatch(indices, NDArray());
     ++curr_;
-    return batch;
+    next_data_ = batch;
+    next_indices_ = indices;
+    next_ready_ = 3;
+}
+
+runtime::NDArray VideoLoader::NextData() {
+    CHECK(next_ready_ & 1) << "Data fetched already.";
+    next_ready_ &= 0xFE;
+    return next_data_;
+}
+
+runtime::NDArray VideoLoader::NextIndices() {
+    CHECK(next_ready_ & 2) << "Indices fetch already.";
+    std::vector<int64_t> shape = {static_cast<int64_t>(next_indices_.size())};
+    auto indices = NDArray::Empty(shape, kInt64, ctxs_[0]);
+    indices.CopyFrom(next_indices_, shape);
+    next_ready_ &= 0xFD;
+    return indices;
 }
 
 int64_t VideoLoader::Length() const {

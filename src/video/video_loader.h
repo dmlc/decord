@@ -25,7 +25,9 @@ public:
         void Reset();
         bool HasNext() const;
         int64_t Length() const;
-        NDArray Next();
+        void Next();
+        NDArray NextData();
+        NDArray NextIndices();
     
     private:
         using ReaderPtr = std::shared_ptr<VideoReader>;
@@ -43,6 +45,9 @@ public:
         int skip_;
         int shuffle_;
         int prefetch_;
+        char next_ready_;  // ready flag, use with 0xFE for data, 0xFD for label
+        NDArray next_data_;
+        std::vector<int64_t> next_indices_;
         std::vector<std::pair<std::size_t, int64_t> > visit_order_;
         std::vector<std::size_t> visit_bounds_;
         std::vector<std::vector<std::pair<std::size_t, int64_t> > > visit_buffer_;

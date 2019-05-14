@@ -127,7 +127,7 @@ cmake -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release"
 
 ## Usage
 
-Decord provides minimal API set for bootstraping.
+Decord provides minimal API set for bootstraping. You can also check out jupyter notebook [examples](examples/).
 
 ### VideoReader
 
@@ -139,7 +139,9 @@ from decord import cpu, gpu
 
 reader = VideoReader('xxx.mp4', ctx=cpu(0))
 print('video frames:', len(reader))
-print('frame shape:', vr.next().asnumpy().shape)
+batch = vr.next()
+print('frame shape:', batch.shape)
+print('numpy frames:', batch.asnumpy())
 
 # skip 100 frames
 vr.skip_frames(1000)
@@ -156,8 +158,9 @@ The optimizations are underlying in the C++ code, which are invisible to user.
 
 ```python
 from decord import VideoLoader
+from decord import cpu, gpu
 
-vl = VideoLoader(['1.mp4', '2.avi', '3.mpeg'], shape=(2, 320, 240, 3), interval=1, skip=5, shuffle=1)
+vl = VideoLoader(['1.mp4', '2.avi', '3.mpeg'], ctx=[cpu(0)], shape=(2, 320, 240, 3), interval=1, skip=5, shuffle=1)
 print('Total batches:', len(vl))
 
 for batch in vl:

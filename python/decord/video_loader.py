@@ -46,9 +46,11 @@ class VideoLoader(object):
         # avoid calling CAPI HasNext
         if self._curr >= self._len:
             raise StopIteration
-        arr = _CAPI_VideoLoaderNext(self._handle)
+        _CAPI_VideoLoaderNext(self._handle)
+        data = _CAPI_VideoLoaderNextData(self._handle)
+        indices = _CAPI_VideoLoaderNextIndices(self._handle)
         self._curr += 1
-        return arr
+        return data, indices
     
     def next(self):
         return self.__next__()
