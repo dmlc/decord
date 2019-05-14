@@ -126,6 +126,10 @@ bool VideoLoader::HasNext() const {
 }
 
 void VideoLoader::Next() {
+    if (next_ready_ & 1) {
+        LOG(WARNING) << "VideoLoader: previous data not consumed."
+            << "You should call NextData() to fetch data.";
+    }
     if (!HasNext()) {
         next_data_ = NDArray::Empty({}, kUInt8, ctxs_[0]);
         next_indices_.clear();
@@ -145,7 +149,14 @@ void VideoLoader::Next() {
     auto batch = readers_[reader_idx].ptr->GetBatch(indices, NDArray());
     ++curr_;
     next_data_ = batch;
-    next_indices_ = indices;
+    next_indices_.clear();
+    next_indices_.reserve(indices.size() * 2);
+    for (auto idx : indices) {
+        // video index first
+        next_indices_.emplace_back(static_cast<int64_t>(reader_idx));
+        // frame index second
+        next_indices_.emplace_back(idx);
+    }
     next_ready_ = 3;
 }
 
@@ -157,7 +168,7 @@ runtime::NDArray VideoLoader::NextData() {
 
 runtime::NDArray VideoLoader::NextIndices() {
     CHECK(next_ready_ & 2) << "Indices fetch already.";
-    std::vector<int64_t> shape = {static_cast<int64_t>(next_indices_.size())};
+    std::vector<int64_t> shape = {static_cast<int64_t>(next_indices_.size() / 2), 2};
     auto indices = NDArray::Empty(shape, kInt64, ctxs_[0]);
     indices.CopyFrom(next_indices_, shape);
     next_ready_ &= 0xFD;
