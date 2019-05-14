@@ -4,11 +4,15 @@
 
 `Decord` is a reverse procedure of `Record`. It provides convenient video slicing methods based on a thin wrapper on top of hardware accelerated video decoders, e.g.
 
-- FFMPEG/LibAV(On going)
-- Nvidia Codecs(On going)
+- FFMPEG/LibAV(Done)
+- Nvidia Codecs(Done)
 - Intel Codecs
 
 `Decord` was designed to handle awkward video shuffling experience in order to provide smooth experiences similar to random image loader for deep learning.
+
+Bridges for deep learning frameworks:
+
+- Apache MXNet (on going)
 
 ## Installation
 
@@ -170,7 +174,7 @@ for batch in vl:
 Shuffling video can be tricky, thus we provide various modes:
 
 ```python
-shuffle = -1  # smart shuffle mode, based on video properties, not implemented yet
+shuffle = -1  # smart shuffle mode, based on video properties, (not implemented yet)
 shuffle = 0  # all sequential, no seeking, following initial filename order
 shuffle = 1  # random filename order, no random access for each video, very efficient
 shuffle = 2  # random order
