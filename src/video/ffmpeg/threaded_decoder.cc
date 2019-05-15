@@ -164,9 +164,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
                 } else {
                     frame_queue_->Push(tmp);
                 }
-                
             }
-            draining_.store(false);
             frame_queue_->Push(NDArray());
         } else {
             // normal mode, push in valid packets and retrieve frames
