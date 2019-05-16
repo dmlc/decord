@@ -21,7 +21,7 @@ class ThreadedDecoderInterface {
         virtual void Push(ffmpeg::AVPacketPtr pkt, runtime::NDArray buf) = 0;
         virtual bool Pop(runtime::NDArray *frame) = 0;
         // virtual bool Pop(ffmpeg::AVFramePtr *frame) = 0;
-        ~ThreadedDecoderInterface() = default;
+        virtual ~ThreadedDecoderInterface() = default;
 };  // class ThreadedDecoderInterface
 
 }  // namespace decord
