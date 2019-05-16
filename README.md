@@ -40,12 +40,12 @@ Clone the repo recursively(important)
 git clone --recursive https://github.com/zhreshold/decord
 ```
 
-Build the shared library in source root directory:
+Build the shared library in source root directory, you can specify `-DUSE_CUDA=1` to enable NVDEC hardware accelerated decoding:
 
 ```bash
 cd decord
 mkdir build && cd build
-cmake ..
+cmake .. -DUSE_CUDA=0
 make
 ```
 
