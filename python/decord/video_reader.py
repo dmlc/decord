@@ -26,6 +26,10 @@ class VideoReader(object):
     def num_frame(self):
         return self._num_frame
 
+    def __del__(self):
+        if (self._handle):
+            _CAPI_VideoReaderFree(self._handle)
+
     def next(self):
         assert self._handle is not None
         arr = _CAPI_VideoReaderNextFrame(self._handle)

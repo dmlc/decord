@@ -152,7 +152,7 @@ using AVPacketPtr = std::shared_ptr<AVPacket>;
  *
  */
 using AVFormatContextPtr = std::unique_ptr<
-    AVFormatContext, Deleter<AVFormatContext, void, avformat_free_context> >;
+    AVFormatContext, Deleterp<AVFormatContext, void, avformat_close_input> >;
 
 /**
  * \brief Smart pointer for AVCodecContext, non copyable

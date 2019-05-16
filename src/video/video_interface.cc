@@ -86,6 +86,12 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderSkipFrames")
     static_cast<VideoReaderInterface*>(handle)->SkipFrames(num);
   });
 
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderFree")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    auto p = static_cast<VideoReaderInterface*>(handle);
+    if (p) delete p;
+  });
 
 // VideoLoader
 DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderGetVideoLoader")
@@ -163,6 +169,13 @@ DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderNextIndices")
     VideoLoaderInterfaceHandle handle = args[0]; 
     auto ret = static_cast<VideoLoaderInterface*>(handle)->NextIndices();
     *rv = ret;
+  });
+
+DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderFree")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoLoaderInterfaceHandle handle = args[0]; 
+    auto p = static_cast<VideoLoaderInterface*>(handle);
+    if (p) delete p;
   });
 }  // namespace runtime
 }  // namespace decord

@@ -118,8 +118,15 @@ void VideoReader::SetVideoStream(int stream_nb) {
     CHECK_GE(avcodec_parameters_to_context(dec_ctx, codecpar.get()), 0)
         << "ERROR copying codec parameters to context";
     // initialize AVCodecContext to use given AVCodec
-    CHECK_GE(avcodec_open2(dec_ctx, codecs_[st_nb], NULL), 0)
-        << "ERROR open codec through avcodec_open2";
+    int open_ret = avcodec_open2(dec_ctx, codecs_[st_nb], NULL);
+    if (open_ret < 0 ) {
+        char errstr[200];
+        av_strerror(open_ret, errstr, 200);
+        LOG(FATAL) << "ERROR open codec through avcodec_open2: " << errstr;
+        return;
+    }
+    // CHECK_GE(avcodec_open2(dec_ctx, codecs_[st_nb], NULL), 0)
+    //     << "ERROR open codec through avcodec_open2";
     // LOG(INFO) << "codecs opened.";
     actv_stm_idx_ = st_nb;
     // LOG(INFO) << "time base: " << fmt_ctx_->streams[st_nb]->time_base.num << " / " << fmt_ctx_->streams[st_nb]->time_base.den;

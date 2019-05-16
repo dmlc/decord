@@ -33,6 +33,10 @@ class VideoLoader(object):
         self._len = _CAPI_VideoLoaderLength(self._handle)
         self._curr = 0
 
+    def __del__(self):
+        if (self._handle):
+            _CAPI_VideoLoaderFree(self._handle)
+
     def __len__(self):
         return self._len
     
