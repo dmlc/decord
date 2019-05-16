@@ -186,9 +186,12 @@ using AVCodecParametersPtr = std::unique_ptr<
 inline void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 	CHECK(p) << "Error: converting empty AVFrame to DLTensor";
 	// int channel = p->linesize[0] / p->width;
-	CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24)
-		<< "Only support RGB24 image to NDArray conversion, given: "
-		<< AVPixelFormat(p->format);
+	CHECK(AVPixelFormat(p->format) == AV_PIX_FMT_RGB24 || AVPixelFormat(p->format) == AV_PIX_FMT_GRAY8)
+        << "Only support RGB24/GRAY8 image to NDArray conversion, given: "
+        << AVPixelFormat(p->format);
+    CHECK(p->linesize[0] % p->width == 0)
+        << "AVFrame data is not a compact array. linesize: " << p->linesize[0]
+        << " width: " << p->width;
 
 	DLContext ctx;
 	if (p->hw_frames_ctx) {
@@ -209,7 +212,7 @@ inline void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 	dlt.ndim = 3;
 	dlt.dtype = kUInt8;
 	dlt.shape = shape;
-	dlt.strides = NULL;
+    dlt.strides = NULL;
 	dlt.byte_offset = 0;
 }
 
@@ -237,9 +240,12 @@ inline NDArray AsNDArray(AVFramePtr p) {
 inline NDArray CopyToNDArray(AVFramePtr p) {
     CHECK(p) << "Error: converting empty AVFrame to DLTensor";
     // int channel = p->linesize[0] / p->width;
-    CHECK_EQ(AVPixelFormat(p->format), AV_PIX_FMT_RGB24)
-        << "Only support RGB24 image to NDArray conversion, given: "
+    CHECK(AVPixelFormat(p->format) == AV_PIX_FMT_RGB24 || AVPixelFormat(p->format) == AV_PIX_FMT_GRAY8)
+        << "Only support RGB24/GRAY8 image to NDArray conversion, given: "
         << AVPixelFormat(p->format);
+    CHECK(p->linesize[0] % p->width == 0)
+        << "AVFrame data is not a compact array. linesize: " << p->linesize[0]
+        << " width: " << p->width;
 
     DLContext ctx;
     if (p->hw_frames_ctx) {

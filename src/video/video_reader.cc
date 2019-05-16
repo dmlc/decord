@@ -130,6 +130,20 @@ void VideoReader::SetVideoStream(int stream_nb) {
     if (height_ < 1) {
         height_ = codecpar->height;
     }
+
+    // adjust width to match cpu alignment
+    auto constexpr cpu_alignment = 32;
+    if (width_ % cpu_alignment != 0) {
+        int new_width = ((width_ / cpu_alignment) + 1) * cpu_alignment;
+        int new_height = static_cast<int>(1.f * height_ / width_ * new_width);
+        LOG(WARNING) << "Video Reader width: " << width_
+            << " is not aligned with CPU alignment preference,"
+            << " causing non-compact array with degraded performance."
+            << " Automatically round up resolution to: "
+            << new_width << " x " << new_height;
+        width_ = new_width;
+        height_ = new_height;
+    }
     ndarray_pool_ = NDArrayPool(32, {height_, width_, 3}, kUInt8, ctx_);
     decoder_->SetCodecContext(dec_ctx, width_, height_);
     IndexKeyframes();

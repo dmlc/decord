@@ -171,6 +171,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
             got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
             if (got_picture == 0) {
+                frame->pts = frame->best_effort_timestamp;
                 // filter image frame (format conversion, scaling...)
                 filter_graph_->Push(frame.get());
                 AVFramePtr out_frame = AVFramePool::Get()->Acquire();

@@ -11,7 +11,8 @@
 namespace decord {
 namespace ffmpeg {
 
-FFMPEGFilterGraph::FFMPEGFilterGraph(std::string filters_descr, AVCodecContext *dec_ctx) : count_(0) {
+FFMPEGFilterGraph::FFMPEGFilterGraph(std::string filters_descr, AVCodecContext *dec_ctx)
+    : buffersink_ctx_(nullptr), buffersrc_ctx_(nullptr), filter_graph_(nullptr), count_(0) {
     Init(filters_descr, dec_ctx);
 }
 
@@ -35,7 +36,7 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
     CHECK(buffersink) << "Error: no buffersink";
     AVFilterInOut *outputs = avfilter_inout_alloc();
 	AVFilterInOut *inputs  = avfilter_inout_alloc();
-	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_RGB24 }; //, AV_PIX_FMT_NONE };
+	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_RGB24 , AV_PIX_FMT_NONE };
 	// AVBufferSinkParams *buffersink_params;
  
 	filter_graph_.reset(avfilter_graph_alloc());
@@ -65,7 +66,8 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 		NULL, NULL, filter_graph_.get()), 0) << "Cannot create buffer sink";
 	// av_free(buffersink_params);
     // LOG(INFO) << "create filter sink";
-    CHECK_GE(av_opt_set_bin(buffersink_ctx_, "pix_fmts", (uint8_t *)&pix_fmts, sizeof(AV_PIX_FMT_RGB24), AV_OPT_SEARCH_CHILDREN), 0) << "Set bin error";
+    // CHECK_GE(av_opt_set_bin(buffersink_ctx_, "pix_fmts", (uint8_t *)&pix_fmts, sizeof(AV_PIX_FMT_RGB24), AV_OPT_SEARCH_CHILDREN), 0) << "Set bin error";
+    CHECK_GE(av_opt_set_int_list(buffersink_ctx_, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN), 0) << "Set output pixel format error.";
 
     // LOG(INFO) << "create filter set opt";
     /* Endpoints for the filter graph. */
@@ -89,11 +91,14 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 	/* automatic threading */
 	// LOG(INFO) << "Original GraphFilter nb_threads: " << filter_graph_->nb_threads;
 	filter_graph_->nb_threads = 0;
+
+    avfilter_inout_free(&inputs);
+    avfilter_inout_free(&outputs);
 }
 
 void FFMPEGFilterGraph::Push(AVFrame *frame) {
     // push decoded frame into filter graph
-    CHECK_GE(av_buffersrc_add_frame_flags(buffersrc_ctx_, frame, 0), 0) 
+    CHECK_GE(av_buffersrc_add_frame_flags(buffersrc_ctx_, frame, AV_BUFFERSRC_FLAG_KEEP_REF), 0) 
         << "Error while feeding the filter graph";
     ++count_;
 }
