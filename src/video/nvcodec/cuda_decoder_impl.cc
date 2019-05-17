@@ -107,16 +107,16 @@ int CUVideoDecoderImpl::Initialize(CUVIDEOFORMAT* format) {
     }
 
     
-    DLOG(INFO) << "Hardware Decoder Input Information" << std::endl
-                << "\tVideo codec     : " << GetVideoCodecString(format->codec) << std::endl
-                << "\tFrame rate      : " << format->frame_rate.numerator << "/" << format->frame_rate.denominator
-                << " = " << 1.0 * format->frame_rate.numerator / format->frame_rate.denominator << " fps" << std::endl
-                << "\tSequence format : " << (format->progressive_sequence ? "Progressive" : "Interlaced") << std::endl
-                << "\tCoded frame size: [" << format->coded_width << ", " << format->coded_height << "]" << std::endl
-                << "\tDisplay area    : [" << format->display_area.left << ", " << format->display_area.top << ", "
-                << format->display_area.right << ", " << format->display_area.bottom << "]" << std::endl
-                << "\tChroma format   : " << GetVideoChromaFormatString(format->chroma_format) << std::endl
-                << "\tBit depth       : " << format->bit_depth_luma_minus8 + 8 << std::endl;
+    // DLOG(INFO) << "Hardware Decoder Input Information" << std::endl
+    //             << "\tVideo codec     : " << GetVideoCodecString(format->codec) << std::endl
+    //             << "\tFrame rate      : " << format->frame_rate.numerator << "/" << format->frame_rate.denominator
+    //             << " = " << 1.0 * format->frame_rate.numerator / format->frame_rate.denominator << " fps" << std::endl
+    //             << "\tSequence format : " << (format->progressive_sequence ? "Progressive" : "Interlaced") << std::endl
+    //             << "\tCoded frame size: [" << format->coded_width << ", " << format->coded_height << "]" << std::endl
+    //             << "\tDisplay area    : [" << format->display_area.left << ", " << format->display_area.top << ", "
+    //             << format->display_area.right << ", " << format->display_area.bottom << "]" << std::endl
+    //             << "\tChroma format   : " << GetVideoChromaFormatString(format->chroma_format) << std::endl
+    //             << "\tBit depth       : " << format->bit_depth_luma_minus8 + 8 << std::endl;
     
 
     auto caps = CUVIDDECODECAPS{};
@@ -131,12 +131,12 @@ int CUVideoDecoderImpl::Initialize(CUVIDEOFORMAT* format) {
                << GetVideoChromaFormatString(format->chroma_format);
             LOG(FATAL) << ss.str();
         }
-        DLOG(INFO) << "NVDEC Capabilities" << std::endl
-                   << "\tMax width : " << caps.nMaxWidth << std::endl
-                   << "\tMax height : " << caps.nMaxHeight << std::endl
-                   << "\tMax MB count : " << caps.nMaxMBCount << std::endl
-                   << "\tMin width : " << caps.nMinWidth << std::endl
-                   << "\tMin height :" << caps.nMinHeight << std::endl;
+        // DLOG(INFO) << "NVDEC Capabilities" << std::endl
+        //            << "\tMax width : " << caps.nMaxWidth << std::endl
+        //            << "\tMax height : " << caps.nMaxHeight << std::endl
+        //            << "\tMax MB count : " << caps.nMaxMBCount << std::endl
+        //            << "\tMin width : " << caps.nMinWidth << std::endl
+        //            << "\tMin height :" << caps.nMinHeight << std::endl;
         
         if (format->coded_width < caps.nMinWidth ||
             format->coded_height < caps.nMinHeight) {
@@ -167,8 +167,8 @@ int CUVideoDecoderImpl::Initialize(CUVIDEOFORMAT* format) {
     area.right  = format->display_area.right;
     area.top    = format->display_area.top;
     area.bottom = format->display_area.bottom;
-    DLOG(INFO) << "\tUsing full size : [" << area.left << ", " << area.top
-               << "], [" << area.right << ", " << area.bottom << "]" << std::endl;
+    // DLOG(INFO) << "\tUsing full size : [" << area.left << ", " << area.top
+    //            << "], [" << area.right << ", " << area.bottom << "]" << std::endl;
     decoder_info_.ulNumOutputSurfaces = 2;
     decoder_info_.ulCreationFlags = cudaVideoCreate_PreferCUVID;
     decoder_info_.vidLock = nullptr;

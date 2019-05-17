@@ -102,8 +102,8 @@ const CUImageTexture& CUTextureRegistry::GetTexture(uint8_t* ptr, unsigned int i
     res_desc.resType = cudaResourceTypePitch2D;
     res_desc.res.pitch2D.devPtr = ptr + (input_height * input_pitch);
     res_desc.res.pitch2D.desc = cudaCreateChannelDesc<uchar2>();
-    res_desc.res.pitch2D.width = input_width;
-    res_desc.res.pitch2D.height = input_height / 2;
+    res_desc.res.pitch2D.width = input_width / 2;  // YUV420
+    res_desc.res.pitch2D.height = input_height / 2;  // YUV420
     res_desc.res.pitch2D.pitchInBytes = input_pitch;
 
     tex_object.chroma = CUTexture{&res_desc, &tex_desc, nullptr};

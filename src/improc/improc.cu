@@ -81,7 +81,7 @@ __global__ void process_frame_kernel(
     if (dst_x >= output_width || dst_y >= output_height)
         return;
 
-    auto src_x = dst_x * fx;
+    auto src_x = static_cast<float>(dst_x) * fx;
 
     auto src_y = static_cast<float>(dst_y) * fy;
 
