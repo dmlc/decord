@@ -8,6 +8,7 @@
 #define DECORD_VIDEO_NVCODEC_CUDA_DECODER_IMPL_H_
 
 #include "nvcuvid/nvcuvid.h"
+#include <stdint.h>
 
 namespace decord {
 namespace cuda {

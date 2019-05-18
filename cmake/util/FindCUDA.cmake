@@ -72,7 +72,10 @@ macro(find_cuda use_cuda)
       find_library(CUDA_CUBLAS_LIBRARY cublas
         ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
         ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
-      find_library(CUDA_NVIDIA_ML_LIBRARY nvidia-ml
+      find_library(CUDA_NVIDIA_ML_LIBRARY nvml
+        ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
+        ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
+      find_library(CUDA_NVCUVID_LIBRARY nvcuvid
         ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
         ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
     else(MSVC)
