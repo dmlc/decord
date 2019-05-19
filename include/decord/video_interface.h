@@ -71,7 +71,7 @@ class VideoReaderInterface {
 };  // class VideoReader
 
 
-VideoReaderPtr GetVideoReader(std::string fname, 
+DECORD_DLL VideoReaderPtr GetVideoReader(std::string fname,
                               Decoder dec = Decoder::FFMPEG());
 
 /**

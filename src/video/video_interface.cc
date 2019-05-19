@@ -21,7 +21,13 @@ VideoReaderPtr GetVideoReader(std::string fn, Decoder be) {
     std::shared_ptr<VideoReaderInterface> ptr;
     if (be == Decoder::FFMPEG()) {
         ptr = std::make_shared<VideoReader>(fn, kCPU);
-    } else {
+	}
+	else if (be == Decoder::NVDEC()) {
+		auto ctx = DLContext();
+		ctx.device_type = kDLGPU;
+		ctx.device_id = 0;
+		ptr = std::make_shared<VideoReader>(fn, ctx);
+	} else {
         LOG(FATAL) << "Not supported Decoder type " << be;
     }
     return ptr;

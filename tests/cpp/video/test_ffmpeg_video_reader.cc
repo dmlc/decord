@@ -1,4 +1,5 @@
 #include <decord/video_interface.h>
+#include <decord/base.h>
 #include <dmlc/logging.h>
 #include <chrono>
 // #include <dmlc/io.h>
@@ -12,7 +13,7 @@ std::time_t getTimeStamp() {
 }
 
 int main(int argc, const char **argv) {
-    auto vr = decord::GetVideoReader("test2.mp4");
+    auto vr = decord::GetVideoReader("test2.mp4", decord::Decoder::NVDEC());
     LOG(INFO) << "Frame count: " << vr->GetFrameCount();
     vr->QueryStreams();
     NDArray array;

@@ -100,6 +100,11 @@ add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS
 
 target_link_libraries(decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS})
 
+# More target definitions
+if(MSVC)
+  target_compile_definitions(decord PRIVATE -DDECORD_EXPORTS)
+endif()
+
 # Tests
 set(TEST_EXECS "")
 file(GLOB_RECURSE TEST_SRCS tests/cpp/*.cc)
@@ -111,8 +116,13 @@ if(GTEST_LIB)
     string(REPLACE ".cc" "" __execname ${__srcname})
     add_executable(${__execname} ${__srcpath})
     list(APPEND TEST_EXECS ${__execname})
-    target_link_libraries(${__execname}
-      decord ${GTEST_LIB} pthread dl)
+	if (MSVC)
+	  set(GTEST_ADD_LIBS "")
+	else(MSVC)
+	  set(GTEST_ADD_LIBS pthread dl)
+	endif(MSVC)
+	target_link_libraries(${__execname}
+		decord ${GTEST_LIB} ${GTEST_ADD_LIBS})
     set_target_properties(${__execname} PROPERTIES EXCLUDE_FROM_ALL 1)
     set_target_properties(${__execname} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD 1)
   endforeach()
@@ -121,8 +131,3 @@ endif()
 
 # Installation rules
 install(TARGETS decord DESTINATION lib${LIB_SUFFIX})
-
-# More target definitions
-if(MSVC)
-  target_compile_definitions(decord PRIVATE -DDECORD_EXPORTS)
-endif()
