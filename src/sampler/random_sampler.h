@@ -25,7 +25,7 @@ class RandomSampler : public SamplerInterface {
         size_t bs_;
         Samples samples_;
         size_t curr_;
-        Samples visit_order_;
+        std::vector<Samples> visit_order_;
 
 };  // class RandomSampler
     

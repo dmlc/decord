@@ -56,7 +56,7 @@ VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLConte
         lengths.emplace_back(frame_count);
         // range is fixed, reserve it for more flexible usage later
         ranges.emplace_back(0);
-        ranges.emplace_back(frame_count);
+        ranges.emplace_back(frame_count - 1);
     }
 
     // init sampler

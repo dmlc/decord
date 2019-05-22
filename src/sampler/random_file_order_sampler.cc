@@ -35,10 +35,11 @@ RandomFileOrderSampler::RandomFileOrderSampler(std::vector<int64_t> lens, std::v
         }
         int64_t bs_skip = bs * (1 + interval) - interval + skip;
         // how many batchsizes in this reader
-        int64_t num_batches = (end - begin) / bs_skip;
+        int64_t num_batches = (end + skip - begin) / bs_skip;
         visit_order_.insert(visit_order_.end(), num_batches, i);
         CHECK_GE(end, 0) << "Video{" << i << "} has range end smaller than 0: " << end;
         CHECK(begin < end) << "Video{" << i << "} has invalid begin and end config: " << begin << "->" << end;
+        CHECK(end < lens[i]) << "Video{" << i <<"} has range end larger than # frames: " << lens[i];
         records_.emplace_back(ReaderRecord{begin, end, interval, skip, begin});
     }
 }
@@ -69,7 +70,7 @@ const Samples& RandomFileOrderSampler::Next() {
         CHECK(pos < record.end);
         samples_[idx].first = next_reader;
         samples_[idx].second = pos;
-        pos += record.interval;
+        pos += record.interval + 1;
     }
     record.current = pos - record.interval + record.skip;
     ++visit_idx_;

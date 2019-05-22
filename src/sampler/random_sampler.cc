@@ -32,11 +32,16 @@ RandomSampler::RandomSampler(std::vector<int64_t> lens, std::vector<int64_t> ran
         }
         CHECK_GE(end, 0) << "Video{" << i << "} has range end smaller than 0: " << end;
         CHECK(begin < end) << "Video{" << i << "} has invalid begin and end config: " << begin << "->" << end;
+        CHECK(end < lens[i]) << "Video{" << i <<"} has range end larger than # frames: " << lens[i];
         int64_t bs_skip = bs * (1 + interval) - interval + skip;
-        for (int64_t b = begin; b < end; b += bs_skip) {
-            for (int offset = 0; offset < bs; offset += interval) {
-                visit_order_.emplace_back(std::make_pair(i, b + offset));
+        int64_t bs_length = bs_skip - skip;
+        for (int64_t b = begin; b + bs_length < end; b += bs_skip) {
+            int offset = 0;
+            for (int j = 0; j < bs; ++j) {
+                samples_[j] = std::make_pair(i, b + offset);
+                offset += interval + 1;
             }
+            visit_order_.emplace_back(samples_);
         }
     }
 }
@@ -49,19 +54,18 @@ void RandomSampler::Reset() {
 }
 
 bool RandomSampler::HasNext() const {
-    return curr_ < (visit_order_.size() / bs_);
+    return curr_ < visit_order_.size();
 }
 
 const Samples& RandomSampler::Next() {
     CHECK(HasNext());
     CHECK_EQ(samples_.size(), bs_);
-    std::copy(visit_order_.begin() + curr_, visit_order_.begin() + curr_ + bs_, samples_.begin());
-    ++curr_;
+    samples_ = visit_order_[curr_++];
     return samples_;
 }
 
 size_t RandomSampler::Size() const {
-    return visit_order_.size() / bs_;
+    return visit_order_.size();
 }
 }  // sampler
 }  // decord
