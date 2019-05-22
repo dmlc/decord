@@ -8,12 +8,21 @@
 #define DECORD_VIDEO_VIDEO_LOADER_H_
 
 #include "video_reader.h"
+#include "../sampler/sampler_interface.h"
 
 #include <vector>
 
 #include <decord/video_interface.h>
 
 namespace decord {
+
+enum ShuffleTypes {
+    kNoShuffle = 0,
+    kRandomFileOrderShuffle,
+    kRandomShuffle,
+    kRandomInFileShuffle,
+    kSmartRandomShuffle,
+};  // enum ShuffleTypes
 
 class VideoLoader : public VideoLoaderInterface {
 public:
@@ -48,10 +57,11 @@ public:
         char next_ready_;  // ready flag, use with 0xFE for data, 0xFD for label
         NDArray next_data_;
         std::vector<int64_t> next_indices_;
-        std::vector<std::pair<std::size_t, int64_t> > visit_order_;
-        std::vector<std::size_t> visit_bounds_;
-        std::vector<std::vector<std::pair<std::size_t, int64_t> > > visit_buffer_;
-        std::size_t curr_;
+        sampler::SamplerPtr sampler_;
+        // std::vector<std::pair<std::size_t, int64_t> > visit_order_;
+        // std::vector<std::size_t> visit_bounds_;
+        // std::vector<std::vector<std::pair<std::size_t, int64_t> > > visit_buffer_;
+        // std::size_t curr_;
         std::vector<DLContext> ctxs_;
         NDArrayPool ndarray_pool_;
 };  // class VideoLoader

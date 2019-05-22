@@ -22,8 +22,8 @@ class SamplerInterface {
         virtual ~SamplerInterface() = default;
         virtual void Reset() = 0;
         virtual bool HasNext() const = 0;
-        virtual Samples Next() = 0;
-        virtual int64_t Size() const = 0;
+        virtual const Samples& Next() = 0;
+        virtual size_t Size() const = 0;
 };  // class SamplerInterface
 
 using SamplerPtr = std::unique_ptr<SamplerInterface>;

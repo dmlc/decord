@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
+project(decord C CXX)
 
 # Utility functions
 include(cmake/util/Util.cmake)
@@ -24,8 +25,6 @@ decord_option(USE_MSVC_MT "Build with MT" OFF)
 # Project
 if(USE_CUDA)
 project(decord C CXX CUDA)
-else(USE_CUDA)
-project(decord C CXX)
 endif(USE_CUDA)
 
 # include directories
@@ -63,7 +62,7 @@ else(MSVC)
   set(CMAKE_CUDA_FLAGS "-std=c++11 ${CMAKE_CUDA_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    message("Build in Debug mode")
+    message(STATUS "Build in Debug mode")
     set(CMAKE_C_FLAGS "-O0 -g -Wall -fPIC ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-O0 -g -Wall -fPIC -std=c++11 ${CMAKE_CXX_FLAGS}")
   else()
@@ -86,7 +85,7 @@ assign_source_group("Source" ${GROUP_SOURCE})
 assign_source_group("Include" ${GROUP_INCLUDE})
 
 # Source file lists
-file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc)
+file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc src/sampler/*.cc)
 
 # Module rules
 include(cmake/modules/FFmpeg.cmake)
@@ -127,6 +126,8 @@ if(GTEST_LIB)
     set_target_properties(${__execname} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD 1)
   endforeach()
   add_custom_target(cpptest DEPENDS ${TEST_EXECS})
+  list(LENGTH TEST_EXECS NUM_TESTS)
+  message(STATUS "Build with: " ${NUM_TESTS}  " tests")
 endif()
 
 # Installation rules
