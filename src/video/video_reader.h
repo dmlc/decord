@@ -30,6 +30,7 @@ class VideoReader : public VideoReaderInterface {
         void SetVideoStream(int stream_nb = -1);
         unsigned int QueryStreams() const;
         int64_t GetFrameCount() const;
+        int64_t GetCurrentPosition() const;
         NDArray NextFrame();
         NDArray GetBatch(std::vector<int64_t> indices, NDArray buf);
         void SkipFrames(int64_t num = 1);

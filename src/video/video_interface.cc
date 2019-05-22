@@ -52,6 +52,13 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetFrameCount")
     *rv = ret;
   });
 
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetCurrentPosition")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    int64_t ret = static_cast<VideoReaderInterface*>(handle)->GetCurrentPosition();
+    *rv = ret;
+  });
+
 DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetKeyIndices")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
     VideoReaderInterfaceHandle handle = args[0];

@@ -208,6 +208,10 @@ int64_t VideoReader::GetFrameCount() const {
    return cnt;
 }
 
+int64_t VideoReader::GetCurrentPosition() const {
+    return curr_frame_;
+}
+
 bool VideoReader::Seek(int64_t pos) {
     if (curr_frame_ == pos) return true;
     decoder_->Clear();
@@ -241,11 +245,18 @@ int64_t VideoReader::LocateKeyframe(int64_t pos) {
 }
 
 bool VideoReader::SeekAccurate(int64_t pos) {
+    if (curr_frame_ == pos) return true;
     int64_t key_pos = LocateKeyframe(pos);
-    // LOG(INFO) << "Accurate seek to " << pos << " with key pos: " << key_pos;
-    bool ret = Seek(key_pos);
-    if (!ret) return false;
-    SkipFrames(pos - key_pos);
+    int64_t curr_key_pos = LocateKeyframe(curr_frame_);
+    if (key_pos != curr_key_pos) {
+        // need to seek to keyframes first
+        bool ret = Seek(key_pos);
+        if (!ret) return false;
+        SkipFrames(pos - key_pos);
+    } else {
+        // no need to seek to keyframe, since both current and seek position belong to same keyframe
+        SkipFrames(pos - curr_frame_);
+    }
     return true;
 }
 

@@ -38,6 +38,8 @@ class VideoReaderInterface {
     virtual void SetVideoStream(int stream_nb = -1) = 0;
     /*! \brief get the total frame count in current stream */
     virtual int64_t GetFrameCount() const = 0;
+    /*! \brief get the current frame position in current stream */
+    virtual int64_t GetCurrentPosition() const = 0;
     /*! \brief read the next frame, return NDArray */
     virtual runtime::NDArray NextFrame() = 0;
     /*! \brief retrieve keyframe indices */
