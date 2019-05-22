@@ -6,6 +6,7 @@
 // #include <gtest/gtest.h>
 
 using NDArray = decord::runtime::NDArray;
+using namespace decord;
 
 std::time_t getTimeStamp() {
 	std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
@@ -13,7 +14,7 @@ std::time_t getTimeStamp() {
 }
 
 int main(int argc, const char **argv) {
-    auto vr = decord::GetVideoReader("test2.mp4", decord::Decoder::NVDEC());
+    auto vr = decord::GetVideoReader("test2.mp4", kGPU);
     LOG(INFO) << "Frame count: " << vr->GetFrameCount();
     vr->QueryStreams();
     NDArray array;

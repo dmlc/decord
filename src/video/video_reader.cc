@@ -139,9 +139,8 @@ void VideoReader::SetVideoStream(int stream_nb) {
     }
 
     // adjust width to match cpu alignment
-    auto constexpr cpu_alignment = 16;
-    if (width_ % cpu_alignment != 0) {
-        int new_width = ((width_ / cpu_alignment) + 1) * cpu_alignment;
+    if (width_ % kCPUAlignment != 0) {
+        int new_width = ((width_ / kCPUAlignment) + 1) * kCPUAlignment;
         int new_height = static_cast<int>(1.f * height_ / width_ * new_width);
         LOG(WARNING) << "Video Reader width: " << width_
             << " is not aligned with CPU alignment preference,"

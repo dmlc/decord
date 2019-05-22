@@ -71,8 +71,7 @@ class VideoReaderInterface {
 };  // class VideoReader
 
 
-DECORD_DLL VideoReaderPtr GetVideoReader(std::string fname,
-                              Decoder dec = Decoder::FFMPEG());
+DECORD_DLL VideoReaderPtr GetVideoReader(std::string fname, DLContext ctx);
 
 /**
  * \brief Interface of VideoLoader, pure virtual class
