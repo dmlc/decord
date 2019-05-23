@@ -9,6 +9,7 @@ from ._ffi.function import _init_api
 from .base import DECORDError
 from . import ndarray as _nd
 from .ndarray import DECORDContext
+from .bridge import bridge_out
 
 VideoLoaderHandle = ctypes.c_void_p
 
@@ -54,7 +55,7 @@ class VideoLoader(object):
         data = _CAPI_VideoLoaderNextData(self._handle)
         indices = _CAPI_VideoLoaderNextIndices(self._handle)
         self._curr += 1
-        return data, indices
+        return bridge_out(data), bridge_out(indices)
     
     def next(self):
         return self.__next__()
