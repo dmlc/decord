@@ -8,6 +8,7 @@ from ._ffi.base import c_array, c_str
 from ._ffi.function import _init_api
 from ._ffi.ndarray import DECORDContext
 from .base import DECORDError
+from . import ndarray as _nd
 from .ndarray import cpu, gpu
 
 VideoReaderHandle = ctypes.c_void_p
@@ -47,6 +48,12 @@ class VideoReader(object):
         arr = _CAPI_VideoReaderNextFrame(self._handle)
         if not arr.shape:
             raise StopIteration()
+        return arr
+    
+    def get_batch(self, indices):
+        assert self._handle is not None
+        indices = _nd.array(np.array(indices))
+        arr = _CAPI_VideoReaderGetBatch(self._handle, indices)
         return arr
     
     def get_key_indices(self):
