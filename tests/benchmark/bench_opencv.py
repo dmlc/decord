@@ -1,13 +1,10 @@
 """Benchmark using opencv's VideoCapture"""
 import time
 import random
-import os
 import numpy as np
 import cv2
 
-curr_dir = os.path.dirname(__file__)
-
-test_video = os.path.join(curr_dir, '..', 'testsrc_h264_100s_default.mp4'
+test_video = '/tmp/testsrc_h264_100s_default.mp4'
 
 def cv2_seek_frame(cap, pos):
     cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
@@ -81,10 +78,10 @@ cap.release()
 cv2.destroyAllWindows()
 
 
-vl = CV2VideoLoader([test_video], (2, 320, 240, 3), 1, 5, 1)
-cnt = 0
-tic = time.time()
-for batch in vl:
-    cnt += 1
+# vl = CV2VideoLoader([test_video], (2, 320, 240, 3), 1, 5, 1)
+# cnt = 0
+# tic = time.time()
+# for batch in vl:
+#     cnt += 1
 
-print(cnt, ' batches. Elapsed time for (not accurate) random access: ', time.time() - tic)
+# print(cnt, ' batches. Elapsed time for (not accurate) random access: ', time.time() - tic)
