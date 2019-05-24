@@ -12,7 +12,7 @@
 
 Bridges for deep learning frameworks:
 
-- Apache MXNet (on going)
+- Apache MXNet (Done)
 
 ## Installation
 
