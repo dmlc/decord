@@ -3,11 +3,56 @@ import time
 import random
 import numpy as np
 import cv2
+import argparse
+import warnings
+import numpy as np
 
-test_video = '/tmp/testsrc_h264_100s_default.mp4'
+parser = argparse.ArgumentParser("OpenCV benchmark")
+parser.add_argument('--file', type=str, default='/tmp/testsrc_h264_100s_default.mp4', help='Test video')
+parser.add_argument('--seed', type=int, default=666, help='numpy random seed for random access indices')
+parser.add_argument('--random-frames', type=int, default=300, help='number of random frames to run')
+parser.add_argument('--width', type=int, default=320, help='resize frame width')
+parser.add_argument('--height', type=int, default=240, help='resize frame height')
+
+args = parser.parse_args()
 
 def cv2_seek_frame(cap, pos):
     cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
+    print(pos, cap.get(cv2.CAP_PROP_POS_FRAMES))
+
+class CV2VideoReader(object):
+    def __init__(self, fn, width, height):
+        self._cap = cv2.VideoCapture(fn)
+        self._len = int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self._width = width
+        self._height = height
+        self._curr = 0
+
+    def __len__(self):
+        return self._len
+
+    def __getitem__(self, idx):
+        cv2_seek_frame(self._cap, idx)
+        self._curr = idx
+        return self.__next__()
+
+    def __del__(self):
+        self._cap.release()
+    
+    def __next__(self):
+        if self._curr >= self.__len__():
+            raise StopIteration
+        
+        ret, frame = self._cap.read()
+        if not ret:
+            raise RuntimeError
+        ret = cv2.resize(frame, (self._width, self._height)) 
+        self._curr += 1
+        return ret
+
+    def next(self):
+        return self.__next__()
+
 
 class CV2VideoLoader(object):
     def __init__(self, fns, shape, interval, skip, shuffle):
@@ -64,24 +109,32 @@ class CV2VideoLoader(object):
     def __iter__(self):
         return self
 
-cap = cv2.VideoCapture(test_video)
+vr = CV2VideoReader(args.file, width=args.width, height=args.height)
 tic = time.time()
 cnt = 0
-while(cap.isOpened()):
-    ret, frame = cap.read()
-    if not ret:
+while True:
+    try:
+        frame = vr.__next__()
+        cnt += 1
+    except:
         break
-    cnt += 1
 print(cnt, ' frames. Elapsed time for sequential read: ', time.time() - tic)
 
-cap.release()
-cv2.destroyAllWindows()
+vr = CV2VideoReader(args.file, width=args.width, height=args.height)
+np.random.seed(args.seed)  # fix seed for all random tests
+acc_indices = np.arange(len(vr))
+np.random.shuffle(acc_indices)
+if args.random_frames > len(vr):
+    warnings.warn('Number of random frames reduced to {} to fit test video'.format(len(vr)))
+    args.random_frames = len(vr)
+indices = acc_indices[:args.random_frames]
 
+tic = time.time()
+for idx in indices:
+    frame = vr[idx]
+    np.save('cv2.npy', frame)
+    raise
+    cv2.imshow('debug', frame)
+    cv2.waitKey()
 
-# vl = CV2VideoLoader([test_video], (2, 320, 240, 3), 1, 5, 1)
-# cnt = 0
-# tic = time.time()
-# for batch in vl:
-#     cnt += 1
-
-# print(cnt, ' batches. Elapsed time for (not accurate) random access: ', time.time() - tic)
+print(len(indices), ' frames, elapsed time for random access: ', time.time() - tic)
