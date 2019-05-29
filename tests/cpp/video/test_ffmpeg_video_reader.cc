@@ -2,6 +2,8 @@
 #include <decord/base.h>
 #include <dmlc/logging.h>
 #include <chrono>
+#include <vector>
+#include <algorithm>
 // #include <dmlc/io.h>
 // #include <gtest/gtest.h>
 
@@ -14,13 +16,13 @@ std::time_t getTimeStamp() {
 }
 
 int main(int argc, const char **argv) {
-    auto vr = decord::GetVideoReader("test2.mp4", kGPU);
+    auto vr = decord::GetVideoReader("C:\\Users\\Joshua\\AppData\\Local\\Temp\\testsrc_h264_100s_default.mp4", kCPU);
     LOG(INFO) << "Frame count: " << vr->GetFrameCount();
     vr->QueryStreams();
     NDArray array;
     int cnt = 0;
 	auto start = getTimeStamp();
-    while (1) {
+    while (0) {
         array = vr->NextFrame();
         // LOG(INFO) << array.Size();
         if (!array.Size()) break;
@@ -30,21 +32,20 @@ int main(int argc, const char **argv) {
     }
     auto end = getTimeStamp();
 	LOG(INFO) << cnt << " frame. Elapsed time: " << (end - start) / 1000.0;
-    return 0;
 
-    LOG(INFO) << " reset by seek";
-    vr->SeekAccurate(3065);
-    cnt = 0;
-    while (1) {
-        array = vr->NextFrame();
-        // LOG(INFO) << array.Size();
-        if (!array.Size()) break;
-        cnt++;
-        LOG(INFO) << "Frame: " << cnt;
-    } 
-    
-    // auto stm = dmlc::Stream::Create("debug.params", "w");
-    // array.Save(stm);
-    LOG(INFO) << "end";
+	std::vector<int> indices(vr->GetFrameCount());
+	std::iota(std::begin(indices), std::end(indices), 0);
+	std::random_shuffle(std::begin(indices), std::end(indices));
+
+	start = getTimeStamp();
+	cnt = 0;
+	for (size_t i = 0; i < 300; ++i) {
+		if (i >= indices.size()) break;
+		vr->SeekAccurate(indices[i]);
+		array = vr->NextFrame();
+		cnt++;
+	}
+	end = getTimeStamp();
+	LOG(INFO) << cnt << " frame. Elapsed time: " << (end - start) / 1000.0;
     return 0;
 }
