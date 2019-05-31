@@ -42,7 +42,7 @@ class VideoReader : public VideoReaderInterface {
         std::vector<int64_t> GetKeyIndicesVector() const;
     private:
         void IndexKeyframes();
-        void PushNext(bool discard = false);
+        void PushNext();
         int64_t LocateKeyframe(int64_t pos);
         NDArray NextFrameImpl();
 

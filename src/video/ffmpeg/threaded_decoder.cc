@@ -190,9 +190,10 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
             if (got_picture == 0) {
                 frame->pts = frame->best_effort_timestamp;
-                if (pkt->side_data) {
-                    frame_queue_->Push(NDArray::Empty({1}, kUInt8, kCPU));
-                }
+                // if (pkt->side_data) {
+                //     frame_queue_->Push(NDArray::Empty({1}, kUInt8, kCPU));
+                //     continue;
+                // }
                 // filter image frame (format conversion, scaling...)
                 filter_graph_->Push(frame.get());
                 AVFramePtr out_frame = AVFramePool::Get()->Acquire();
