@@ -95,6 +95,24 @@ void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
     // LOG(INFO) << "Pushed pkt to pkt_queue";
 }
 
+// void FFMPEGThreadedDecoder::Skip(AVPacketPtr pkt) {
+//    CHECK(run_.load());
+//    if (!pkt) {
+//         if (!draining_.load()) {
+//             draining_.store(true);
+//         }
+//    } else {
+//         CHECK(pkt->side_data == nullptr);
+//         AVDictionary * frameDict = nullptr;
+//         av_dict_set(&frameDict, "discard", std::to_string(1).c_str(), 0);
+//         int frameDictSize = 0;
+//         uint8_t *frameDictData = av_packet_pack_dictionary(frameDict, &frameDictSize);
+//         av_dict_free(&frameDict);
+//         av_packet_add_side_data(pkt.get(), AVPacketSideDataType::AV_PKT_DATA_STRINGS_METADATA, frameDictData, frameDictSize);
+//    }
+//    pkt_queue_->Push(pkt);
+// }
+
 // bool FFMPEGThreadedDecoder::Pop(AVFramePtr *frame) {
 //     // Pop is blocking operation
 //     // unblock and return false if queue has been destroyed.
@@ -172,15 +190,9 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
             if (got_picture == 0) {
                 frame->pts = frame->best_effort_timestamp;
-                // if (pkt->side_data) {
-                //     int discard = std::stoul(av_dict_get(frame->metadata, "discard", NULL, 0)->value);
-                //     if (discard) {
-                //         // skip filtering
-                //         // LOG(INFO) << "Discard";
-                //         frame_queue_->Push(NDArray());
-                //         continue;
-                //     }
-                // }
+                if (pkt->side_data) {
+                    frame_queue_->Push(NDArray::Empty({1}, kUInt8, kCPU));
+                }
                 // filter image frame (format conversion, scaling...)
                 filter_graph_->Push(frame.get());
                 AVFramePtr out_frame = AVFramePool::Get()->Acquire();

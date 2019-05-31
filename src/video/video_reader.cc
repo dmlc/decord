@@ -290,14 +290,15 @@ void VideoReader::PushNext(bool discard) {
             // LOG(FATAL) << packet->pts << " dts: " << packet->dts;
 
             // add discard info to side_data if necessary
-            // if (discard) {
-            //     AVDictionary * frameDict = nullptr;
-            //     av_dict_set(&frameDict, "discard", std::to_string(1).c_str(), 0);
-            //     int frameDictSize = 0;
-            //     uint8_t *frameDictData = av_packet_pack_dictionary(frameDict, &frameDictSize);
-            //     av_dict_free(&frameDict);
-            //     av_packet_add_side_data(packet.get(), AVPacketSideDataType::AV_PKT_DATA_STRINGS_METADATA, frameDictData, frameDictSize);
-            // }
+            if (discard) {
+                CHECK(packet->side_data == nullptr);
+                AVDictionary * frameDict = nullptr;
+                av_dict_set(&frameDict, "discard", std::to_string(1).c_str(), 0);
+                int frameDictSize = 0;
+                uint8_t *frameDictData = av_packet_pack_dictionary(frameDict, &frameDictSize);
+                av_dict_free(&frameDict);
+                av_packet_add_side_data(packet.get(), AVPacketSideDataType::AV_PKT_DATA_STRINGS_METADATA, frameDictData, frameDictSize);
+            }
             
             if (ctx_.device_type != kDLGPU) {
                     // no preallocated memory and memory pool, use FFMPEG AVFrame pool
@@ -407,7 +408,7 @@ void VideoReader::SkipFrames(int64_t num) {
     decoder_->Start();
     bool ret = false;
     while ((!eof_) && num > 0) {
-        PushNext(true);
+        PushNext(false);
         ret = decoder_->Pop(&frame);
         if (!ret) continue;
         ++curr_frame_;

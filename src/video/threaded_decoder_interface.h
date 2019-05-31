@@ -8,6 +8,7 @@
 #define DECORD_VIDEO_THREADED_DECODER_INTERFACE_H_
 
 #include "ffmpeg/ffmpeg_common.h"
+#include <vector>
 #include <decord/runtime/ndarray.h>
 
 namespace decord {
@@ -19,6 +20,7 @@ class ThreadedDecoderInterface {
         virtual void Clear() = 0;
         // virtual void Push(ffmpeg::AVPacketPtr pkt) = 0;
         virtual void Push(ffmpeg::AVPacketPtr pkt, runtime::NDArray buf) = 0;
+        // virtual void Skip(ffmpeg::AVPacketPtr pkt) = 0;
         virtual bool Pop(runtime::NDArray *frame) = 0;
         // virtual bool Pop(ffmpeg::AVFramePtr *frame) = 0;
         virtual ~ThreadedDecoderInterface() = default;
