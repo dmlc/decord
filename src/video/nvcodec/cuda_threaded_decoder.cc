@@ -22,7 +22,7 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar)
     pkt_queue_{}, frame_queue_{}, buffer_queue_{}, reorder_buffer_{}, reorder_queue_(), frame_order_(), 
     last_pts_(-1), permits_{}, run_(false), frame_count_(0), draining_(false),
     tex_registry_(), nv_time_base_({1, 10000000}), frame_base_({1, 1000000}),
-    dec_ctx_(nullptr), bsf_ctx_(nullptr), width_(-1), height_(-1) {
+    dec_ctx_(nullptr), bsf_ctx_(nullptr), width_(-1), height_(-1), discard_pts_() {
 
     // initialize bitstream filters
     InitBitStreamFilter(codecpar);
@@ -161,6 +161,7 @@ void CUThreadedDecoder::Clear() {
     }
     permits_.clear();
     // frame_in_use_.clear();
+    discard_pts_.clear();
 }
 
 CUThreadedDecoder::~CUThreadedDecoder() {
@@ -219,6 +220,10 @@ int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
     // finished, send clear msg to allow next decoding
     // LOG(INFO) << "finished, send clear msg to allow next decoding";
     return 1;
+}
+
+void CUThreadedDecoder::SuggestDiscardPTS(std::vector<int64_t> dts) {
+    discard_pts_.insert(dts.begin(), dts.end());
 }
 
 void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
@@ -331,8 +336,11 @@ void CUThreadedDecoder::ConvertThread() {
                                                   input_height,
                                                   ScaleMethod_Linear,
                                                   ChromaUpMethod_Linear);
-        ProcessFrame(textures.chroma, textures.luma, dst_ptr, stream_, input_width, input_height, width_, height_);
         int64_t frame_pts = static_cast<int64_t>(frame.disp_info->timestamp);
+        if (discard_pts_.find(frame_pts) == discard_pts_.end()) {
+            // only process frame when not indicated with discard flag
+            ProcessFrame(textures.chroma, textures.luma, dst_ptr, stream_, input_width, input_height, width_, height_);
+        }
         // auto frame_num = av_rescale_q(frame.disp_info->timestamp,
         //                               nv_time_base_, frame_base_);
         int64_t desired_pts;

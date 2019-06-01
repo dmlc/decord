@@ -45,6 +45,8 @@ class VideoReader : public VideoReaderInterface {
         void PushNext();
         int64_t LocateKeyframe(int64_t pos);
         NDArray NextFrameImpl();
+        int64_t FrameToPTS(int64_t pos);
+        std::vector<int64_t> FramesToPTS(const std::vector<int64_t>& positions);
 
         DLContext ctx_;
         std::vector<int64_t> key_indices_;

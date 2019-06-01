@@ -11,7 +11,7 @@
 namespace decord {
 namespace ffmpeg {
 
-FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false) {
+FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), discard_pts_() {
 }
 
 void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
@@ -66,6 +66,7 @@ void FFMPEGThreadedDecoder::Clear() {
     }
     frame_count_.store(0);
     draining_.store(false);
+    discard_pts_.clear();
 }
 
 // void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt) {
@@ -80,6 +81,10 @@ void FFMPEGThreadedDecoder::Clear() {
 //     // LOG(INFO)<< "frame push: " << frame_count_;
 //     // LOG(INFO) << "Pushed pkt to pkt_queue";
 // }
+
+void FFMPEGThreadedDecoder::SuggestDiscardPTS(std::vector<int64_t> dts) {
+    discard_pts_.insert(dts.begin(), dts.end());
+}
 
 void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
     CHECK(run_.load());
@@ -147,6 +152,29 @@ FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
     Stop();
 }
 
+void FFMPEGThreadedDecoder::ProcessFrame(AVFramePtr frame, NDArray out_buf) {
+    frame->pts = frame->best_effort_timestamp;
+    if (discard_pts_.find(frame->pts) != discard_pts_.end()) {
+        // skip resize/filtering
+        frame_queue_->Push(NDArray::Empty({1}, kUInt8, kCPU));
+        return;
+    }
+    // filter image frame (format conversion, scaling...)
+    filter_graph_->Push(frame.get());
+    AVFramePtr out_frame = AVFramePool::Get()->Acquire();
+    AVFrame *out_frame_p = out_frame.get();
+    CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
+    
+    auto tmp = AsNDArray(out_frame);
+    if (out_buf.defined()) {
+        CHECK(out_buf.Size() == tmp.Size());
+        out_buf.CopyFrom(tmp);
+        frame_queue_->Push(out_buf);
+    } else {
+        frame_queue_->Push(tmp);
+    }
+}
+
 void FFMPEGThreadedDecoder::WorkerThread() {
     while (run_.load()) {
         // CHECK(filter_graph_) << "FilterGraph not initialized.";
@@ -166,22 +194,10 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             while (true) {
                 got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
                 if (got_picture == AVERROR_EOF) break;
-                // filter image frame (format conversion, scaling...)
-                filter_graph_->Push(frame.get());
-                AVFramePtr out_frame = AVFramePool::Get()->Acquire();
-                AVFrame *out_frame_p = out_frame.get();
-                CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
                 NDArray out_buf;
                 bool get_buf = buffer_queue_->Pop(&out_buf);
                 if (!get_buf) return;
-                auto tmp = AsNDArray(out_frame);
-                if (out_buf.defined()) {
-                    CHECK(out_buf.Size() == tmp.Size());
-                    out_buf.CopyFrom(tmp);
-                    frame_queue_->Push(out_buf);
-                } else {
-                    frame_queue_->Push(tmp);
-                }
+                ProcessFrame(frame, out_buf);
             }
             frame_queue_->Push(NDArray());
         } else {
@@ -189,28 +205,10 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
             got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
             if (got_picture == 0) {
-                frame->pts = frame->best_effort_timestamp;
-                // if (pkt->side_data) {
-                //     frame_queue_->Push(NDArray::Empty({1}, kUInt8, kCPU));
-                //     continue;
-                // }
-                // filter image frame (format conversion, scaling...)
-                filter_graph_->Push(frame.get());
-                AVFramePtr out_frame = AVFramePool::Get()->Acquire();
-                AVFrame *out_frame_p = out_frame.get();
-                CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
                 NDArray out_buf;
                 bool get_buf = buffer_queue_->Pop(&out_buf);
                 if (!get_buf) return;
-                auto tmp = AsNDArray(out_frame);
-                if (out_buf.defined()) {
-                    CHECK(out_buf.Size() == tmp.Size());
-                    out_buf.CopyFrom(tmp);
-                    frame_queue_->Push(out_buf);
-                } else {
-                    frame_queue_->Push(tmp);
-                }
-                // LOG(INFO) << "pts: " <<out_frame->pts;
+                ProcessFrame(frame, out_buf);
             } else if (AVERROR(EAGAIN) == got_picture || AVERROR_EOF == got_picture) {
                 frame_queue_->Push(NDArray());
             } else {

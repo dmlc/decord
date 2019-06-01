@@ -53,6 +53,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         void Clear();
         void Push(AVPacketPtr pkt, NDArray buf);
         bool Pop(NDArray *frame);
+        void SuggestDiscardPTS(std::vector<int64_t> dts);
         ~CUThreadedDecoder();
 
         static int CUDAAPI HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format);
@@ -97,6 +98,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         unsigned int width_;
         unsigned int height_;
         // uint64_t decoded_cnt_;
+        std::unordered_set<int64_t> discard_pts_;
     
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
 };

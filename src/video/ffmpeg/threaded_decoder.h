@@ -12,6 +12,7 @@
 #include <decord/runtime/ndarray.h>
 
 #include <thread>
+#include <unordered_set>
 
 #include <dmlc/concurrency.h>
 
@@ -37,9 +38,11 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         void Push(ffmpeg::AVPacketPtr pkt, runtime::NDArray buf);
         // bool Pop(AVFramePtr *frame) {LOG(FATAL); return false; };
         bool Pop(runtime::NDArray *frame);
+        void SuggestDiscardPTS(std::vector<int64_t> dts);
         ~FFMPEGThreadedDecoder();
     private:
         void WorkerThread();
+        void ProcessFrame(AVFramePtr p, NDArray out_buf);
         // void FetcherThread(std::condition_variable& cv, FrameQueuePtr frame_queue);
         PacketQueuePtr pkt_queue_;
         FrameQueuePtr frame_queue_;
@@ -52,6 +55,7 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         std::atomic<bool> run_;
         FFMPEGFilterGraphPtr filter_graph_;
         AVCodecContextPtr dec_ctx_;
+        std::unordered_set<int64_t> discard_pts_;
 
     DISALLOW_COPY_AND_ASSIGN(FFMPEGThreadedDecoder);
 };

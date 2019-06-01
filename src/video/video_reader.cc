@@ -212,11 +212,28 @@ int64_t VideoReader::GetCurrentPosition() const {
     return curr_frame_;
 }
 
+int64_t VideoReader::FrameToPTS(int64_t pos) {
+    int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / GetFrameCount();
+    return ts;
+}
+
+std::vector<int64_t> VideoReader::FramesToPTS(const std::vector<int64_t>& positions) {
+    auto nframe = GetFrameCount();
+    auto duration = fmt_ctx_->streams[actv_stm_idx_]->duration;
+    std::vector<int64_t> ret;
+    ret.reserve(positions.size());
+    for (auto pos : positions) {
+        ret.emplace_back(pos * duration / nframe);
+    }
+    return ret;
+}
+
 bool VideoReader::Seek(int64_t pos) {
     if (curr_frame_ == pos) return true;
     decoder_->Clear();
     eof_ = false;
-    int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / GetFrameCount();
+    
+    int64_t ts = FrameToPTS(pos);
     // LOG(INFO) << "ts as by seek: " << ts;
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
     // int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_,
@@ -402,11 +419,16 @@ void VideoReader::SkipFrames(int64_t num) {
         // LOG(INFO) << "current: " << curr_frame_ << ", adjust skip from " << num << " to " << num + old_frame - *it2;
         num += old_frame - *it2;
     }
+    if (num < 1) return;
 
     // LOG(INFO) << "started skipping with: " << num;
     NDArray frame;
     decoder_->Start();
     bool ret = false;
+    std::vector<int64_t> frame_pos(num);
+    std::iota(frame_pos.begin(), frame_pos.end(), curr_frame_);
+    auto pts = FramesToPTS(frame_pos);
+    decoder_->SuggestDiscardPTS(pts);
     while ((!eof_) && num > 0) {
         PushNext();
         ret = decoder_->Pop(&frame);
