@@ -81,13 +81,22 @@ class AutoReleaseAVFramePool : public AutoReleasePool<AVFrame, S> {
             return &pool;
         }
 
+        virtual ~AutoReleaseAVFramePool() {
+          auto pool = AutoReleasePool<AVFrame, S>::pool_type::Get();
+          while (!pool->empty()) {
+            AVFrame* ret = pool->front();
+            Delete(ret);
+            pool->pop();
+          }
+        }
+
     private:
         AVFrame* Allocate() final {
             return av_frame_alloc();
         }
 
         void Delete(AVFrame* p) final {
-            av_frame_unref(p);
+            av_frame_free(&p);
         }
 };
 
@@ -104,13 +113,22 @@ class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
             return &pool;
         }
 
+        virtual ~AutoReleaseAVPacketPool() {
+          auto pool = AutoReleasePool<AVPacket, S>::pool_type::Get();
+          while (!pool->empty()) {
+            AVPacket* ret = pool->front();
+            Delete(ret);
+            pool->pop();
+          }
+        }
+
     private:
         AVPacket* Allocate() final {
             return av_packet_alloc();
         }
 
         void Delete(AVPacket* p) final {
-            av_packet_unref(p);
+            av_packet_free(&p);
         }
 };
 
@@ -159,7 +177,7 @@ using AVFormatContextPtr = std::unique_ptr<
  *
  */
 using AVCodecContextPtr = std::unique_ptr<
-    AVCodecContext, Deleter<AVCodecContext, int, avcodec_close> >;
+    AVCodecContext, Deleterp<AVCodecContext, void, avcodec_free_context> >;
 
 /**
  * \brief Smart pointer for AVFilterGraph, non copyable
@@ -218,7 +236,7 @@ inline void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 
 struct AVFrameManager {
 	AVFramePtr ptr;
-    int64_t shape[3];
+  int64_t shape[3];
 	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
 };
 
@@ -229,7 +247,7 @@ static void AVFrameManagerDeleter(DLManagedTensor *manager) {
 
 inline NDArray AsNDArray(AVFramePtr p) {
 	DLManagedTensor* manager = new DLManagedTensor();
-    auto av_manager = new AVFrameManager(p);
+  auto av_manager = new AVFrameManager(p);
 	manager->manager_ctx = av_manager;
 	ToDLTensor(p, manager->dl_tensor, av_manager->shape);
 	manager->deleter = AVFrameManagerDeleter;

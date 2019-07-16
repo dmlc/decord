@@ -91,7 +91,7 @@ void VideoReader::SetVideoStream(int stream_nb) {
     // initialize the mem for codec context
     CHECK(codecs_[st_nb] == dec) << "Codecs of " << st_nb << " is NULL";
     // LOG(INFO) << "codecs of stream: " << codecs_[st_nb] << " name: " <<  codecs_[st_nb]->name;
-    ffmpeg::AVCodecParametersPtr codecpar; 
+    ffmpeg::AVCodecParametersPtr codecpar;
     codecpar.reset(avcodec_parameters_alloc());
     CHECK_GE(avcodec_parameters_copy(codecpar.get(), fmt_ctx_->streams[st_nb]->codecpar), 0)
         << "Error copy stream->codecpar to buffer codecpar";
@@ -232,7 +232,7 @@ bool VideoReader::Seek(int64_t pos) {
     if (curr_frame_ == pos) return true;
     decoder_->Clear();
     eof_ = false;
-    
+
     int64_t ts = FrameToPTS(pos);
     // LOG(INFO) << "ts as by seek: " << ts;
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
@@ -316,7 +316,7 @@ void VideoReader::PushNext() {
             //     av_dict_free(&frameDict);
             //     av_packet_add_side_data(packet.get(), AVPacketSideDataType::AV_PKT_DATA_STRINGS_METADATA, frameDictData, frameDictSize);
             // }
-            
+
             if (ctx_.device_type != kDLGPU) {
                     // no preallocated memory and memory pool, use FFMPEG AVFrame pool
                     decoder_->Push(packet, NDArray());
@@ -327,6 +327,7 @@ void VideoReader::PushNext() {
             // LOG(INFO) << "Pushed packet to decoder.";
             break;
         }
+        av_packet_unref(packet.get());
     }
 }
 
@@ -374,6 +375,7 @@ void VideoReader::IndexKeyframes() {
             }
             ++cnt;
         }
+        av_packet_unref(packet.get());
     }
     curr_frame_ = GetFrameCount();
 	ret = Seek(0);

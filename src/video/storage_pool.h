@@ -20,7 +20,7 @@ namespace decord {
 
 /**
  * \brief A pool with auto release memory management
- * 
+ *
  * \tparam T Pointer type
  * \tparam S Pool size
  */
@@ -31,21 +31,21 @@ class AutoReleasePool {
         using pool_type = dmlc::ThreadLocalStore<std::queue<T*>>;
         /**
          * \brief Construct a new Auto Release Pool object
-         * 
+         *
          */
         AutoReleasePool() : active_(true) {};
         /**
          * \brief Destroy the Auto Release Pool object
-         * 
+         *
          */
-        ~AutoReleasePool() {
+        virtual ~AutoReleasePool() {
             active_.store(false);
         }
 
         /**
          * \brief Acquire a new smart pointer object, either from pool (if exist) or from new memory
-         * 
-         * \return ptr_type 
+         *
+         * \return ptr_type
          */
         ptr_type Acquire() {
             if (pool_type::Get()->empty()) {
@@ -59,7 +59,7 @@ class AutoReleasePool {
     private:
         /**
          * \brief Recycle function for on-destroying smart pointer object
-         * 
+         *
          * \param p Raw pointer
          */
         void Recycle(T* p) {
@@ -73,7 +73,7 @@ class AutoReleasePool {
 
         /**
          * \brief Virtual allocation method for T*
-         * 
+         *
          * \return T* New raw pointer
          */
         virtual T* Allocate() {
@@ -83,7 +83,7 @@ class AutoReleasePool {
 
         /**
          * \brief Deleter for raw pointer
-         * 
+         *
          * \param p Raw pointer to be freed
          */
         virtual void Delete(T* p) {
@@ -93,7 +93,7 @@ class AutoReleasePool {
 
         /**
          * \brief whether pool is active or on-destroying
-         * 
+         *
          */
         std::atomic<bool> active_;
 
@@ -102,14 +102,14 @@ class AutoReleasePool {
 
 class NDArrayPool {
     using NDArray = runtime::NDArray;
-    public: 
+    public:
         NDArrayPool();
         NDArrayPool(std::size_t sz, std::vector<int64_t> shape, DLDataType dtype, DLContext ctx);
         NDArray Acquire();
         ~NDArrayPool();
         static void Deleter(NDArray::Container* ptr);
         // static void DefaultDeleter(NDArray::Container* ptr);
-    
+
     private:
         std::size_t size_;
         std::vector<int64_t> shape_;
@@ -119,6 +119,6 @@ class NDArrayPool {
         bool init_;
 };  // NDArrayPool
 
-}  // namespace decord 
+}  // namespace decord
 
 #endif  // DECORD_VIDEO_STORAGE_POOL_H_
