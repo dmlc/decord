@@ -66,8 +66,6 @@ template<typename T, typename R, R(*Fn)(T**)> struct Deleterp {
     }
 };
 
-
-
 /**
  * \brief AutoReleasePool for AVFrame
  *
@@ -79,15 +77,6 @@ class AutoReleaseAVFramePool : public AutoReleasePool<AVFrame, S> {
         static AutoReleaseAVFramePool<S>* Get() {
             static AutoReleaseAVFramePool<S> pool;
             return &pool;
-        }
-
-        virtual ~AutoReleaseAVFramePool() {
-          auto pool = AutoReleasePool<AVFrame, S>::pool_type::Get();
-          while (!pool->empty()) {
-            AVFrame* ret = pool->front();
-            Delete(ret);
-            pool->pop();
-          }
         }
 
     private:
@@ -113,15 +102,6 @@ class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
             return &pool;
         }
 
-        virtual ~AutoReleaseAVPacketPool() {
-          auto pool = AutoReleasePool<AVPacket, S>::pool_type::Get();
-          while (!pool->empty()) {
-            AVPacket* ret = pool->front();
-            Delete(ret);
-            pool->pop();
-          }
-        }
-
     private:
         AVPacket* Allocate() final {
             return av_packet_alloc();
@@ -138,12 +118,12 @@ class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
  * \brief maximum pool size for AVFrame, per thread
  *
  */
-static const int kAVFramePoolMaxSize = 32;
+static const int kAVFramePoolMaxSize = 0;
 /**
  * \brief maximum pool size for AVPacket, per thread
  *
  */
-static const int kAVPacketPoolMaxSize = 32;
+static const int kAVPacketPoolMaxSize = 0;
 /**
  * \brief AVFramePool
  *

@@ -28,7 +28,7 @@ template<typename T, int S>
 class AutoReleasePool {
     public:
         using ptr_type = std::shared_ptr<T>;
-        using pool_type = dmlc::ThreadLocalStore<std::queue<T*>>;
+        using pool_type = dmlc::ThreadLocalStore<std::queue<ptr_type>>;
         /**
          * \brief Construct a new Auto Release Pool object
          *
@@ -51,9 +51,9 @@ class AutoReleasePool {
             if (pool_type::Get()->empty()) {
                 return std::shared_ptr<T>(Allocate(), std::bind(&AutoReleasePool::Recycle, this, std::placeholders::_1));
             }
-            T* ret = pool_type::Get()->front();
+            ptr_type ret = pool_type::Get()->front();
             pool_type::Get()->pop();
-            return std::shared_ptr<T>(ret, std::bind(&AutoReleasePool::Recycle, this, std::placeholders::_1));
+            return ret;
         }
 
     private:
@@ -67,7 +67,7 @@ class AutoReleasePool {
             if (!active_.load() || pool_type::Get()->size() + 1 > S) {
                 Delete(p);
             } else {
-                pool_type::Get()->push(p);
+                pool_type::Get()->push(std::shared_ptr<T>(p, std::bind(&AutoReleasePool::Recycle, this, std::placeholders::_1)));
             }
         }
 
