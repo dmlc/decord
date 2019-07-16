@@ -32,7 +32,7 @@ static const DLContext kCPU = {kDLCPU, 0};
 static const DLContext kGPU = {kDLGPU, 0};
 
 /*! \brief performance flags */
-int constexpr kCPUAlignment = 16;  // For video width alignment, not comply to this will result in sparse arrays
+int constexpr kCPUAlignment = 32;  // For video width alignment, not comply to this will result in sparse arrays
 
 }  // namespace decord
 #endif  // DECORD_BASE_H_

@@ -66,8 +66,6 @@ template<typename T, typename R, R(*Fn)(T**)> struct Deleterp {
     }
 };
 
-
-
 /**
  * \brief AutoReleasePool for AVFrame
  *
@@ -87,7 +85,7 @@ class AutoReleaseAVFramePool : public AutoReleasePool<AVFrame, S> {
         }
 
         void Delete(AVFrame* p) final {
-            av_frame_unref(p);
+            av_frame_free(&p);
         }
 };
 
@@ -110,7 +108,7 @@ class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
         }
 
         void Delete(AVPacket* p) final {
-            av_packet_unref(p);
+            av_packet_free(&p);
         }
 };
 
@@ -120,12 +118,12 @@ class AutoReleaseAVPacketPool : public AutoReleasePool<AVPacket, S> {
  * \brief maximum pool size for AVFrame, per thread
  *
  */
-static const int kAVFramePoolMaxSize = 32;
+static const int kAVFramePoolMaxSize = 0;
 /**
  * \brief maximum pool size for AVPacket, per thread
  *
  */
-static const int kAVPacketPoolMaxSize = 32;
+static const int kAVPacketPoolMaxSize = 0;
 /**
  * \brief AVFramePool
  *
@@ -159,7 +157,7 @@ using AVFormatContextPtr = std::unique_ptr<
  *
  */
 using AVCodecContextPtr = std::unique_ptr<
-    AVCodecContext, Deleter<AVCodecContext, int, avcodec_close> >;
+    AVCodecContext, Deleterp<AVCodecContext, void, avcodec_free_context> >;
 
 /**
  * \brief Smart pointer for AVFilterGraph, non copyable
@@ -218,7 +216,7 @@ inline void ToDLTensor(AVFramePtr p, DLTensor& dlt, int64_t *shape) {
 
 struct AVFrameManager {
 	AVFramePtr ptr;
-    int64_t shape[3];
+  int64_t shape[3];
 	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
 };
 
@@ -229,7 +227,7 @@ static void AVFrameManagerDeleter(DLManagedTensor *manager) {
 
 inline NDArray AsNDArray(AVFramePtr p) {
 	DLManagedTensor* manager = new DLManagedTensor();
-    auto av_manager = new AVFrameManager(p);
+  auto av_manager = new AVFrameManager(p);
 	manager->manager_ctx = av_manager;
 	ToDLTensor(p, manager->dl_tensor, av_manager->shape);
 	manager->deleter = AVFrameManagerDeleter;
