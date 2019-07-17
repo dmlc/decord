@@ -227,7 +227,7 @@ static void AVFrameManagerDeleter(DLManagedTensor *manager) {
 
 inline NDArray AsNDArray(AVFramePtr p) {
 	DLManagedTensor* manager = new DLManagedTensor();
-  auto av_manager = new AVFrameManager(p);
+    auto av_manager = new AVFrameManager(p);
 	manager->manager_ctx = av_manager;
 	ToDLTensor(p, manager->dl_tensor, av_manager->shape);
 	manager->deleter = AVFrameManagerDeleter;

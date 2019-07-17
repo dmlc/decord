@@ -143,10 +143,11 @@ void VideoReader::SetVideoStream(int stream_nb) {
         int new_width = ((width_ / kCPUAlignment) + 1) * kCPUAlignment;
         int new_height = static_cast<int>(1.f * height_ / width_ * new_width);
         LOG(WARNING) << "Video Reader width: " << width_
-            << " is not aligned with CPU alignment preference,"
+            << " is not aligned with CPU alignment preference(" << kCPUAlignment << "),"
             << " causing non-compact array with degraded performance."
             << " Automatically round up resolution to: "
-            << new_width << " x " << new_height;
+            << new_width << " x " << new_height 
+            << ".\nYou can set 'VideoReader(..., width=n*32)' to avoid warnings.";
         width_ = new_width;
         height_ = new_height;
     }
@@ -341,6 +342,9 @@ NDArray VideoReader::NextFrameImpl() {
             return NDArray::Empty({}, kUInt8, ctx_);
         }
         ret = decoder_->Pop(&frame);
+        if (frame.Size() <= 1) {
+            ret = false;
+        }
     }
     if (frame.defined()) {
         ++curr_frame_;
@@ -431,49 +435,16 @@ void VideoReader::SkipFrames(int64_t num) {
     std::iota(frame_pos.begin(), frame_pos.end(), curr_frame_);
     auto pts = FramesToPTS(frame_pos);
     decoder_->SuggestDiscardPTS(pts);
-    while ((!eof_) && num > 0) {
+    curr_frame_ += num;
+    while (num > 0) {
         PushNext();
         ret = decoder_->Pop(&frame);
         if (!ret) continue;
-        ++curr_frame_;
         // LOG(INFO) << "skip: " << num;
         --num;
     }
     // LOG(INFO) << " stopped skipframes: " << curr_frame_;
 }
-
-// NDArray VideoReader::GetBatch(std::vector<int64_t> indices) {
-//     std::size_t bs = indices.size();
-//     int sz = height_ * width_ * 3;
-//     std::vector<uint8_t> buffer(bs * sz);
-//     int64_t frame_count = GetFrameCount();
-//     for (std::size_t i = 0; i < indices.size(); ++i) {
-//         int64_t pos = indices[i];
-//         // LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
-//         CHECK_LT(pos, frame_count);
-//         CHECK_GE(pos, 0);
-//         if (curr_frame_ == pos) {
-//             // no need to seek
-//         } else if (pos > curr_frame_) {
-//             // skip positive number of frames
-//             SkipFrames(pos - curr_frame_);
-//         } else {
-//             // seek no matter what
-//             SeekAccurate(pos);
-//         }
-//         NDArray frame = NextFrameImpl();
-//         if (frame.Size() < 1 && eof_) {
-//             LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
-//         }
-//         // copy frame to buffer
-//         auto raw_data = static_cast<uint8_t*>(frame.data_->dl_tensor.data);
-//         std::copy(raw_data, raw_data + sz, buffer.begin() + i * sz);
-//     }
-//     std::vector<int64_t> shape({static_cast<int64_t>(bs), height_, width_, 3});
-//     NDArray batch = NDArray::Empty(shape, kUInt8, kCPU);
-//     batch.CopyFrom(buffer, shape);
-//     return batch;
-// }
 
 NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     std::size_t bs = indices.size();
@@ -498,6 +469,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
             SeekAccurate(pos);
         }
         NDArray frame = NextFrameImpl();
+        
         if (frame.Size() < 1 && eof_) {
             LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
         }
