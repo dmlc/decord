@@ -1,4 +1,4 @@
-# Decode(WIP)
+# Decode
 
 ![symbol](docs/symbol.png)
 
