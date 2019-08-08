@@ -45,7 +45,7 @@ using NDArray = runtime::NDArray;
  *
  * \tparam T Pointer type
  * \tparam R Deleter return type
- * \tparam R(*Fn)(T*) Real deteter function
+ * \tparam R(*Fn)(T*) Real deleter function
  */
 template<typename T, typename R, R(*Fn)(T*)> struct Deleter {
     inline void operator() (T* p) const {

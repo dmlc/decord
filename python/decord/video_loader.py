@@ -40,7 +40,7 @@ class VideoLoader(object):
 
     def __len__(self):
         return self._len
-    
+
     def reset(self):
         assert self._handle is not None
         self._curr = 0
@@ -56,7 +56,7 @@ class VideoLoader(object):
         indices = _CAPI_VideoLoaderNextIndices(self._handle)
         self._curr += 1
         return bridge_out(data), bridge_out(indices)
-    
+
     def next(self):
         return self.__next__()
 

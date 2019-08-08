@@ -75,17 +75,17 @@ struct CUImageTexture {
 
 /**
  * \brief A registry of CUDA Texture Objects, for fast retrieval
- *  
+ *
  */
 class CUTextureRegistry {
     public:
         // Here we assume that a data pointer, scale method, chroma_up_method uniquely defines a texture
         using TexID = std::tuple<uint8_t*, ScaleMethod, ChromaUpMethod>;
         CUTextureRegistry();
-        const CUImageTexture& GetTexture(uint8_t* ptr, unsigned int input_pitch, 
+        const CUImageTexture& GetTexture(uint8_t* ptr, unsigned int input_pitch,
                                          uint16_t input_width, uint16_t input_height,
                                          ScaleMethod scale_method, ChromaUpMethod chroma_up_method);
-        
+
     private:
         struct TexHash {
         std::hash<uint8_t*> ptr_hash;

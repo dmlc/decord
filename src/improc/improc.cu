@@ -72,7 +72,7 @@ __device__ void yuv2rgb(const YUV<YUV_T>& yuv, RGB_T* rgb,
 template<typename T>
 __global__ void process_frame_kernel(
     cudaTextureObject_t luma, cudaTextureObject_t chroma,
-    T* dst, uint16_t input_width, uint16_t input_height, 
+    T* dst, uint16_t input_width, uint16_t input_height,
     uint16_t output_width, uint16_t output_height, float fx, float fy) {
 
     const int dst_x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -100,13 +100,13 @@ int DivUp(int total, int grain) {
     return (total + grain - 1) / grain;
 }
 
-void ProcessFrame(cudaTextureObject_t chroma, cudaTextureObject_t luma, 
+void ProcessFrame(cudaTextureObject_t chroma, cudaTextureObject_t luma,
     uint8_t* dst, cudaStream_t stream, uint16_t input_width, uint16_t input_height,
     int output_width, int output_height) {
     // resize factor
     auto fx = static_cast<float>(input_width) / output_width;
     auto fy = static_cast<float>(input_height) / output_height;
-    
+
     dim3 block(32, 8);
     dim3 grid(DivUp(output_width, block.x), DivUp(output_height, block.y));
 

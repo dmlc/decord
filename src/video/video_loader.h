@@ -27,8 +27,8 @@ enum ShuffleTypes {
 class VideoLoader : public VideoLoaderInterface {
 public:
         VideoLoader(std::vector<std::string> filenames, std::vector<DLContext> ctxs,
-                          std::vector<int> shape, int interval, 
-                          int skip, int shuffle, 
+                          std::vector<int> shape, int interval,
+                          int skip, int shuffle,
                           int prefetch);
         ~VideoLoader();
         void Reset();
@@ -37,7 +37,7 @@ public:
         void Next();
         NDArray NextData();
         NDArray NextIndices();
-    
+
     private:
         using ReaderPtr = std::shared_ptr<VideoReader>;
         struct Entry {

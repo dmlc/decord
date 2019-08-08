@@ -29,7 +29,7 @@ class CUMappedFrame {
         unsigned int get_pitch() const;
 
         CUVIDPARSERDISPINFO* disp_info;
-    
+
     private:
         bool valid_;
         CUvideodecoder decoder_;

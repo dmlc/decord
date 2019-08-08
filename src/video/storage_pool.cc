@@ -31,7 +31,7 @@ runtime::NDArray NDArrayPool::Acquire() {
         queue_.pop();
         return arr;
     } else {
-        // Allocate 
+        // Allocate
         auto arr = NDArray::Empty(shape_, dtype_, ctx_);
         arr.data_->manager_ctx = this;
         arr.data_->deleter = &NDArrayPool::Deleter;
@@ -47,7 +47,7 @@ void NDArrayPool::Deleter(NDArray::Container* ptr) {
             decord::runtime::DeviceAPI::Get(ptr->dl_tensor.ctx)->FreeDataSpace(
           ptr->dl_tensor.ctx, ptr->dl_tensor.data);
             delete ptr;
-            ptr = nullptr; 
+            ptr = nullptr;
         } else {
             static_cast<NDArrayPool*>(ptr->manager_ctx)->queue_.push(NDArray(ptr));
         }

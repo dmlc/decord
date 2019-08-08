@@ -28,7 +28,7 @@ class SequentialSampler : public SamplerInterface {
         std::vector<Samples> visit_order_;
 
 };  // class SequentialSampler
-    
+
 }  // sampler
 }  // decord
 

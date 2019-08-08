@@ -67,7 +67,7 @@ class KineticsHumanActionDataset(object):
         arrs = vr.get_batch(sample_indices)
         del vr
         return arrs
-        
+
     def _load_annotations(self):
         self._items = []
         for split in self._splits:

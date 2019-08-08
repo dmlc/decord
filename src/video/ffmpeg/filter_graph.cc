@@ -31,14 +31,14 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 	const AVFilter *buffersink = avfilter_get_by_name("buffersink");
     if (!buffersink) {
         buffersink = avfilter_get_by_name("ffbuffersink");
-    } 
+    }
     CHECK(buffersrc) << "Error: no buffersrc";
     CHECK(buffersink) << "Error: no buffersink";
     AVFilterInOut *outputs = avfilter_inout_alloc();
 	AVFilterInOut *inputs  = avfilter_inout_alloc();
 	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_RGB24 , AV_PIX_FMT_NONE };
 	// AVBufferSinkParams *buffersink_params;
- 
+
 	filter_graph_.reset(avfilter_graph_alloc());
 	/* automatic threading */
 	//LOG(INFO) << "Original GraphFilter nb_threads: " << filter_graph_->nb_threads;
@@ -52,9 +52,9 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
     // std::snprintf(args, sizeof(args),
     //         "video_size=%dx%d:pix_fmt=%d",
     //         dec_ctx->width, dec_ctx->height, dec_ctx->pix_fmt);
-    
+
     // LOG(INFO) << "filter args: " << args;
-    
+
     // AVFilterContext *buffersrc_ctx;
     // AVFilterContext *buffersink_ctx;
     CHECK_GE(avfilter_graph_create_filter(&buffersrc_ctx_, buffersrc, "in",
@@ -78,7 +78,7 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 	outputs->filter_ctx = buffersrc_ctx_;
 	outputs->pad_idx    = 0;
 	outputs->next       = NULL;
- 
+
 	inputs->name       = av_strdup("out");
 	inputs->filter_ctx = buffersink_ctx_;
 	inputs->pad_idx    = 0;
@@ -97,7 +97,7 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 
 void FFMPEGFilterGraph::Push(AVFrame *frame) {
     // push decoded frame into filter graph
-    CHECK_GE(av_buffersrc_add_frame_flags(buffersrc_ctx_, frame, AV_BUFFERSRC_FLAG_KEEP_REF), 0) 
+    CHECK_GE(av_buffersrc_add_frame_flags(buffersrc_ctx_, frame, AV_BUFFERSRC_FLAG_KEEP_REF), 0)
         << "Error while feeding the filter graph";
     ++count_;
 }
@@ -106,7 +106,7 @@ bool FFMPEGFilterGraph::Pop(AVFrame **frame) {
     if (!count_.load()) {
         // LOG(INFO) << "No count in filter graph.";
         return false;
-    } 
+    }
     if (!*frame) *frame = av_frame_alloc();
     int ret = av_buffersink_get_frame(buffersink_ctx_, *frame);
     if (ret < 0) LOG(INFO) << "buffersink get frame failed" << AVERROR(ret);

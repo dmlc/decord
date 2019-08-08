@@ -19,7 +19,7 @@ class SmartRandomSampler : public SamplerInterface {
     private:
 
 };  // class SmartRandomSampler
-    
+
 }  // sampler
 }  // decord
 

@@ -146,47 +146,47 @@ DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderGetVideoLoader")
 
 DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderReset")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
-    VideoLoaderInterfaceHandle handle = args[0]; 
+    VideoLoaderInterfaceHandle handle = args[0];
     static_cast<VideoLoaderInterface*>(handle)->Reset();
   });
 
 DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderLength")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
-    VideoLoaderInterfaceHandle handle = args[0]; 
+    VideoLoaderInterfaceHandle handle = args[0];
     auto len = static_cast<VideoLoaderInterface*>(handle)->Length();
     *rv = len;
   });
 
 DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderHasNext")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
-    VideoLoaderInterfaceHandle handle = args[0]; 
+    VideoLoaderInterfaceHandle handle = args[0];
     bool ret = static_cast<VideoLoaderInterface*>(handle)->HasNext();
     *rv = ret;
   });
 
 DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderNext")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
-    VideoLoaderInterfaceHandle handle = args[0]; 
+    VideoLoaderInterfaceHandle handle = args[0];
     static_cast<VideoLoaderInterface*>(handle)->Next();
   });
 
 DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderNextData")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
-    VideoLoaderInterfaceHandle handle = args[0]; 
+    VideoLoaderInterfaceHandle handle = args[0];
     auto ret = static_cast<VideoLoaderInterface*>(handle)->NextData();
     *rv = ret;
   });
 
 DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderNextIndices")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
-    VideoLoaderInterfaceHandle handle = args[0]; 
+    VideoLoaderInterfaceHandle handle = args[0];
     auto ret = static_cast<VideoLoaderInterface*>(handle)->NextIndices();
     *rv = ret;
   });
 
 DECORD_REGISTER_GLOBAL("video_loader._CAPI_VideoLoaderFree")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
-    VideoLoaderInterfaceHandle handle = args[0]; 
+    VideoLoaderInterfaceHandle handle = args[0];
     auto p = static_cast<VideoLoaderInterface*>(handle);
     if (p) delete p;
   });

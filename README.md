@@ -1,22 +1,23 @@
-# Decode
+# Decord
 
 ![symbol](docs/symbol.png)
 
 `Decord` is a reverse procedure of `Record`. It provides convenient video slicing methods based on a thin wrapper on top of hardware accelerated video decoders, e.g.
 
-- FFMPEG/LibAV(Done)
-- Nvidia Codecs(Done)
-- Intel Codecs
+-   FFMPEG/LibAV(Done)
+-   Nvidia Codecs(Done)
+-   Intel Codecs
 
 `Decord` was designed to handle awkward video shuffling experience in order to provide smooth experiences similar to random image loader for deep learning.
 
 Bridges for deep learning frameworks:
 
-- Apache MXNet (Done)
+-   Apache MXNet (Done)
 
 ## Installation
 
 ### Install via pip
+
 TODO
 
 ### Install from source
@@ -29,7 +30,7 @@ Install the system packages for building the shared library, for Debian/Ubuntu u
 # official PPA comes with ffmpeg 2.8, which lacks tons of features, we use ffmpeg 4.0 here
 sudo add-apt-repository ppa:jonathonf/ffmpeg-4
 sudo apt-get update
-sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake 
+sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake
 libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
 # note: make sure you have cmake 3.8 or later, you can install from cmake official website if it's too old
 ```
@@ -65,7 +66,7 @@ python3 setup.py install --user
 
 Installation on macOS is similar to Linux. But macOS users need to install building tools like clang, GNU Make, cmake first.
 
-Tools like clang and GNU Make are packaged in *Command Line Tools* for macOS. To install:
+Tools like clang and GNU Make are packaged in _Command Line Tools_ for macOS. To install:
 
 ```bash
 xcode-select --install
@@ -95,7 +96,6 @@ cmake ..
 make
 ```
 
-
 Install python bindings:
 
 ```bash
@@ -108,13 +108,12 @@ source ~/.bash_profile
 python3 setup.py install --user
 ```
 
-
 #### Windows
 
 For windows, you will need CMake and Visual Studio for C++ compilation.
 
-- First, install `git`, `cmake`, `ffmpeg` and `python`. You can use [Chocolatey](https://chocolatey.org/) to manage packages similar to Linux/Mac OS.
-- Second, install [`Visual Studio 2017 Community`](https://visualstudio.microsoft.com/), this my take some time.
+-   First, install `git`, `cmake`, `ffmpeg` and `python`. You can use [Chocolatey](https://chocolatey.org/) to manage packages similar to Linux/Mac OS.
+-   Second, install [`Visual Studio 2017 Community`](https://visualstudio.microsoft.com/), this my take some time.
 
 When dependencies are ready, open command line prompt:
 
@@ -127,7 +126,6 @@ cd build
 cmake -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -G "Visual Studio 15 2017 Win64" ..
 # open `decord.sln` and build project
 ```
-
 
 ## Usage
 
@@ -156,7 +154,7 @@ vr.seek(0)
 
 ### VideoLoader
 
-VideoLoader is designed for training deep learning models with tons of video files. 
+VideoLoader is designed for training deep learning models with tons of video files.
 It provides smart video shuffle techniques in order to provide high random access performance (We know that seeking in video is super slow and redundant).
 The optimizations are underlying in the C++ code, which are invisible to user.
 
@@ -183,10 +181,10 @@ shuffle = 3  # random frame access in each video only
 
 ## Preliminary Benchmarks
 
-| Setting             | OpenCV VideoCapture | NVVL | Decord |
-|---------------------|---------------------|------|--------|
-| CPU sequential read | 1.0x                | -    | 1.1x   |
-| CPU random acess(no accurate seek)  | 0.08x                | -    | 0.23x  |
-| CPU random acess (accurate seek)                    |    -                 |      |  0.06x  |
-| GPU sequential                    |       -              |  TODO    |    TODO    |
-| GPU random acess                   |      -               |  TODO    |   TODO     |
+| Setting                             | OpenCV VideoCapture | NVVL | Decord |
+| ----------------------------------- | ------------------- | ---- | ------ |
+| CPU sequential read                 | 1.0x                | -    | 1.1x   |
+| CPU random access(no accurate seek) | 0.08x               | -    | 0.23x  |
+| CPU random access (accurate seek)   | -                   |      | 0.06x  |
+| GPU sequential                      | -                   | TODO | TODO   |
+| GPU random access                   | -                   | TODO | TODO   |

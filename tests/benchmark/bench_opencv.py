@@ -38,15 +38,15 @@ class CV2VideoReader(object):
 
     def __del__(self):
         self._cap.release()
-    
+
     def __next__(self):
         if self._curr >= self.__len__():
             raise StopIteration
-        
+
         ret, frame = self._cap.read()
         if not ret:
             raise RuntimeError
-        ret = cv2.resize(frame, (self._width, self._height)) 
+        ret = cv2.resize(frame, (self._width, self._height))
         self._curr += 1
         return ret
 
@@ -72,7 +72,7 @@ class CV2VideoLoader(object):
     def __del__(self):
         for cap in self._cap:
             cap.release()
-    
+
     def _init_orders(self):
         self._orders = []
         for i, cap in enumerate(self._cap):
@@ -80,7 +80,7 @@ class CV2VideoLoader(object):
             order = np.arange(0, l, self._shape[0] * (1 + self._interval) - self._interval + self._skip)
             for o in order:
                 self._orders.append((i, o))
-        
+
     def reset(self):
         self._curr = 0
         random.shuffle(self._orders)
@@ -100,11 +100,11 @@ class CV2VideoLoader(object):
             ret, frame = cap.read()
             if not ret:
                 raise RuntimeError
-            data[j][:] = cv2.resize(frame, (self._shape[2], self._shape[1])) 
+            data[j][:] = cv2.resize(frame, (self._shape[2], self._shape[1]))
             for k in range(self._interval):
                 ret, frame = cap.read()
         self._curr += 1
-        return 
+        return
 
     def __iter__(self):
         return self

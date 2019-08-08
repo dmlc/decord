@@ -14,7 +14,7 @@ namespace cuda {
 
 #ifdef DECORD_USE_CUDA
 
-void ProcessFrame(cudaTextureObject_t chroma, cudaTextureObject_t luma, 
+void ProcessFrame(cudaTextureObject_t chroma, cudaTextureObject_t luma,
                   uint8_t* dst, cudaStream_t stream, uint16_t input_width, uint16_t input_height,
                   int output_width, int output_height);
 #endif

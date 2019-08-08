@@ -39,7 +39,7 @@ class RandomFileOrderSampler : public SamplerInterface {
         std::size_t visit_idx_;
 
 };  // class RandomFileOrderSampler
-    
+
 }  // sampler
 }  // decord
 

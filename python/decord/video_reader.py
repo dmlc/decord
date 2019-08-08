@@ -26,7 +26,7 @@ class VideoReader(object):
         self._num_frame = _CAPI_VideoReaderGetFrameCount(self._handle)
         assert self._num_frame > 0
         self._key_indices = _CAPI_VideoReaderGetKeyIndices(self._handle)
-    
+
     @property
     def num_frame(self):
         return self._num_frame
@@ -50,23 +50,23 @@ class VideoReader(object):
         if not arr.shape:
             raise StopIteration()
         return bridge_out(arr)
-    
+
     def get_batch(self, indices):
         assert self._handle is not None
         indices = _nd.array(np.array(indices))
         arr = _CAPI_VideoReaderGetBatch(self._handle, indices)
         return bridge_out(arr)
-    
+
     def get_key_indices(self):
         return bridge_out(self._key_indices)
-    
+
     def seek(self, pos):
         assert self._handle is not None
         assert pos >= 0 and pos < self._num_frame
         success = _CAPI_VideoReaderSeek(self._handle, pos)
         if not success:
             raise RuntimeError("Failed to seek to frame {}".format(pos))
-    
+
     def seek_accurate(self, pos):
         assert self._handle is not None
         assert pos >= 0 and pos < self._num_frame
