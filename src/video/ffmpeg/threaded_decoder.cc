@@ -77,7 +77,7 @@ void FFMPEGThreadedDecoder::Clear() {
 //     }
 //     pkt_queue_->Push(pkt);
 //     ++frame_count_;
-    
+
 //     // LOG(INFO)<< "frame push: " << frame_count_;
 //     // LOG(INFO) << "Pushed pkt to pkt_queue";
 // }
@@ -95,7 +95,7 @@ void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
     pkt_queue_->Push(pkt);
     buffer_queue_->Push(buf);
     ++frame_count_;
-    
+
     // LOG(INFO)<< "frame push: " << frame_count_;
     // LOG(INFO) << "Pushed pkt to pkt_queue";
 }
@@ -121,12 +121,12 @@ void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
 // bool FFMPEGThreadedDecoder::Pop(AVFramePtr *frame) {
 //     // Pop is blocking operation
 //     // unblock and return false if queue has been destroyed.
-    
+
 //     if (!frame_count_.load() && !draining_.load()) {
 //         return false;
 //     }
 //     bool ret = frame_queue_->Pop(frame);
-    
+
 //     if (ret){
 //         --frame_count_;
 //     }
@@ -136,12 +136,12 @@ void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
 bool FFMPEGThreadedDecoder::Pop(runtime::NDArray *frame) {
     // Pop is blocking operation
     // unblock and return false if queue has been destroyed.
-    
+
     if (!frame_count_.load() && !draining_.load()) {
         return false;
     }
     bool ret = frame_queue_->Pop(frame);
-    
+
     if (ret) {
         --frame_count_;
     }
@@ -164,7 +164,7 @@ void FFMPEGThreadedDecoder::ProcessFrame(AVFramePtr frame, NDArray out_buf) {
     AVFramePtr out_frame = AVFramePool::Get()->Acquire();
     AVFrame *out_frame_p = out_frame.get();
     CHECK(filter_graph_->Pop(&out_frame_p)) << "Error fetch filtered frame.";
-    
+
     auto tmp = AsNDArray(out_frame);
     if (out_buf.defined()) {
         CHECK(out_buf.Size() == tmp.Size());
@@ -180,7 +180,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
         // CHECK(filter_graph_) << "FilterGraph not initialized.";
         if (!filter_graph_) return;
         AVPacketPtr pkt;
-        
+
         int got_picture;
         bool ret = pkt_queue_->Pop(&pkt);
         if (!ret) {

@@ -20,7 +20,7 @@ namespace runtime {
  *
  *  - Only a few allocation will happen, and space will be released after use.
  *  - The release order is usually in reverse order of allocate
- *  - Repeative pattern of same allocations over different runs.
+ *  - Repetitive pattern of same allocations over different runs.
  */
 class DECORD_DLL WorkspacePool {
  public:

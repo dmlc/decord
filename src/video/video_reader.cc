@@ -146,7 +146,7 @@ void VideoReader::SetVideoStream(int stream_nb) {
             << " is not aligned with CPU alignment preference(" << kCPUAlignment << "),"
             << " causing non-compact array with degraded performance."
             << " Automatically round up resolution to: "
-            << new_width << " x " << new_height 
+            << new_width << " x " << new_height
             << ".\nYou can set 'VideoReader(..., width=n*32)' to avoid warnings.";
         width_ = new_width;
         height_ = new_height;
@@ -469,7 +469,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
             SeekAccurate(pos);
         }
         NDArray frame = NextFrameImpl();
-        
+
         if (frame.Size() < 1 && eof_) {
             LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
         }

@@ -17,16 +17,16 @@ namespace decord {
 namespace cuda {
 using namespace runtime;
 
-CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar) 
-    : device_id_(device_id), stream_({-1, false}), device_{}, ctx_{}, parser_{}, decoder_{}, 
-    pkt_queue_{}, frame_queue_{}, buffer_queue_{}, reorder_buffer_{}, reorder_queue_(), frame_order_(), 
+CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar)
+    : device_id_(device_id), stream_({-1, false}), device_{}, ctx_{}, parser_{}, decoder_{},
+    pkt_queue_{}, frame_queue_{}, buffer_queue_{}, reorder_buffer_{}, reorder_queue_(), frame_order_(),
     last_pts_(-1), permits_{}, run_(false), frame_count_(0), draining_(false),
     tex_registry_(), nv_time_base_({1, 10000000}), frame_base_({1, 1000000}),
     dec_ctx_(nullptr), bsf_ctx_(nullptr), width_(-1), height_(-1), discard_pts_() {
 
     // initialize bitstream filters
     InitBitStreamFilter(codecpar);
-    
+
     CHECK_CUDA_CALL(cuInit(0));
     CHECK_CUDA_CALL(cuDeviceGet(&device_, device_id_));
 
@@ -245,13 +245,13 @@ void CUThreadedDecoder::Push(AVPacketPtr pkt, NDArray buf) {
             last_pts_ += pkt->duration;
             frame_order_->Push(last_pts_);
         }
-    } 
-    
+    }
+
     while (pkt_queue_->Size() > kMaxOutputSurfaces) {
         // too many in queue to be processed, wait here
         std::this_thread::sleep_for(std::chrono::nanoseconds(1));
     }
-    
+
     pkt_queue_->Push(pkt);
     frame_queue_->Push(buf);  // push memory buffer
     ++frame_count_;

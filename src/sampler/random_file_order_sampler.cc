@@ -18,7 +18,7 @@ RandomFileOrderSampler::RandomFileOrderSampler(std::vector<int64_t> lens, std::v
     CHECK_GT(bs_, 0) << "Batch size cannot be smaller than 1.";
     CHECK(range.size() % 2 == 0) << "Range (begin, end) size incorrect, expected: " << lens.size() * 2;
     CHECK_EQ(lens.size(), range.size() / 2) << "Video reader size mismatch with range: " << lens.size() << " vs " << range.size() / 2;
-    
+
     // return sample buffer
     samples_.resize(bs_);
 

@@ -15,11 +15,11 @@
 namespace decord {
 
 VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLContext> ctxs,
-                         std::vector<int> shape, int interval, 
-                         int skip, int shuffle, int prefetch) 
-    : readers_(), shape_(shape), intvl_(interval), skip_(skip), shuffle_(shuffle), 
+                         std::vector<int> shape, int interval,
+                         int skip, int shuffle, int prefetch)
+    : readers_(), shape_(shape), intvl_(interval), skip_(skip), shuffle_(shuffle),
     prefetch_(prefetch), next_ready_(0), next_data_(), next_indices_(),
-    //visit_order_(), visit_bounds_(), visit_buffer_(), curr_(0), 
+    //visit_order_(), visit_bounds_(), visit_buffer_(), curr_(0),
     ctxs_(ctxs), ndarray_pool_() {
     // Validate parameters
     intvl_ = std::max(0, intvl_);
@@ -34,7 +34,7 @@ VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLConte
         }
         ss << (")");
         LOG(FATAL) << "Shape must be of dim 4, in [Batchsize, H, W, C], given " << ss.str();
-    } 
+    }
 
     // initialize ndarray buffer pool
 
@@ -50,7 +50,7 @@ VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLConte
         ReaderPtr ptr = std::make_shared<VideoReader>(filename, ctxs[0], shape_[2], shape_[1]);
         auto key_indices = ptr->GetKeyIndicesVector();
         CHECK_GT(key_indices.size(), 0) << "Error getting key frame info from " << filename;
-        auto frame_count = ptr->GetFrameCount(); 
+        auto frame_count = ptr->GetFrameCount();
         CHECK_GT(frame_count, 0) << "Error getting total frame from " << filename;
         readers_.emplace_back(Entry(ptr, key_indices, frame_count));
         lengths.emplace_back(frame_count);
@@ -67,7 +67,7 @@ VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLConte
     } else if (shuffle == kRandomShuffle) {
         sampler_ = std::unique_ptr<sampler::SamplerInterface>(new sampler::RandomSampler(lengths, ranges, shape[0], intvl_, skip_));
     } else {
-        LOG(FATAL) << "Invalid shuffle mode: " << shuffle << " Available: " 
+        LOG(FATAL) << "Invalid shuffle mode: " << shuffle << " Available: "
             << "\n\t{No shuffle: " << kNoShuffle << "}"
             << "\n\t{Random File Order: " << kRandomFileOrderShuffle << "}"
             << "\n\t{Random access: " << kRandomShuffle << "}";
@@ -93,7 +93,7 @@ VideoLoader::VideoLoader(std::vector<std::string> filenames, std::vector<DLConte
     //     std::size_t start = 0;
     //     for (auto bound : visit_bounds_) {
     //         visit_buffer_.emplace_back(std::vector<std::pair<std::size_t, int64_t> >(
-    //             visit_order_.begin() + start, visit_order_.begin() + bound)); 
+    //             visit_order_.begin() + start, visit_order_.begin() + bound));
     //         start = bound;
     //     }
     // }

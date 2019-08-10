@@ -19,26 +19,26 @@ namespace ffmpeg {
 
 /**
  * \brief FFMPEGFilterGraph for filtering operations
- * 
+ *
  */
 class FFMPEGFilterGraph {
     public:
         /**
          * \brief Construct a new FFMPEGFilterGraph object
-         * 
+         *
          * \param filter_desc String defining filter descriptions
          * \param dec_ctx Decoder context
          */
         FFMPEGFilterGraph(std::string filter_desc, AVCodecContext *dec_ctx);
         /**
          * \brief Push frame to be processed into filter graph
-         * 
+         *
          * \param frame Pointer to AVFrame
          */
         void Push(AVFrame *frame);
         /**
          * \brief Pop filtered frame from graph
-         * 
+         *
          * \param frame Pointer to pointer to AVFrame
          * \return true Success
          * \return false Failed
@@ -46,35 +46,35 @@ class FFMPEGFilterGraph {
         bool Pop(AVFrame **frame);
         /**
          * \brief Destroy the FFMPEGFilterGraph object
-         * 
+         *
          */
         ~FFMPEGFilterGraph();
     private:
         /**
          * \brief Initialize filter graph
-         * 
+         *
          * \param filter_desc String defining filter descriptions
          * \param dec_ctx Decoder context
          */
         void Init(std::string filter_desc, AVCodecContext *dec_ctx);
         /**
          * \brief Buffer sink context, the output side of graph
-         * 
+         *
          */
         AVFilterContext *buffersink_ctx_;
         /**
          * \brief Buffer src context, the input side of graph
-         * 
+         *
          */
         AVFilterContext *buffersrc_ctx_;
         /**
          * \brief Smart pointer to filter graph
-         * 
+         *
          */
         AVFilterGraphPtr filter_graph_;
         /**
-         * \brief Size of buffered frames under processing 
-         * 
+         * \brief Size of buffered frames under processing
+         *
          */
         std::atomic<int> count_;
 

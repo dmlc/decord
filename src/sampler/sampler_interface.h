@@ -27,7 +27,7 @@ class SamplerInterface {
 };  // class SamplerInterface
 
 using SamplerPtr = std::unique_ptr<SamplerInterface>;
-    
+
 }  // sampler
 }  // decord
 #endif

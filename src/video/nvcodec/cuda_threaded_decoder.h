@@ -88,7 +88,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         std::atomic<bool> run_;
         std::atomic<int> frame_count_;
         std::atomic<bool> draining_;
-        
+
         CUTextureRegistry tex_registry_;
         AVRational nv_time_base_;
         AVRational frame_base_;
@@ -99,7 +99,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         unsigned int height_;
         // uint64_t decoded_cnt_;
         std::unordered_set<int64_t> discard_pts_;
-    
+
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
 };
 }  // namespace cuda

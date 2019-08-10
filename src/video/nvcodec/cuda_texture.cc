@@ -58,7 +58,7 @@ CUTextureRegistry::CUTextureRegistry() {
 
 }
 
-const CUImageTexture& CUTextureRegistry::GetTexture(uint8_t* ptr, unsigned int input_pitch, 
+const CUImageTexture& CUTextureRegistry::GetTexture(uint8_t* ptr, unsigned int input_pitch,
                                                     uint16_t input_width, uint16_t input_height,
                                                     ScaleMethod scale_method, ChromaUpMethod chroma_up_method) {
     auto tex_id = std::make_tuple(ptr, scale_method, chroma_up_method);

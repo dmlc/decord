@@ -31,7 +31,7 @@ union ArgUnion {
 /*!
  * \brief Create a packed function from void addr types.
  *
- * \param f with signiture (DECORDArgs args, DECORDRetValue* rv, void* void_args)
+ * \param f with signature (DECORDArgs args, DECORDRetValue* rv, void* void_args)
  * \param arg_types The arguments type information.
  * \tparam F the function type
  *
@@ -42,7 +42,7 @@ inline PackedFunc PackFuncVoidAddr(F f, const std::vector<DECORDType>& arg_types
 /*!
  * \brief Create a packed function that from function only packs buffer arguments.
  *
- * \param f with signiture (DECORDArgs args, DECORDRetValue* rv, ArgUnion* pack_args)
+ * \param f with signature (DECORDArgs args, DECORDRetValue* rv, ArgUnion* pack_args)
  * \param arg_types The arguments type information.
  * \tparam F the function type
  *
@@ -103,7 +103,7 @@ enum ArgConvertCode {
 
 inline ArgConvertCode GetArgConvertCode(DECORDType t) {
   CHECK_EQ(t.lanes, 1U)
-      << "Cannot pass vector type argument to devic function for now";
+      << "Cannot pass vector type argument to device function for now";
   if (t.code == kDLInt) {
     if (t.bits == 64U) return INT64_TO_INT64;
     if (t.bits == 32U) return INT64_TO_INT32;

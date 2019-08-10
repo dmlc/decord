@@ -106,7 +106,7 @@ int CUVideoDecoderImpl::Initialize(CUVIDEOFORMAT* format) {
         return 1;
     }
 
-    
+
     // DLOG(INFO) << "Hardware Decoder Input Information" << std::endl
     //             << "\tVideo codec     : " << GetVideoCodecString(format->codec) << std::endl
     //             << "\tFrame rate      : " << format->frame_rate.numerator << "/" << format->frame_rate.denominator
@@ -117,7 +117,7 @@ int CUVideoDecoderImpl::Initialize(CUVIDEOFORMAT* format) {
     //             << format->display_area.right << ", " << format->display_area.bottom << "]" << std::endl
     //             << "\tChroma format   : " << GetVideoChromaFormatString(format->chroma_format) << std::endl
     //             << "\tBit depth       : " << format->bit_depth_luma_minus8 + 8 << std::endl;
-    
+
 
     auto caps = CUVIDDECODECAPS{};
     caps.eCodecType = format->codec;
@@ -137,7 +137,7 @@ int CUVideoDecoderImpl::Initialize(CUVIDEOFORMAT* format) {
         //            << "\tMax MB count : " << caps.nMaxMBCount << std::endl
         //            << "\tMin width : " << caps.nMinWidth << std::endl
         //            << "\tMin height :" << caps.nMinHeight << std::endl;
-        
+
         if (format->coded_width < caps.nMinWidth ||
             format->coded_height < caps.nMinHeight) {
             LOG(FATAL) << "Video is too small in at least one dimension.";
