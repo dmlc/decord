@@ -343,7 +343,11 @@ NDArray VideoReader::NextFrameImpl() {
         }
         ret = decoder_->Pop(&frame);
         if (frame.Size() <= 1) {
-            ret = false;
+            if (frame.defined() && frame.data_->dl_tensor.dtype == kInt64) {
+                SeekAccurate(curr_frame_);
+            } else {
+                ret = false;
+            }
         }
     }
     if (frame.defined()) {

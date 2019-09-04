@@ -69,19 +69,6 @@ void FFMPEGThreadedDecoder::Clear() {
     discard_pts_.clear();
 }
 
-// void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt) {
-//     CHECK(run_.load());
-//     if (!pkt) {
-//         CHECK(!draining_.load()) << "Start draining twice...";
-//         draining_.store(true);
-//     }
-//     pkt_queue_->Push(pkt);
-//     ++frame_count_;
-
-//     // LOG(INFO)<< "frame push: " << frame_count_;
-//     // LOG(INFO) << "Pushed pkt to pkt_queue";
-// }
-
 void FFMPEGThreadedDecoder::SuggestDiscardPTS(std::vector<int64_t> dts) {
     discard_pts_.insert(dts.begin(), dts.end());
 }
@@ -94,44 +81,10 @@ void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
     }
     pkt_queue_->Push(pkt);
     buffer_queue_->Push(buf);
-    ++frame_count_;
 
     // LOG(INFO)<< "frame push: " << frame_count_;
     // LOG(INFO) << "Pushed pkt to pkt_queue";
 }
-
-// void FFMPEGThreadedDecoder::Skip(AVPacketPtr pkt) {
-//    CHECK(run_.load());
-//    if (!pkt) {
-//         if (!draining_.load()) {
-//             draining_.store(true);
-//         }
-//    } else {
-//         CHECK(pkt->side_data == nullptr);
-//         AVDictionary * frameDict = nullptr;
-//         av_dict_set(&frameDict, "discard", std::to_string(1).c_str(), 0);
-//         int frameDictSize = 0;
-//         uint8_t *frameDictData = av_packet_pack_dictionary(frameDict, &frameDictSize);
-//         av_dict_free(&frameDict);
-//         av_packet_add_side_data(pkt.get(), AVPacketSideDataType::AV_PKT_DATA_STRINGS_METADATA, frameDictData, frameDictSize);
-//    }
-//    pkt_queue_->Push(pkt);
-// }
-
-// bool FFMPEGThreadedDecoder::Pop(AVFramePtr *frame) {
-//     // Pop is blocking operation
-//     // unblock and return false if queue has been destroyed.
-
-//     if (!frame_count_.load() && !draining_.load()) {
-//         return false;
-//     }
-//     bool ret = frame_queue_->Pop(frame);
-
-//     if (ret){
-//         --frame_count_;
-//     }
-//     return (ret && (*frame));
-// }
 
 bool FFMPEGThreadedDecoder::Pop(runtime::NDArray *frame) {
     // Pop is blocking operation
@@ -157,6 +110,7 @@ void FFMPEGThreadedDecoder::ProcessFrame(AVFramePtr frame, NDArray out_buf) {
     if (discard_pts_.find(frame->pts) != discard_pts_.end()) {
         // skip resize/filtering
         frame_queue_->Push(NDArray::Empty({1}, kUInt8, kCPU));
+        ++frame_count_;
         return;
     }
     // filter image frame (format conversion, scaling...)
@@ -170,8 +124,10 @@ void FFMPEGThreadedDecoder::ProcessFrame(AVFramePtr frame, NDArray out_buf) {
         CHECK(out_buf.Size() == tmp.Size());
         out_buf.CopyFrom(tmp);
         frame_queue_->Push(out_buf);
+        ++frame_count_;
     } else {
         frame_queue_->Push(tmp);
+        ++frame_count_;
     }
 }
 
@@ -193,13 +149,18 @@ void FFMPEGThreadedDecoder::WorkerThread() {
             CHECK_GE(avcodec_send_packet(dec_ctx_.get(), NULL), 0) << "Thread worker: Error entering draining mode.";
             while (true) {
                 got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
-                if (got_picture == AVERROR_EOF) break;
+                if (got_picture == AVERROR_EOF) {
+                    // LOG(INFO) << "stop draining";
+                    frame_queue_->Push(NDArray::Empty({1}, kInt64, kCPU));
+                    ++frame_count_;
+                    draining_.store(false);
+                    break;
+                }
                 NDArray out_buf;
                 bool get_buf = buffer_queue_->Pop(&out_buf);
                 if (!get_buf) return;
                 ProcessFrame(frame, out_buf);
             }
-            frame_queue_->Push(NDArray());
         } else {
             // normal mode, push in valid packets and retrieve frames
             CHECK_GE(avcodec_send_packet(dec_ctx_.get(), pkt.get()), 0) << "Thread worker: Error sending packet.";
@@ -211,6 +172,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
                 ProcessFrame(frame, out_buf);
             } else if (AVERROR(EAGAIN) == got_picture || AVERROR_EOF == got_picture) {
                 frame_queue_->Push(NDArray());
+                ++frame_count_;
             } else {
                 LOG(FATAL) << "Thread worker: Error decoding frame: " << got_picture;
             }
@@ -234,15 +196,6 @@ NDArray FFMPEGThreadedDecoder::CopyToNDArray(AVFramePtr p) {
     DLContext ctx;
     CHECK(!p->hw_frames_ctx) << "Not supported hw_frames_ctx";
     ctx = kCPU;
-    // DLTensor dlt;
-    // std::vector<int64_t> shape = {p->height, p->width, p->linesize[0] / p->width};
-    // dlt.data = p->data[0];
-    // dlt.ctx = ctx;
-    // dlt.ndim = 3;
-    // dlt.dtype = kUInt8;
-    // dlt.shape = dmlc::BeginPtr(shape);
-    // dlt.strides = NULL;
-    // dlt.byte_offset = 0;
     NDArray arr = NDArray::Empty({p->height, p->width, channel}, kUInt8, ctx);
     auto device_api = runtime::DeviceAPI::Get(ctx);
     void *to_ptr = arr.data_->dl_tensor.data;
