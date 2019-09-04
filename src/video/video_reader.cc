@@ -139,18 +139,18 @@ void VideoReader::SetVideoStream(int stream_nb) {
     }
 
     // adjust width to match cpu alignment
-    if (width_ % kCPUAlignment != 0) {
-        int new_width = ((width_ / kCPUAlignment) + 1) * kCPUAlignment;
-        int new_height = static_cast<int>(1.f * height_ / width_ * new_width);
-        LOG(WARNING) << "Video Reader width: " << width_
-            << " is not aligned with CPU alignment preference(" << kCPUAlignment << "),"
-            << " causing non-compact array with degraded performance."
-            << " Automatically round up resolution to: "
-            << new_width << " x " << new_height
-            << ".\nYou can set 'VideoReader(..., width=n*32)' to avoid warnings.";
-        width_ = new_width;
-        height_ = new_height;
-    }
+    // if (width_ % kCPUAlignment != 0) {
+    //     int new_width = ((width_ / kCPUAlignment) + 1) * kCPUAlignment;
+    //     int new_height = static_cast<int>(1.f * height_ / width_ * new_width);
+    //     LOG(WARNING) << "Video Reader width: " << width_
+    //         << " is not aligned with CPU alignment preference(" << kCPUAlignment << "),"
+    //         << " causing non-compact array with degraded performance."
+    //         << " Automatically round up resolution to: "
+    //         << new_width << " x " << new_height
+    //         << ".\nYou can set 'VideoReader(..., width=n*32)' to avoid warnings.";
+    //     width_ = new_width;
+    //     height_ = new_height;
+    // }
     ndarray_pool_ = NDArrayPool(32, {height_, width_, 3}, kUInt8, ctx_);
     decoder_->SetCodecContext(dec_ctx, width_, height_);
     IndexKeyframes();

@@ -43,6 +43,8 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
     private:
         void WorkerThread();
         void ProcessFrame(AVFramePtr p, NDArray out_buf);
+        NDArray CopyToNDArray(AVFramePtr p);
+        NDArray AsNDArray(AVFramePtr p);
         // void FetcherThread(std::condition_variable& cv, FrameQueuePtr frame_queue);
         PacketQueuePtr pkt_queue_;
         FrameQueuePtr frame_queue_;

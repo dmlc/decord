@@ -10,6 +10,7 @@
 #include "../storage_pool.h"
 #include <decord/base.h>
 #include <decord/runtime/ndarray.h>
+#include <decord/runtime/device_api.h>
 
 #include <memory>
 #include <queue>
@@ -219,51 +220,6 @@ struct AVFrameManager {
   int64_t shape[3];
 	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
 };
-
-static void AVFrameManagerDeleter(DLManagedTensor *manager) {
-	delete static_cast<AVFrameManager*>(manager->manager_ctx);
-	delete manager;
-}
-
-inline NDArray AsNDArray(AVFramePtr p) {
-	DLManagedTensor* manager = new DLManagedTensor();
-    auto av_manager = new AVFrameManager(p);
-	manager->manager_ctx = av_manager;
-	ToDLTensor(p, manager->dl_tensor, av_manager->shape);
-	manager->deleter = AVFrameManagerDeleter;
-	NDArray arr = NDArray::FromDLPack(manager);
-	return arr;
-}
-
-inline NDArray CopyToNDArray(AVFramePtr p) {
-    CHECK(p) << "Error: converting empty AVFrame to DLTensor";
-    // int channel = p->linesize[0] / p->width;
-    CHECK(AVPixelFormat(p->format) == AV_PIX_FMT_RGB24 || AVPixelFormat(p->format) == AV_PIX_FMT_GRAY8)
-        << "Only support RGB24/GRAY8 image to NDArray conversion, given: "
-        << AVPixelFormat(p->format);
-    CHECK(p->linesize[0] % p->width == 0)
-        << "AVFrame data is not a compact array. linesize: " << p->linesize[0]
-        << " width: " << p->width;
-
-    DLContext ctx;
-    if (p->hw_frames_ctx) {
-        ctx = DLContext({kDLGPU, 0});
-    } else {
-        ctx = kCPU;
-    }
-    DLTensor dlt;
-    std::vector<int64_t> shape = {p->height, p->width, p->linesize[0] / p->width};
-    dlt.data = p->data[0];
-    dlt.ctx = ctx;
-    dlt.ndim = 3;
-    dlt.dtype = kUInt8;
-    dlt.shape = dmlc::BeginPtr(shape);
-    dlt.strides = NULL;
-    dlt.byte_offset = 0;
-    NDArray arr = NDArray::Empty({p->height, p->width, p->linesize[0] / p->width}, kUInt8, ctx);
-    arr.CopyFrom(&dlt);
-    return arr;
-}
 
 }  // namespace ffmpeg
 }  // namespace decord

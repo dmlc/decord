@@ -220,5 +220,64 @@ void FFMPEGThreadedDecoder::WorkerThread() {
     }
 }
 
+NDArray FFMPEGThreadedDecoder::CopyToNDArray(AVFramePtr p) {
+    CHECK(p) << "Error: converting empty AVFrame to DLTensor";
+    // int channel = p->linesize[0] / p->width;
+    CHECK(AVPixelFormat(p->format) == AV_PIX_FMT_RGB24 || AVPixelFormat(p->format) == AV_PIX_FMT_GRAY8)
+        << "Only support RGB24/GRAY8 image to NDArray conversion, given: "
+        << AVPixelFormat(p->format);
+    int channel = AVPixelFormat(p->format) == AV_PIX_FMT_RGB24 ? 3 : 1;
+    // CHECK(p->linesize[0] % p->width == 0)
+    //     << "AVFrame data is not a compact array. linesize: " << p->linesize[0]
+    //     << " width: " << p->width;
+
+    DLContext ctx;
+    CHECK(!p->hw_frames_ctx) << "Not supported hw_frames_ctx";
+    ctx = kCPU;
+    // DLTensor dlt;
+    // std::vector<int64_t> shape = {p->height, p->width, p->linesize[0] / p->width};
+    // dlt.data = p->data[0];
+    // dlt.ctx = ctx;
+    // dlt.ndim = 3;
+    // dlt.dtype = kUInt8;
+    // dlt.shape = dmlc::BeginPtr(shape);
+    // dlt.strides = NULL;
+    // dlt.byte_offset = 0;
+    NDArray arr = NDArray::Empty({p->height, p->width, channel}, kUInt8, ctx);
+    auto device_api = runtime::DeviceAPI::Get(ctx);
+    void *to_ptr = arr.data_->dl_tensor.data;
+    void *from_ptr = p->data[0];
+    int linesize = p->width * channel;
+    
+    // arr.CopyFrom(&dlt);
+    for (int i = 0; i < p->height; ++i) {
+        // copy line by line
+        device_api->CopyDataFromTo(
+            from_ptr, i * p->linesize[0],
+            to_ptr, i * linesize,
+            linesize, ctx, ctx, kUInt8, nullptr);
+    }
+    return arr;
+}
+
+static void AVFrameManagerDeleter(DLManagedTensor *manager) {
+	delete static_cast<AVFrameManager*>(manager->manager_ctx);
+	delete manager;
+}
+
+NDArray FFMPEGThreadedDecoder::AsNDArray(AVFramePtr p) {
+    if (p->linesize[0] % p->width != 0) {
+        // Fallback to copy since original AVFrame is not compact
+        return CopyToNDArray(p);
+    }
+	DLManagedTensor* manager = new DLManagedTensor();
+    auto av_manager = new AVFrameManager(p);
+	manager->manager_ctx = av_manager;
+	ToDLTensor(p, manager->dl_tensor, av_manager->shape);
+	manager->deleter = AVFrameManagerDeleter;
+	NDArray arr = NDArray::FromDLPack(manager);
+	return arr;
+}
+
 }  // namespace ffmpeg
 }  // namespace decord
