@@ -155,6 +155,11 @@ for i in range(len(vr)):
     # the video reader will handle seeking and skipping in the most efficient manner
     frame = vr[i]
 
+# To get multiple frames at once, use get_batch
+frames = vf.get_batch([1, 3, 5, 7, 9])
+print(frames.shape)
+# (5, 240, 320, 3)
+
 ```
 
 ### VideoLoader
