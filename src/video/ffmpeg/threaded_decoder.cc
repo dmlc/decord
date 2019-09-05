@@ -151,8 +151,11 @@ void FFMPEGThreadedDecoder::WorkerThread() {
                 got_picture = avcodec_receive_frame(dec_ctx_.get(), frame.get());
                 if (got_picture == AVERROR_EOF) {
                     // LOG(INFO) << "stop draining";
-                    frame_queue_->Push(NDArray::Empty({1}, kInt64, kCPU));
-                    ++frame_count_;
+                    for (int cnt = 0; cnt < 32; ++cnt) {
+                        // special signal
+                        frame_queue_->Push(NDArray::Empty({1}, kInt64, kCPU));
+                        ++frame_count_;
+                    }
                     draining_.store(false);
                     break;
                 }
