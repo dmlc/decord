@@ -139,7 +139,7 @@ VideoReader is used to access frames directly from video files.
 from decord import VideoReader
 from decord import cpu, gpu
 
-reader = VideoReader('xxx.mp4', ctx=cpu(0))
+vr = VideoReader('xxx.mp4', ctx=cpu(0))
 print('video frames:', len(reader))
 batch = vr.next()
 print('frame shape:', batch.shape)
@@ -149,6 +149,11 @@ print('numpy frames:', batch.asnumpy())
 vr.skip_frames(1000)
 # seek to start
 vr.seek(0)
+
+# Another way is to directly access frames
+for i in range(len(vr)):
+    # the video reader will handle seeking and skipping in the most efficient manner
+    frame = vr[i]
 
 ```
 
