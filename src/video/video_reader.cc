@@ -336,6 +336,7 @@ NDArray VideoReader::NextFrameImpl() {
     NDArray frame;
     decoder_->Start();
     bool ret = false;
+    int rewind_offset = 0;
     while (!ret) {
         PushNext();
         if (curr_frame_ >= GetFrameCount()) {
@@ -344,7 +345,8 @@ NDArray VideoReader::NextFrameImpl() {
         ret = decoder_->Pop(&frame);
         if (frame.Size() <= 1) {
             if (frame.defined() && frame.data_->dl_tensor.dtype == kInt64) {
-                SeekAccurate(curr_frame_);
+                SeekAccurate(curr_frame_ - rewind_offset);
+                ++rewind_offset;
             } else {
                 ret = false;
             }
