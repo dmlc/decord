@@ -158,6 +158,7 @@ void VideoReader::SetVideoStream(int stream_nb) {
     // for (auto i : key_indices_) {
     //     LOG(INFO) << i;
     // }
+    // QueryStreams();
 
 }
 
