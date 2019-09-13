@@ -18,7 +18,18 @@ Bridges for deep learning frameworks:
 
 ### Install via pip
 
-TODO
+Simply use
+
+```bash
+pip install decord
+```
+
+Supported platforms:
+
+- [x] Linux
+- [x] Mac OS >= 10.12, python>=3.5
+- [ ] Windows
+
 
 ### Install from source
 
