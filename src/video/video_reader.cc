@@ -455,6 +455,16 @@ void VideoReader::SkipFrames(int64_t num) {
 
 NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     std::size_t bs = indices.size();
+    // find the first occurance of each index to avoid duplicate access
+    std::unordered_map<int64_t, std::size_t> unique_indices;
+    for (std::size_t i = 0; i < indices.size(); ++i) {
+        int64_t value = indices[i];
+        auto it = unique_indices.find(value);
+        if (it == unique_indices.end()) {
+            // first apperance only
+            unique_indices[value] = i;
+        }
+    }
     if (!buf.defined()) {
         buf = NDArray::Empty({static_cast<int64_t>(bs), height_, width_, 3}, kUInt8, ctx_);
     }
@@ -463,27 +473,38 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     std::vector<int64_t> frame_shape = {height_, width_, 3};
     for (std::size_t i = 0; i < indices.size(); ++i) {
         int64_t pos = indices[i];
-        // LOG(INFO) << "Get batch: " << i << "/" << indices.size() << ", " << pos;
-        CHECK_LT(pos, frame_count);
-        CHECK_GE(pos, 0);
-        if (curr_frame_ == pos) {
-            // no need to seek
-        } else if (pos > curr_frame_) {
-            // skip positive number of frames
-            SkipFrames(pos - curr_frame_);
-        } else {
-            // seek no matter what
-            SeekAccurate(pos);
+        auto it = unique_indices.find(pos);
+        if (it != unique_indices.end() && it->second != i) {
+            // not the first occurance of frame, try to copy from buffer rather than load from video
+            CHECK(i > it->second);
+            CHECK(i > 0);
+            uint64_t old_offset = offset / i * it->second;
+            auto old_view = buf.CreateOffsetView(frame_shape, kUInt8, &old_offset);
+            auto view = buf.CreateOffsetView(frame_shape, kUInt8, &offset);
+            old_view.CopyTo(view); 
         }
-        NDArray frame = NextFrameImpl();
+        else {
+            CHECK_LT(pos, frame_count);
+            CHECK_GE(pos, 0);
+            if (curr_frame_ == pos) {
+                // no need to seek
+            } else if (pos > curr_frame_) {
+                // skip positive number of frames
+                SkipFrames(pos - curr_frame_);
+            } else {
+                // seek no matter what
+                SeekAccurate(pos);
+            }
+            NDArray frame = NextFrameImpl();
 
-        if (frame.Size() < 1 && eof_) {
-            LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
+            if (frame.Size() < 1 && eof_) {
+                LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
+            }
+            // copy frame to buffer
+            // LOG(INFO) << "offset: " << offset;
+            auto view = buf.CreateOffsetView(frame_shape, frame.data_->dl_tensor.dtype, &offset);
+            frame.CopyTo(view);
         }
-        // copy frame to buffer
-        // LOG(INFO) << "offset: " << offset;
-        auto view = buf.CreateOffsetView(frame_shape, frame.data_->dl_tensor.dtype, &offset);
-        frame.CopyTo(view);
     }
     return buf;
 }
