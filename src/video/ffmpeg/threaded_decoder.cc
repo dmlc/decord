@@ -66,10 +66,12 @@ void FFMPEGThreadedDecoder::Clear() {
     }
     frame_count_.store(0);
     draining_.store(false);
+    std::lock_guard<std::mutex> lock(pts_mutex_);
     discard_pts_.clear();
 }
 
 void FFMPEGThreadedDecoder::SuggestDiscardPTS(std::vector<int64_t> dts) {
+    std::lock_guard<std::mutex> lock(pts_mutex_);
     discard_pts_.insert(dts.begin(), dts.end());
 }
 
@@ -107,7 +109,12 @@ FFMPEGThreadedDecoder::~FFMPEGThreadedDecoder() {
 
 void FFMPEGThreadedDecoder::ProcessFrame(AVFramePtr frame, NDArray out_buf) {
     frame->pts = frame->best_effort_timestamp;
-    if (discard_pts_.find(frame->pts) != discard_pts_.end()) {
+    bool skip = false;
+    {
+      std::lock_guard<std::mutex> lock(pts_mutex_);
+      skip = discard_pts_.find(frame->pts) != discard_pts_.end();
+    }
+    if (skip) {
         // skip resize/filtering
         frame_queue_->Push(NDArray::Empty({1}, kUInt8, kCPU));
         ++frame_count_;
@@ -204,7 +211,7 @@ NDArray FFMPEGThreadedDecoder::CopyToNDArray(AVFramePtr p) {
     void *to_ptr = arr.data_->dl_tensor.data;
     void *from_ptr = p->data[0];
     int linesize = p->width * channel;
-    
+
     // arr.CopyFrom(&dlt);
     for (int i = 0; i < p->height; ++i) {
         // copy line by line

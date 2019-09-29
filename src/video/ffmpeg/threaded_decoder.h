@@ -58,6 +58,7 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         FFMPEGFilterGraphPtr filter_graph_;
         AVCodecContextPtr dec_ctx_;
         std::unordered_set<int64_t> discard_pts_;
+        std::mutex pts_mutex_;
 
     DISALLOW_COPY_AND_ASSIGN(FFMPEGThreadedDecoder);
 };
