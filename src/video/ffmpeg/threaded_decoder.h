@@ -13,6 +13,7 @@
 
 #include <thread>
 #include <unordered_set>
+#include <mutex>
 
 #include <dmlc/concurrency.h>
 

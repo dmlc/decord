@@ -17,6 +17,7 @@
 
 #include <condition_variable>
 #include <thread>
+#include <mutex>
 
 #include <decord/runtime/ndarray.h>
 #include <dmlc/concurrency.h>
@@ -99,6 +100,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         unsigned int height_;
         // uint64_t decoded_cnt_;
         std::unordered_set<int64_t> discard_pts_;
+        std::mutex pts_mutex_;
 
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
 };

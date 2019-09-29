@@ -161,7 +161,10 @@ void CUThreadedDecoder::Clear() {
     }
     permits_.clear();
     // frame_in_use_.clear();
-    discard_pts_.clear();
+    {
+      std::lock_guard<std::mutex> lock(pts_mutex_);
+      discard_pts_.clear();
+    }
 }
 
 CUThreadedDecoder::~CUThreadedDecoder() {
@@ -223,6 +226,7 @@ int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
 }
 
 void CUThreadedDecoder::SuggestDiscardPTS(std::vector<int64_t> dts) {
+    std::lock_guard<std::mutex> lock(pts_mutex_);
     discard_pts_.insert(dts.begin(), dts.end());
 }
 
@@ -337,7 +341,12 @@ void CUThreadedDecoder::ConvertThread() {
                                                   ScaleMethod_Linear,
                                                   ChromaUpMethod_Linear);
         int64_t frame_pts = static_cast<int64_t>(frame.disp_info->timestamp);
-        if (discard_pts_.find(frame_pts) == discard_pts_.end()) {
+        bool no_skip = true;
+        {
+            std::lock_guard<std::mutex> lock(pts_mutex_);
+            no_skip = discard_pts_.find(frame_pts) == discard_pts_.end();
+        }
+        if (no_skip) {
             // only process frame when not indicated with discard flag
             ProcessFrame(textures.chroma, textures.luma, dst_ptr, stream_, input_width, input_height, width_, height_);
         }

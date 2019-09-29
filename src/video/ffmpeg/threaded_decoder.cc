@@ -66,8 +66,10 @@ void FFMPEGThreadedDecoder::Clear() {
     }
     frame_count_.store(0);
     draining_.store(false);
-    std::lock_guard<std::mutex> lock(pts_mutex_);
-    discard_pts_.clear();
+    {
+      std::lock_guard<std::mutex> lock(pts_mutex_);
+      discard_pts_.clear();
+    }
 }
 
 void FFMPEGThreadedDecoder::SuggestDiscardPTS(std::vector<int64_t> dts) {
