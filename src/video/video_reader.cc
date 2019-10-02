@@ -272,6 +272,11 @@ bool VideoReader::SeekAccurate(int64_t pos) {
         bool ret = Seek(key_pos);
         if (!ret) return false;
         SkipFrames(pos - key_pos);
+    } else if (pos < curr_frame_) {
+        // need seek backwards to the nearest keyframe
+        bool ret = Seek(key_pos);
+        if (!ret) return false;
+        SkipFrames(pos - key_pos);
     } else {
         // no need to seek to keyframe, since both current and seek position belong to same keyframe
         SkipFrames(pos - curr_frame_);
