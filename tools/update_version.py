@@ -4,13 +4,14 @@ This script runs and update all the locations that related to versions
 List of affected files:
 - decord-root/python/decord/_ffi/libinfo.py
 - decord-root/include/decord/runtime/c_runtime_api.h
+- decord-root/src/runtime/file_util.cc
 """
 import os
 import re
 # current version
 # We use the version of the incoming release for code
 # that is under development
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 # Implementations
 def update(file_name, pattern, repl):
@@ -48,6 +49,9 @@ def main():
     # C++ header
     update(os.path.join(proj_root, "include", "decord", "runtime", "c_runtime_api.h"),
            "(?<=DECORD_VERSION \")[.0-9a-z]+", __version__)
+    # file util
+    update(os.path.join(proj_root, "src", "runtime", "file_util.cc"),
+           "(?<=std::string version = \")[.0-9a-z]+", __version__) 
 
 if __name__ == "__main__":
     main()
