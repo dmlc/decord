@@ -353,9 +353,8 @@ NDArray VideoReader::NextFrameImpl() {
             if (frame.defined() && frame.data_->dl_tensor.dtype == kInt64) {
                 SeekAccurate(curr_frame_ - rewind_offset);
                 ++rewind_offset;
-            } else {
-                ret = false;
             }
+            ret = false;
         }
     }
     if (frame.defined()) {
@@ -473,6 +472,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     if (!buf.defined()) {
         buf = NDArray::Empty({static_cast<int64_t>(bs), height_, width_, 3}, kUInt8, ctx_);
     }
+    // LOG(INFO) << height_ << " "  << width_ << " Buf size: " << bs << " total: " << bs * height_ * width_ * 3;
     int64_t frame_count = GetFrameCount();
     uint64_t offset = 0;
     std::vector<int64_t> frame_shape = {height_, width_, 3};
@@ -506,7 +506,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
                 LOG(FATAL) << "Error getting frame at: " << pos << " with total frames: " << frame_count;
             }
             // copy frame to buffer
-            // LOG(INFO) << "offset: " << offset;
+            // LOG(INFO) << "index: " << i << ", size: " << height_ * width_ * 3 * i <<  ", offset: " << offset << " Curr frame: " << frame.data_->dl_tensor.shape[0] << " x " << frame.data_->dl_tensor.shape[1] << " x " << frame.data_->dl_tensor.shape[2] << " Frame size: " << frame.Size();
             auto view = buf.CreateOffsetView(frame_shape, frame.data_->dl_tensor.dtype, &offset);
             frame.CopyTo(view);
         }
