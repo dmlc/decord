@@ -28,7 +28,9 @@ Supported platforms:
 
 - [x] Linux
 - [x] Mac OS >= 10.12, python>=3.5
-- [ ] Windows
+- [x] Windows
+
+**Note that only CPU versions are provided with PYPI now. Please build from source to enable GPU acclerator.**
 
 
 ### Install from source
@@ -42,7 +44,7 @@ Install the system packages for building the shared library, for Debian/Ubuntu u
 sudo add-apt-repository ppa:jonathonf/ffmpeg-4
 sudo apt-get update
 sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake
-libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
+sudo apt-get install -y ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
 # note: make sure you have cmake 3.8 or later, you can install from cmake official website if it's too old
 ```
 
@@ -52,7 +54,7 @@ Clone the repo recursively(important)
 git clone --recursive https://github.com/zhreshold/decord
 ```
 
-Build the shared library in source root directory, you can specify `-DUSE_CUDA=1` to enable NVDEC hardware accelerated decoding:
+Build the shared library in source root directory, you can specify `-DUSE_CUDA=1` or `-DUSE_CUDA=/path/to/cuda` to enable NVDEC hardware accelerated decoding:
 
 ```bash
 cd decord
@@ -150,26 +152,32 @@ VideoReader is used to access frames directly from video files.
 from decord import VideoReader
 from decord import cpu, gpu
 
-vr = VideoReader('xxx.mp4', ctx=cpu(0))
+vr = VideoReader('examples/flipping_a_pancake.mkv', ctx=cpu(0))
 print('video frames:', len(reader))
-batch = vr.next()
-print('frame shape:', batch.shape)
-print('numpy frames:', batch.asnumpy())
-
-# skip 100 frames
-vr.skip_frames(1000)
-# seek to start
-vr.seek(0)
-
-# Another way is to directly access frames
+# 1. the simplest way is to directly access frames
 for i in range(len(vr)):
     # the video reader will handle seeking and skipping in the most efficient manner
     frame = vr[i]
+    print(frame.shape)
 
 # To get multiple frames at once, use get_batch
-frames = vf.get_batch([1, 3, 5, 7, 9])
+# this is the efficient way to obtain a long list of frames
+frames = vr.get_batch([1, 3, 5, 7, 9])
 print(frames.shape)
 # (5, 240, 320, 3)
+# duplicate frame indices will be accepted and handled internally to avoid duplicate decoding
+frames2 = vr.get_batch([1, 2, 3, 2, 3, 4, 3, 4, 5]).asnumpy()
+print(frames2.shape)
+# (9, 240, 320, 3)
+
+# 2. you can do cv2 style reading as well
+# skip 100 frames
+vr.skip_frames(100)
+# seek to start
+vr.seek(0)
+batch = vr.next()
+print('frame shape:', batch.shape)
+print('numpy frames:', batch.asnumpy())
 
 ```
 

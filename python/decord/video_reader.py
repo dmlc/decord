@@ -24,8 +24,8 @@ class VideoReader(object):
         if self._handle is None:
             raise RuntimeError("Error reading " + uri + "...")
         self._num_frame = _CAPI_VideoReaderGetFrameCount(self._handle)
-        assert self._num_frame > 0
-        self._key_indices = _CAPI_VideoReaderGetKeyIndices(self._handle)
+        assert self._num_frame > 0, "Invalid frame count: {}".format(self._num_frame)
+        self._key_indices = _CAPI_VideoReaderGetKeyIndices(self._handle).asnumpy().tolist()
 
     @property
     def num_frame(self):
@@ -39,7 +39,9 @@ class VideoReader(object):
         return self._num_frame
 
     def __getitem__(self, idx):
-        if idx >= self._num_frame:
+        if idx < 0:
+            idx += self._num_frame
+        if idx >= self._num_frame or idx < 0:
             raise IndexError("Index: {} out of bound: {}".format(idx, self._num_frame))
         self.seek_accurate(idx)
         return self.next()
@@ -58,7 +60,7 @@ class VideoReader(object):
         return bridge_out(arr)
 
     def get_key_indices(self):
-        return bridge_out(self._key_indices)
+        return self._key_indices
 
     def seek(self, pos):
         assert self._handle is not None

@@ -16,7 +16,7 @@ std::time_t getTimeStamp() {
 }
 
 int main(int argc, const char **argv) {
-    auto vr = decord::GetVideoReader("C:\\Users\\Joshua\\AppData\\Local\\Temp\\testsrc_h264_100s_default.mp4", kCPU);
+    auto vr = decord::GetVideoReader("/tmp/testsrc_h264_10s_default.mp4", kCPU);
     LOG(INFO) << "Frame count: " << vr->GetFrameCount();
     vr->QueryStreams();
     NDArray array;

@@ -127,8 +127,10 @@ void CUThreadedDecoder::Start() {
     // LOG(INFO) << "permits initied.";
     run_.store(true);
     // launch worker threads
-    launcher_t_ = std::thread{&CUThreadedDecoder::LaunchThread, this};
-    converter_t_ = std::thread{&CUThreadedDecoder::ConvertThread, this};
+    auto launcher_t = std::thread{&CUThreadedDecoder::LaunchThread, this};
+    std::swap(launcher_t_, launcher_t);
+    auto converter_t = std::thread{&CUThreadedDecoder::ConvertThread, this};
+    std::swap(converter_t_, converter_t);
 }
 
 void CUThreadedDecoder::Stop() {
