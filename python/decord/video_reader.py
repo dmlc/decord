@@ -16,6 +16,20 @@ VideoReaderHandle = ctypes.c_void_p
 
 
 class VideoReader(object):
+    """Individual video reader with convenient indexing and seeking functions.
+
+    Parameters
+    ----------
+    uri : str
+        Path of video file.
+    ctx : decord.Context
+        The context to decode the video file, can be decord.cpu() or decord.gpu().
+    width : int, default is -1
+        Desired output width of the video, unchanged if `-1` is specified.
+    height : int, default is -1
+        Desired output height of the video, unchanged if `-1` is specified.
+
+    """
     def __init__(self, uri, ctx=cpu(0), width=-1, height=-1):
         assert isinstance(ctx, DECORDContext)
         self._handle = None
@@ -27,18 +41,36 @@ class VideoReader(object):
         assert self._num_frame > 0, "Invalid frame count: {}".format(self._num_frame)
         self._key_indices = _CAPI_VideoReaderGetKeyIndices(self._handle).asnumpy().tolist()
 
-    @property
-    def num_frame(self):
-        return self._num_frame
-
     def __del__(self):
         if self._handle:
             _CAPI_VideoReaderFree(self._handle)
 
     def __len__(self):
+        """Get length of the video. Note that sometimes FFMPEG reports inaccurate number of frames,
+        we always follow what FFMPEG reports.
+
+        Returns
+        -------
+        int
+            The number of frames in the video file.
+
+        """
         return self._num_frame
 
     def __getitem__(self, idx):
+        """Get frame at `idx`.
+
+        Parameters
+        ----------
+        idx : int
+            The frame index, can be negative which means it will indexing backwards.
+
+        Returns
+        -------
+        ndarray
+            Frame of shape HxWx3.
+
+        """
         if idx < 0:
             idx += self._num_frame
         if idx >= self._num_frame or idx < 0:
@@ -47,6 +79,14 @@ class VideoReader(object):
         return self.next()
 
     def next(self):
+        """Grab the next frame.
+
+        Returns
+        -------
+        ndarray
+            Frame with shape HxWx3.
+
+        """
         assert self._handle is not None
         arr = _CAPI_VideoReaderNextFrame(self._handle)
         if not arr.shape:
@@ -54,15 +94,47 @@ class VideoReader(object):
         return bridge_out(arr)
 
     def get_batch(self, indices):
+        """Get entire batch of images. `get_batch` is optimized to handle seeking internally.
+        Duplicate frame indices will be optmized by copying existing frames rather than decode
+        from video again.
+
+        Parameters
+        ----------
+        indices : list of integers
+            A list of non-negative frame indices.
+
+        Returns
+        -------
+        ndarray
+            An entire batch of image frames with shape NxHxWx3, where N is the length of `indices`.
+
+        """
         assert self._handle is not None
         indices = _nd.array(np.array(indices))
         arr = _CAPI_VideoReaderGetBatch(self._handle, indices)
         return bridge_out(arr)
 
     def get_key_indices(self):
+        """Get list of key frame indices.
+
+        Returns
+        -------
+        list
+            List of key frame indices.
+
+        """
         return self._key_indices
 
     def seek(self, pos):
+        """Fast seek to frame position, this does not guarantee accurate position.
+        To obtain accurate seeking, see `accurate_seek`.
+
+        Parameters
+        ----------
+        pos : integer
+            Non negative seeking position.
+
+        """
         assert self._handle is not None
         assert pos >= 0 and pos < self._num_frame
         success = _CAPI_VideoReaderSeek(self._handle, pos)
@@ -70,6 +142,15 @@ class VideoReader(object):
             raise RuntimeError("Failed to seek to frame {}".format(pos))
 
     def seek_accurate(self, pos):
+        """Accurately seek to frame position, this is slower than `seek`
+        but guarantees accurate position.
+
+        Parameters
+        ----------
+        pos : integer
+            Non negative seeking position.
+
+        """
         assert self._handle is not None
         assert pos >= 0 and pos < self._num_frame
         success = _CAPI_VideoReaderSeekAccurate(self._handle, pos)
@@ -77,6 +158,16 @@ class VideoReader(object):
             raise RuntimeError("Failed to seek_accurate to frame {}".format(pos))
 
     def skip_frames(self, num=1):
+        """Skip reading multiple frames. Skipped frames will still be decoded
+        (required by following frames) but it can save image resize/copy operations.
+
+
+        Parameters
+        ----------
+        num : int, default is 1
+            The number of frames to be skipped.
+
+        """
         assert self._handle is not None
         assert num > 0
         _CAPI_VideoReaderSkipFrames(self._handle, num)

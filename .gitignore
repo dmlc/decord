@@ -1,6 +1,7 @@
 # Custom ignored
 .vscode
 build/*
+docs/_build
 .DS_Store
 __pycache__
 *.pyc
