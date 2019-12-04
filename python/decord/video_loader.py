@@ -21,10 +21,11 @@ class VideoLoader(object):
     ----------
     uris : list of str
         List of video paths.
-    ctx : decord.Context
+    ctx : decord.Context or list of Context
         The context to decode the video file, can be decord.cpu() or decord.gpu().
+        If ctx is a list, videos will be evenly split over many ctxs.
     shape : tuple
-        Returned shape of the batch images, e.g., (320, 240, 3).
+        Returned shape of the batch images, e.g., (2, 320, 240, 3) as (Batch, H, W, 3)
     interval : int
         Intra-batch frame interval.
     skip : int
