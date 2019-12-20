@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 def cv2_seek_frame(cap, pos):
     cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
-    print(pos, cap.get(cv2.CAP_PROP_POS_FRAMES))
+    #print(pos, cap.get(cv2.CAP_PROP_POS_FRAMES))
 
 class CV2VideoReader(object):
     def __init__(self, fn, width, height):
@@ -132,9 +132,5 @@ indices = acc_indices[:args.random_frames]
 tic = time.time()
 for idx in indices:
     frame = vr[idx]
-    np.save('cv2.npy', frame)
-    raise
-    cv2.imshow('debug', frame)
-    cv2.waitKey()
 
-print(len(indices), ' frames, elapsed time for random access: ', time.time() - tic)
+print(len(indices), ' frames, elapsed time for random access(not accurate): ', time.time() - tic)
