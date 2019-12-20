@@ -14,6 +14,13 @@ Bridges for deep learning frameworks:
 
 -   Apache MXNet (Done)
 
+
+## Preliminary benchmark
+
+Decord is good at handling random access patterns, which is rather common during neural network training.
+
+![Speed up](https://user-images.githubusercontent.com/3307514/71223638-7199f300-2289-11ea-9e16-104038f94a55.png)
+
 ## Installation
 
 ### Install via pip
@@ -207,13 +214,3 @@ shuffle = 1  # random filename order, no random access for each video, very effi
 shuffle = 2  # random order
 shuffle = 3  # random frame access in each video only
 ```
-
-## Preliminary Benchmarks
-
-| Setting                             | OpenCV VideoCapture | NVVL | Decord |
-| ----------------------------------- | ------------------- | ---- | ------ |
-| CPU sequential read                 | 1.0x                | -    | 1.1x   |
-| CPU random access(no accurate seek) | 0.08x               | -    | 0.23x  |
-| CPU random access (accurate seek)   | -                   |      | 0.06x  |
-| GPU sequential                      | -                   | TODO | TODO   |
-| GPU random access                   | -                   | TODO | TODO   |
