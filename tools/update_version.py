@@ -11,7 +11,7 @@ import re
 # current version
 # We use the version of the incoming release for code
 # that is under development
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 
 # Implementations
 def update(file_name, pattern, repl):
@@ -51,7 +51,7 @@ def main():
            "(?<=DECORD_VERSION \")[.0-9a-z]+", __version__)
     # file util
     update(os.path.join(proj_root, "src", "runtime", "file_util.cc"),
-           "(?<=std::string version = \")[.0-9a-z]+", __version__) 
+           "(?<=std::string version = \")[.0-9a-z]+", __version__)
 
 if __name__ == "__main__":
     main()
