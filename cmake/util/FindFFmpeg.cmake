@@ -16,6 +16,16 @@
 # BSD license.
 #
 
+if (FFMPEG_Dir)
+  set(FFMPEG_INCLUDE_DIR ${FFMPEG_Dir}/include)
+  set(FFMPEG_LIBRARIES
+    ${FFMPEG_Dir}/lib/libavformat.so
+    ${FFMPEG_Dir}/lib/libavfilter.so
+    ${FFMPEG_Dir}/lib/libavcodec.so
+    ${FFMPEG_Dir}/lib/libavutil.so
+  )
+endif (FFMPEG_Dir)
+
 if (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
 # in cache already
 set(FFMPEG_FOUND TRUE)

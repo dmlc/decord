@@ -73,6 +73,8 @@ cmake .. -DUSE_CUDA=0
 make
 ```
 
+To specify a customized FFMPEG library path, use `-DFFMPEG_Dir=/path/to/ffmpeg".
+
 Install python bindings:
 
 ```bash
