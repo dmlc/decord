@@ -1,5 +1,8 @@
 # Decord
 
+[![PyPI](https://img.shields.io/pypi/v/decord.svg)](https://pypi.python.org/pypi/decord)
+[![Downloads](http://pepy.tech/badge/decord)](http://pepy.tech/project/decord)
+
 ![symbol](docs/symbol.png)
 
 `Decord` is a reverse procedure of `Record`. It provides convenient video slicing methods based on a thin wrapper on top of hardware accelerated video decoders, e.g.
