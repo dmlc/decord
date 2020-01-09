@@ -37,6 +37,7 @@ class VideoReader : public VideoReaderInterface {
         bool Seek(int64_t pos);
         bool SeekAccurate(int64_t pos);
         runtime::NDArray GetKeyIndices();
+        double GetAverageFPS() const;
     protected:
         friend class VideoLoader;
         std::vector<int64_t> GetKeyIndicesVector() const;

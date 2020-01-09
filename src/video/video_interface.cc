@@ -99,6 +99,13 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderSkipFrames")
     static_cast<VideoReaderInterface*>(handle)->SkipFrames(num);
   });
 
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetAverageFPS")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    double fps = static_cast<VideoReaderInterface*>(handle)->GetAverageFPS();
+    *rv = fps;
+  });
+
 DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderFree")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
     VideoReaderInterfaceHandle handle = args[0];

@@ -40,6 +40,7 @@ class VideoReader(object):
         self._num_frame = _CAPI_VideoReaderGetFrameCount(self._handle)
         assert self._num_frame > 0, "Invalid frame count: {}".format(self._num_frame)
         self._key_indices = _CAPI_VideoReaderGetKeyIndices(self._handle).asnumpy().tolist()
+        self._avg_fps = _CAPI_VideoReaderGetAverageFPS(self._handle)
 
     def __del__(self):
         if self._handle:
@@ -132,6 +133,17 @@ class VideoReader(object):
 
         """
         return self._key_indices
+
+    def get_avg_fps(self):
+        """Get average FPS(frame per second).
+
+        Returns
+        -------
+        float
+            Average FPS.
+
+        """
+        return self._avg_fps
 
     def seek(self, pos):
         """Fast seek to frame position, this does not guarantee accurate position.

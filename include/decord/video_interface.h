@@ -48,6 +48,8 @@ class VideoReaderInterface {
     virtual runtime::NDArray GetBatch(std::vector<int64_t> indices, runtime::NDArray buf) = 0;
     /*! \brief skip certain frames without decoding */
     virtual void SkipFrames(int64_t num = 1) = 0;
+    /*! \brief get average fps */
+    virtual double GetAverageFPS() const = 0;
     /*! \brief destructor */
     virtual ~VideoReaderInterface() = default;
 
