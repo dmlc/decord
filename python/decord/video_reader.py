@@ -111,7 +111,7 @@ class VideoReader(object):
 
         """
         assert self._handle is not None
-        indices = np.array(indices)
+        indices = np.array(indices, dtype=np.int64)
         # process negative indices
         indices[indices < 0] += self._num_frame
         if not (indices >= 0).all():
@@ -119,7 +119,7 @@ class VideoReader(object):
                 'Invalid negative indices: {}'.format(indices[indices < 0] + self._num_frame))
         if not (indices < self._num_frame).all():
             raise IndexError('Out of bound indices: {}'.format(indices[indices >= self._num_frame]))
-        indices = _nd.array(np.array(indices))
+        indices = _nd.array(indices)
         arr = _CAPI_VideoReaderGetBatch(self._handle, indices)
         return bridge_out(arr)
 
