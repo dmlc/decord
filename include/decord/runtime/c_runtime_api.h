@@ -43,7 +43,7 @@
 #endif
 
 // DECORD version
-#define DECORD_VERSION "0.3.4"
+#define DECORD_VERSION "0.3.5"
 
 
 // DECORD Runtime is DLPack compatible.
