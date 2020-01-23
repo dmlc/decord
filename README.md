@@ -61,7 +61,7 @@ sudo apt-get install -y ffmpeg libavcodec-dev libavfilter-dev libavformat-dev li
 Clone the repo recursively(important)
 
 ```bash
-git clone --recursive https://github.com/zhreshold/decord
+git clone --recursive https://github.com/dmlc/decord
 ```
 
 Build the shared library in source root directory, you can specify `-DUSE_CUDA=1` or `-DUSE_CUDA=/path/to/cuda` to enable NVDEC hardware accelerated decoding:
@@ -109,7 +109,7 @@ brew install cmake
 Clone the repo recursively(important)
 
 ```bash
-git clone --recursive https://github.com/zhreshold/decord
+git clone --recursive https://github.com/dmlc/decord
 ```
 
 Then go to root directory build shared library:
@@ -144,7 +144,7 @@ When dependencies are ready, open command line prompt:
 
 ```bash
 cd your-workspace
-git clone --recursive https://github.com/zhreshold/decord
+git clone --recursive https://github.com/dmlc/decord
 cd decord
 mkdir build
 cd build
@@ -165,7 +165,7 @@ from decord import VideoReader
 from decord import cpu, gpu
 
 vr = VideoReader('examples/flipping_a_pancake.mkv', ctx=cpu(0))
-print('video frames:', len(reader))
+print('video frames:', len(vr))
 # 1. the simplest way is to directly access frames
 for i in range(len(vr)):
     # the video reader will handle seeking and skipping in the most efficient manner
