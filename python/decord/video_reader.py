@@ -63,15 +63,18 @@ class VideoReader(object):
 
         Parameters
         ----------
-        idx : int
-            The frame index, can be negative which means it will indexing backwards.
+        idx : int or slice
+            The frame index, can be negative which means it will index backwards,
+            or slice of frame indices.
 
         Returns
         -------
         ndarray
-            Frame of shape HxWx3.
-
+            Frame of shape HxWx3 or batch of image frames with shape NxHxWx3,
+            where N is the length of the slice.
         """
+        if isinstance(idx, slice):
+            return self.get_batch(range(*idx.indices(len(self))))
         if idx < 0:
             idx += self._num_frame
         if idx >= self._num_frame or idx < 0:
