@@ -165,7 +165,7 @@ from decord import VideoReader
 from decord import cpu, gpu
 
 vr = VideoReader('examples/flipping_a_pancake.mkv', ctx=cpu(0))
-print('video frames:', len(reader))
+print('video frames:', len(vr))
 # 1. the simplest way is to directly access frames
 for i in range(len(vr)):
     # the video reader will handle seeking and skipping in the most efficient manner
