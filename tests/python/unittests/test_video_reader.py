@@ -14,6 +14,15 @@ def test_video_reader_read_sequential():
     for i in range(len(vr)):
         frame = vr[i]
 
+def test_video_reader_read_slice():
+    vr = _get_default_test_video()
+    frames = vr[:]
+    assert frames.shape[0] == len(vr) 
+    
+    vr = _get_default_test_video()
+    frames = vr[:10]
+    assert frames.shape[0] == 10
+
 def test_video_reader_read_random():
     vr = _get_default_test_video()
     lst = list(range(len(vr)))
