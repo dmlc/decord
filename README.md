@@ -16,7 +16,7 @@
 Bridges for deep learning frameworks:
 
 -   Apache MXNet (Done)
-
+-   Pytorch (Done)
 
 ## Preliminary benchmark
 
@@ -64,7 +64,7 @@ Clone the repo recursively(important)
 git clone --recursive https://github.com/dmlc/decord
 ```
 
-Build the shared library in source root directory, you can specify `-DUSE_CUDA=1` or `-DUSE_CUDA=/path/to/cuda` to enable NVDEC hardware accelerated decoding:
+Build the shared library in source root directory, you can specify `-DUSE_CUDA=ON` or `-DUSE_CUDA=/path/to/cuda` to enable NVDEC hardware accelerated decoding:
 
 ```bash
 cd decord
