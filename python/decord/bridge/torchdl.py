@@ -19,15 +19,15 @@ def try_import_torch():
         raise ImportError(message)
 
 def to_torch(decord_arr):
-    """From decord (F,H,W,C) to torch (F,C,H,W).
+    """From decord to torch.
     The tensor will share the memory with the object represented in the dlpack.
     Note that each dlpack can only be consumed once."""
     dlpack = try_import_torch()
-    return dlpack.from_dlpack(decord_arr.to_dlpack()).permute(0,3,1,2)
+    return dlpack.from_dlpack(decord_arr.to_dlpack())
 
 def from_torch(tensor):
-    """From torch (F,C,H,W) to decord (F,H,W,C).
+    """From torch to decord.
     The dlpack shares the tensors memory.
     Note that each dlpack can only be consumed once."""
     dlpack = try_import_torch()
-    return _from_dlpack(dlpack.to_dlpack(tensor.permute(0,2,3,1)))
+    return _from_dlpack(dlpack.to_dlpack(tensor))
