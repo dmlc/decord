@@ -3,10 +3,12 @@ from __future__ import absolute_import
 
 from .mxnet import from_decord as to_mxnet
 from .mxnet import to_decord as from_mxnet
+from .torchdl import to_torch, from_torch
 
 _BRIDGE_TYPES = {
     'native': (lambda x: x, lambda x: x),
     'mxnet': (to_mxnet, from_mxnet),
+    'torch': (to_torch, from_torch),
 }
 
 _CURRENT_BRIDGE = 'native'
