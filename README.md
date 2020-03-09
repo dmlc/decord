@@ -17,6 +17,7 @@ Bridges for deep learning frameworks:
 
 -   Apache MXNet (Done)
 -   Pytorch (Done)
+-   TensorFlow (Done)
 
 ## Preliminary benchmark
 
