@@ -41,6 +41,19 @@ void FFMPEGThreadedDecoder::Start() {
 }
 
 void FFMPEGThreadedDecoder::Stop() {
+    KillQueues();
+    if (t_.joinable()) {
+        // LOG(INFO) << "joining";
+        t_.join();
+    }
+}
+
+void FFMPEGThreadedDecoder::Clear() {
+    Stop();
+    ClearBuffers();
+}
+
+void FFMPEGThreadedDecoder::KillQueues() {
     if (run_.load()) {
         if (pkt_queue_) {
             pkt_queue_->SignalForKill();
@@ -53,14 +66,9 @@ void FFMPEGThreadedDecoder::Stop() {
             frame_queue_->SignalForKill();
         }
     }
-    if (t_.joinable()) {
-        // LOG(INFO) << "joining";
-        t_.join();
-    }
 }
 
-void FFMPEGThreadedDecoder::Clear() {
-    Stop();
+void FFMPEGThreadedDecoder::ClearBuffers() {
     if (dec_ctx_.get()) {
         avcodec_flush_buffers(dec_ctx_.get());
     }
@@ -146,7 +154,8 @@ void FFMPEGThreadedDecoder::WorkerThread() {
     } catch (dmlc::Error error) {
         error_message_ = error.what();
         error_status_.store(true);
-        run_.store(false);
+        KillQueues();
+        ClearBuffers();
     }
 }
 

@@ -458,6 +458,7 @@ void VideoReader::SkipFrames(int64_t num) {
     while (num > 0) {
         PushNext();
         ret = decoder_->Pop(&frame);
+        if (decoder_->GetErrorStatus()) break;
         if (!ret) continue;
         // LOG(INFO) << "skip: " << num;
         --num;

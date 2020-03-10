@@ -46,6 +46,8 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
     private:
         void WorkerThread();
         void WorkerThreadImpl();
+        void KillQueues();
+        void ClearBuffers();
         void ProcessFrame(AVFramePtr p, NDArray out_buf);
         NDArray CopyToNDArray(AVFramePtr p);
         NDArray AsNDArray(AVFramePtr p);
