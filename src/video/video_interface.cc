@@ -76,6 +76,20 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetBatch")
     *rv = ret;
   });
 
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetErrorStatus")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    auto ret = static_cast<VideoReaderInterface*>(handle)->GetErrorStatus();
+    *rv = ret;
+});
+
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetErrorMessage")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    std::string ret = static_cast<VideoReaderInterface*>(handle)->GetErrorMessage();
+    *rv = ret;
+});
+
 DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderSeek")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
     VideoReaderInterfaceHandle handle = args[0];

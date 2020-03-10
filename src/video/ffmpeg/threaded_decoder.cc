@@ -11,7 +11,7 @@
 namespace decord {
 namespace ffmpeg {
 
-FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), discard_pts_() {
+FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), discard_pts_(), error_status_(), error_message_() {
 }
 
 void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
@@ -141,6 +141,15 @@ void FFMPEGThreadedDecoder::ProcessFrame(AVFramePtr frame, NDArray out_buf) {
 }
 
 void FFMPEGThreadedDecoder::WorkerThread() {
+    try {
+        WorkerThreadImpl();
+    } catch (dmlc::Error error) {
+        error_message_ = error.what();
+        error_status_.store(true);
+    }
+}
+
+void FFMPEGThreadedDecoder::WorkerThreadImpl() {
     while (run_.load()) {
         // CHECK(filter_graph_) << "FilterGraph not initialized.";
         if (!filter_graph_) return;
@@ -242,6 +251,14 @@ NDArray FFMPEGThreadedDecoder::AsNDArray(AVFramePtr p) {
 	manager->deleter = AVFrameManagerDeleter;
 	NDArray arr = NDArray::FromDLPack(manager);
 	return arr;
+}
+
+bool FFMPEGThreadedDecoder::GetErrorStatus() {
+    return error_status_.load();
+}
+
+std::string FFMPEGThreadedDecoder::GetErrorMessage() {
+    return error_message_;
 }
 
 }  // namespace ffmpeg

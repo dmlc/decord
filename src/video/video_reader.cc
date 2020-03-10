@@ -484,6 +484,9 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     uint64_t offset = 0;
     std::vector<int64_t> frame_shape = {height_, width_, 3};
     for (std::size_t i = 0; i < indices.size(); ++i) {
+        if (decoder_->GetErrorStatus()) {
+            return buf;
+        }
         int64_t pos = indices[i];
         auto it = unique_indices.find(pos);
         if (it != unique_indices.end() && it->second != i) {
@@ -519,6 +522,14 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
         }
     }
     return buf;
+}
+
+bool VideoReader::GetErrorStatus() {
+    return decoder_->GetErrorStatus();
+}
+
+std::string VideoReader::GetErrorMessage() {
+    return decoder_->GetErrorMessage();
 }
 
 }  // namespace decord

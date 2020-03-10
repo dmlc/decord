@@ -95,6 +95,7 @@ class VideoReader(object):
         arr = _CAPI_VideoReaderNextFrame(self._handle)
         if not arr.shape:
             raise StopIteration()
+        self.check_error()
         return bridge_out(arr)
 
     def get_batch(self, indices):
@@ -124,6 +125,7 @@ class VideoReader(object):
             raise IndexError('Out of bound indices: {}'.format(indices[indices >= self._num_frame]))
         indices = _nd.array(indices)
         arr = _CAPI_VideoReaderGetBatch(self._handle, indices)
+        self.check_error()
         return bridge_out(arr)
 
     def get_key_indices(self):
@@ -163,6 +165,7 @@ class VideoReader(object):
         success = _CAPI_VideoReaderSeek(self._handle, pos)
         if not success:
             raise RuntimeError("Failed to seek to frame {}".format(pos))
+        self.check_error()
 
     def seek_accurate(self, pos):
         """Accurately seek to frame position, this is slower than `seek`
@@ -179,6 +182,7 @@ class VideoReader(object):
         success = _CAPI_VideoReaderSeekAccurate(self._handle, pos)
         if not success:
             raise RuntimeError("Failed to seek_accurate to frame {}".format(pos))
+        self.check_error()
 
     def skip_frames(self, num=1):
         """Skip reading multiple frames. Skipped frames will still be decoded
@@ -194,5 +198,10 @@ class VideoReader(object):
         assert self._handle is not None
         assert num > 0
         _CAPI_VideoReaderSkipFrames(self._handle, num)
+        self.check_error()
+
+    def check_error(self):
+        if bool(_CAPI_VideoReaderGetErrorStatus(self._handle)):
+            raise RuntimeError(_CAPI_VideoReaderGetErrorMessage(self._handle))
 
 _init_api("decord.video_reader")
