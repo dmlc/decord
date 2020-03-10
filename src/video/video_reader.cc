@@ -344,6 +344,7 @@ NDArray VideoReader::NextFrameImpl() {
     bool ret = false;
     int rewind_offset = 0;
     while (!ret) {
+        if (decoder_->GetErrorStatus()) return NDArray::Empty({}, kUInt8, ctx_);
         PushNext();
         if (curr_frame_ >= GetFrameCount()) {
             return NDArray::Empty({}, kUInt8, ctx_);
@@ -485,7 +486,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     std::vector<int64_t> frame_shape = {height_, width_, 3};
     for (std::size_t i = 0; i < indices.size(); ++i) {
         if (decoder_->GetErrorStatus()) {
-            return buf;
+            return NDArray::Empty({static_cast<int64_t>(bs), height_, width_, 3}, kUInt8, ctx_);
         }
         int64_t pos = indices[i];
         auto it = unique_indices.find(pos);

@@ -146,6 +146,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
     } catch (dmlc::Error error) {
         error_message_ = error.what();
         error_status_.store(true);
+        run_.store(false);
     }
 }
 
