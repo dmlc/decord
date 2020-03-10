@@ -16,10 +16,10 @@
 Table of contents
 =================
 
-- [Benchmark](preliminary-benchmark)
-- [Installation](installation)
-- [Usage](usage)
-- [Bridge for Deep Learning frameworks](bridges-for-deep-learning-frameworks)
+- [Benchmark](#preliminary-benchmark)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Bridge for Deep Learning frameworks](#bridges-for-deep-learning-frameworks)
 
 ## Preliminary benchmark
 
