@@ -13,11 +13,13 @@
 
 `Decord` was designed to handle awkward video shuffling experience in order to provide smooth experiences similar to random image loader for deep learning.
 
-Bridges for deep learning frameworks:
+Table of contents
+=================
 
--   Apache MXNet (Done)
--   Pytorch (Done)
--   TensorFlow (Done)
+- [Benchmark](#preliminary-benchmark)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Bridge for Deep Learning frameworks](#bridges-for-deep-learning-frameworks)
 
 ## Preliminary benchmark
 
@@ -219,4 +221,30 @@ shuffle = 0  # all sequential, no seeking, following initial filename order
 shuffle = 1  # random filename order, no random access for each video, very efficient
 shuffle = 2  # random order
 shuffle = 3  # random frame access in each video only
+```
+
+## Bridges for deep learning frameworks:
+
+It's important to have a bridge from decord to popular deep learning frameworks for training/inference
+
+-   Apache MXNet (Done)
+-   Pytorch (Done)
+-   TensorFlow (Done)
+
+Using bridges for deep learning frameworks are simple, for example, one can set the default tensor output to `mxnet.ndarray`:
+
+```python
+import decord
+vr = decord.VideoReader('examples/flipping_a_pancake.mkv')
+print('native output:', type(vr[0]), vr[0].shape)
+# native output: <class 'decord.ndarray.NDArray'>, (240, 426, 3)
+# you only need to set the output type once
+decord.bridge.set_bridge('mxnet')
+print(type(vr[0], vr[0].shape))
+# <class 'mxnet.ndarray.ndarray.NDArray'> (240, 426, 3)
+# or pytorch and tensorflow(>=2.2.0)
+decord.bridge.set_bridge('torch')
+decord.bridge.set_bridge('tensorflow')
+# or back to decord native format
+decord.bridge.set_bridge('native')
 ```
