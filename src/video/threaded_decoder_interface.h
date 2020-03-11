@@ -24,8 +24,6 @@ class ThreadedDecoderInterface {
         virtual bool Pop(runtime::NDArray *frame) = 0;
         // virtual bool Pop(ffmpeg::AVFramePtr *frame) = 0;
         virtual void SuggestDiscardPTS(std::vector<int64_t> dts) = 0;
-        virtual bool GetErrorStatus() {return false;}
-        virtual std::string GetErrorMessage() {return "";}
         virtual ~ThreadedDecoderInterface() = default;
 };  // class ThreadedDecoderInterface
 

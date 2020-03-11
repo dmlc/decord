@@ -30,6 +30,7 @@ void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, 
 }
 
 void FFMPEGThreadedDecoder::Start() {
+    CheckErrorStatus();
     if (!run_.load()) {
         pkt_queue_.reset(new PacketQueue());
         frame_queue_.reset(new FrameQueue());
@@ -41,19 +42,6 @@ void FFMPEGThreadedDecoder::Start() {
 }
 
 void FFMPEGThreadedDecoder::Stop() {
-    KillQueues();
-    if (t_.joinable()) {
-        // LOG(INFO) << "joining";
-        t_.join();
-    }
-}
-
-void FFMPEGThreadedDecoder::Clear() {
-    Stop();
-    ClearBuffers();
-}
-
-void FFMPEGThreadedDecoder::KillQueues() {
     if (run_.load()) {
         if (pkt_queue_) {
             pkt_queue_->SignalForKill();
@@ -66,9 +54,14 @@ void FFMPEGThreadedDecoder::KillQueues() {
             frame_queue_->SignalForKill();
         }
     }
+    if (t_.joinable()) {
+        // LOG(INFO) << "joining";
+        t_.join();
+    }
 }
 
-void FFMPEGThreadedDecoder::ClearBuffers() {
+void FFMPEGThreadedDecoder::Clear() {
+    Stop();
     if (dec_ctx_.get()) {
         avcodec_flush_buffers(dec_ctx_.get());
     }
@@ -77,6 +70,11 @@ void FFMPEGThreadedDecoder::ClearBuffers() {
     {
       std::lock_guard<std::mutex> lock(pts_mutex_);
       discard_pts_.clear();
+    }
+    error_status_.store(false);
+    {
+        std::lock_guard<std::mutex> lock(error_mutex_);
+        error_message_.clear();
     }
 }
 
@@ -102,10 +100,12 @@ bool FFMPEGThreadedDecoder::Pop(runtime::NDArray *frame) {
     // Pop is blocking operation
     // unblock and return false if queue has been destroyed.
 
+    CheckErrorStatus();
     if (!frame_count_.load() && !draining_.load()) {
         return false;
     }
     bool ret = frame_queue_->Pop(frame);
+    CheckErrorStatus();
 
     if (ret) {
         --frame_count_;
@@ -152,9 +152,9 @@ void FFMPEGThreadedDecoder::WorkerThread() {
     try {
         WorkerThreadImpl();
     } catch (dmlc::Error error) {
-        SetErrorMessage(error.what());
-        KillQueues();
-        ClearBuffers();
+        RecordInternalError(error.what());
+        run_.store(false);
+        frame_queue_->SignalForKill(); // Unblock all consumers
     }
 }
 
@@ -262,16 +262,14 @@ NDArray FFMPEGThreadedDecoder::AsNDArray(AVFramePtr p) {
 	return arr;
 }
 
-bool FFMPEGThreadedDecoder::GetErrorStatus() {
-    return error_status_.load();
+void FFMPEGThreadedDecoder::CheckErrorStatus() {
+    if (error_status_.load()) {
+        std::lock_guard<std::mutex> lock(error_mutex_);
+        LOG(FATAL) << error_message_;
+    }
 }
 
-std::string FFMPEGThreadedDecoder::GetErrorMessage() {
-    std::lock_guard<std::mutex> lock(error_mutex_);
-    return error_message_;
-}
-
-void FFMPEGThreadedDecoder::SetErrorMessage(std::string message) {
+void FFMPEGThreadedDecoder::RecordInternalError(std::string message) {
     {
         std::lock_guard<std::mutex> lock(error_mutex_);
         error_message_ = message;

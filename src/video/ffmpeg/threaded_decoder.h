@@ -40,15 +40,12 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         // bool Pop(AVFramePtr *frame) {LOG(FATAL); return false; };
         bool Pop(runtime::NDArray *frame);
         void SuggestDiscardPTS(std::vector<int64_t> dts);
-        bool GetErrorStatus() override;
-        std::string GetErrorMessage() override;
         ~FFMPEGThreadedDecoder();
     private:
         void WorkerThread();
         void WorkerThreadImpl();
-        void KillQueues();
-        void ClearBuffers();
-        void SetErrorMessage(std::string message);
+        void RecordInternalError(std::string message);
+        void CheckErrorStatus();
         void ProcessFrame(AVFramePtr p, NDArray out_buf);
         NDArray CopyToNDArray(AVFramePtr p);
         NDArray AsNDArray(AVFramePtr p);
