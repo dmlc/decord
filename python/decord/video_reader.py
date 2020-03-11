@@ -219,7 +219,7 @@ class VideoReader(object):
 
     def check_error(self):
         if bool(_CAPI_VideoReaderGetErrorStatus(self._handle)):
-            raise RuntimeError(_CAPI_VideoReaderGetErrorMessage(self._handle))
+            raise DECORDError(_CAPI_VideoReaderGetErrorMessage(self._handle))
 
 
 _init_api("decord.video_reader")
