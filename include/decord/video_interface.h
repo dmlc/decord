@@ -74,19 +74,6 @@ class VideoReaderInterface {
     virtual bool SeekAccurate(int64_t pos) = 0;
     /*! \brief seek and read frame at position p */
     // virtual runtime::NDArray GetFrame(uint64_t pos) = 0;
-
-    /**
-     * \brief Check if decoder raised an error
-     * 
-     * \return true An error was raised during decoding
-     * \return false Ok
-     */
-    virtual bool GetErrorStatus() {return false;}
-
-    /**
-     * \brief Get the message if an error was raised
-     */
-    virtual std::string GetErrorMessage() {return "";}
 };  // class VideoReader
 
 

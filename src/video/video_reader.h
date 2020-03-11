@@ -38,8 +38,6 @@ class VideoReader : public VideoReaderInterface {
         bool SeekAccurate(int64_t pos);
         runtime::NDArray GetKeyIndices();
         double GetAverageFPS() const;
-        bool GetErrorStatus() override;
-        std::string GetErrorMessage() override;
     protected:
         friend class VideoLoader;
         std::vector<int64_t> GetKeyIndicesVector() const;

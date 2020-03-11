@@ -344,12 +344,12 @@ NDArray VideoReader::NextFrameImpl() {
     bool ret = false;
     int rewind_offset = 0;
     while (!ret) {
-        if (decoder_->GetErrorStatus()) return NDArray::Empty({}, kUInt8, ctx_);
         PushNext();
         if (curr_frame_ >= GetFrameCount()) {
             return NDArray::Empty({}, kUInt8, ctx_);
         }
         ret = decoder_->Pop(&frame);
+        if (decoder_->GetErrorStatus()) LOG(FATAL) << decoder_->GetErrorMessage();
         if (frame.Size() <= 1) {
             if (frame.defined() && frame.data_->dl_tensor.dtype == kInt64) {
                 SeekAccurate(curr_frame_ - rewind_offset);
@@ -458,7 +458,7 @@ void VideoReader::SkipFrames(int64_t num) {
     while (num > 0) {
         PushNext();
         ret = decoder_->Pop(&frame);
-        if (decoder_->GetErrorStatus()) break;
+        if (decoder_->GetErrorStatus()) LOG(FATAL) << decoder_->GetErrorMessage();
         if (!ret) continue;
         // LOG(INFO) << "skip: " << num;
         --num;
@@ -486,7 +486,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     uint64_t offset = 0;
     std::vector<int64_t> frame_shape = {height_, width_, 3};
     for (std::size_t i = 0; i < indices.size(); ++i) {
-        if (decoder_->GetErrorStatus()) break;
+        if (decoder_->GetErrorStatus()) LOG(FATAL) << decoder_->GetErrorMessage();
         int64_t pos = indices[i];
         auto it = unique_indices.find(pos);
         if (it != unique_indices.end() && it->second != i) {
@@ -522,14 +522,6 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
         }
     }
     return buf;
-}
-
-bool VideoReader::GetErrorStatus() {
-    return decoder_->GetErrorStatus();
-}
-
-std::string VideoReader::GetErrorMessage() {
-    return decoder_->GetErrorMessage();
 }
 
 }  // namespace decord

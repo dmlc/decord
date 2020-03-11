@@ -4,8 +4,6 @@ from __future__ import absolute_import
 import ctypes
 import numpy as np
 
-from functools import wraps
-
 from ._ffi.base import c_array, c_str
 from ._ffi.function import _init_api
 from ._ffi.ndarray import DECORDContext
@@ -14,21 +12,7 @@ from . import ndarray as _nd
 from .ndarray import cpu, gpu
 from .bridge import bridge_out
 
-
 VideoReaderHandle = ctypes.c_void_p
-
-
-def check_for_video_error(f):
-    """ Deocrator that checks for video error when calling functions
-        exposed by VideoReader.
-    """
-    @wraps(f)
-    def wrapper(self, *args, **kwargs):
-        self.check_error()
-        result = f(self, *args, **kwargs)
-        self.check_error()
-        return result
-    return wrapper
 
 
 class VideoReader(object):
@@ -46,7 +30,6 @@ class VideoReader(object):
         Desired output height of the video, unchanged if `-1` is specified.
 
     """
-
     def __init__(self, uri, ctx=cpu(0), width=-1, height=-1):
         assert isinstance(ctx, DECORDContext)
         self._handle = None
@@ -99,7 +82,6 @@ class VideoReader(object):
         self.seek_accurate(idx)
         return self.next()
 
-    @check_for_video_error
     def next(self):
         """Grab the next frame.
 
@@ -115,7 +97,6 @@ class VideoReader(object):
             raise StopIteration()
         return bridge_out(arr)
 
-    @check_for_video_error
     def get_batch(self, indices):
         """Get entire batch of images. `get_batch` is optimized to handle seeking internally.
         Duplicate frame indices will be optmized by copying existing frames rather than decode
@@ -167,7 +148,6 @@ class VideoReader(object):
         """
         return self._avg_fps
 
-    @check_for_video_error
     def seek(self, pos):
         """Fast seek to frame position, this does not guarantee accurate position.
         To obtain accurate seeking, see `accurate_seek`.
@@ -184,7 +164,6 @@ class VideoReader(object):
         if not success:
             raise RuntimeError("Failed to seek to frame {}".format(pos))
 
-    @check_for_video_error
     def seek_accurate(self, pos):
         """Accurately seek to frame position, this is slower than `seek`
         but guarantees accurate position.
@@ -201,7 +180,6 @@ class VideoReader(object):
         if not success:
             raise RuntimeError("Failed to seek_accurate to frame {}".format(pos))
 
-    @check_for_video_error
     def skip_frames(self, num=1):
         """Skip reading multiple frames. Skipped frames will still be decoded
         (required by following frames) but it can save image resize/copy operations.
@@ -216,10 +194,5 @@ class VideoReader(object):
         assert self._handle is not None
         assert num > 0
         _CAPI_VideoReaderSkipFrames(self._handle, num)
-
-    def check_error(self):
-        if bool(_CAPI_VideoReaderGetErrorStatus(self._handle)):
-            raise DECORDError(_CAPI_VideoReaderGetErrorMessage(self._handle))
-
 
 _init_api("decord.video_reader")
