@@ -486,9 +486,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
     uint64_t offset = 0;
     std::vector<int64_t> frame_shape = {height_, width_, 3};
     for (std::size_t i = 0; i < indices.size(); ++i) {
-        if (decoder_->GetErrorStatus()) {
-            return NDArray::Empty({static_cast<int64_t>(bs), height_, width_, 3}, kUInt8, ctx_);
-        }
+        if (decoder_->GetErrorStatus()) break;
         int64_t pos = indices[i];
         auto it = unique_indices.find(pos);
         if (it != unique_indices.end() && it->second != i) {

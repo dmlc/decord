@@ -11,7 +11,7 @@
 namespace decord {
 namespace ffmpeg {
 
-FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), discard_pts_(), error_status_(), error_message_() {
+FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), discard_pts_(), error_status_(false), error_message_() {
 }
 
 void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
@@ -152,8 +152,7 @@ void FFMPEGThreadedDecoder::WorkerThread() {
     try {
         WorkerThreadImpl();
     } catch (dmlc::Error error) {
-        error_message_ = error.what();
-        error_status_.store(true);
+        SetErrorMessage(error.what());
         KillQueues();
         ClearBuffers();
     }
@@ -268,7 +267,16 @@ bool FFMPEGThreadedDecoder::GetErrorStatus() {
 }
 
 std::string FFMPEGThreadedDecoder::GetErrorMessage() {
+    std::lock_guard<std::mutex> lock(error_mutex_);
     return error_message_;
+}
+
+void FFMPEGThreadedDecoder::SetErrorMessage(std::string message) {
+    {
+        std::lock_guard<std::mutex> lock(error_mutex_);
+        error_message_ = message;
+    }
+    error_status_.store(true);
 }
 
 }  // namespace ffmpeg
