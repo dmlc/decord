@@ -11,7 +11,7 @@
 namespace decord {
 namespace ffmpeg {
 
-FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), discard_pts_() {
+FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), discard_pts_(), error_status_(false), error_message_() {
 }
 
 void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
@@ -30,6 +30,7 @@ void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, 
 }
 
 void FFMPEGThreadedDecoder::Start() {
+    CheckErrorStatus();
     if (!run_.load()) {
         pkt_queue_.reset(new PacketQueue());
         frame_queue_.reset(new FrameQueue());
@@ -70,6 +71,11 @@ void FFMPEGThreadedDecoder::Clear() {
       std::lock_guard<std::mutex> lock(pts_mutex_);
       discard_pts_.clear();
     }
+    error_status_.store(false);
+    {
+        std::lock_guard<std::mutex> lock(error_mutex_);
+        error_message_.clear();
+    }
 }
 
 void FFMPEGThreadedDecoder::SuggestDiscardPTS(std::vector<int64_t> dts) {
@@ -94,10 +100,12 @@ bool FFMPEGThreadedDecoder::Pop(runtime::NDArray *frame) {
     // Pop is blocking operation
     // unblock and return false if queue has been destroyed.
 
+    CheckErrorStatus();
     if (!frame_count_.load() && !draining_.load()) {
         return false;
     }
     bool ret = frame_queue_->Pop(frame);
+    CheckErrorStatus();
 
     if (ret) {
         --frame_count_;
@@ -141,6 +149,16 @@ void FFMPEGThreadedDecoder::ProcessFrame(AVFramePtr frame, NDArray out_buf) {
 }
 
 void FFMPEGThreadedDecoder::WorkerThread() {
+    try {
+        WorkerThreadImpl();
+    } catch (dmlc::Error error) {
+        RecordInternalError(error.what());
+        run_.store(false);
+        frame_queue_->SignalForKill(); // Unblock all consumers
+    }
+}
+
+void FFMPEGThreadedDecoder::WorkerThreadImpl() {
     while (run_.load()) {
         // CHECK(filter_graph_) << "FilterGraph not initialized.";
         if (!filter_graph_) return;
@@ -242,6 +260,21 @@ NDArray FFMPEGThreadedDecoder::AsNDArray(AVFramePtr p) {
 	manager->deleter = AVFrameManagerDeleter;
 	NDArray arr = NDArray::FromDLPack(manager);
 	return arr;
+}
+
+void FFMPEGThreadedDecoder::CheckErrorStatus() {
+    if (error_status_.load()) {
+        std::lock_guard<std::mutex> lock(error_mutex_);
+        LOG(FATAL) << error_message_;
+    }
+}
+
+void FFMPEGThreadedDecoder::RecordInternalError(std::string message) {
+    {
+        std::lock_guard<std::mutex> lock(error_mutex_);
+        error_message_ = message;
+    }
+    error_status_.store(true);
 }
 
 }  // namespace ffmpeg

@@ -43,6 +43,9 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         ~FFMPEGThreadedDecoder();
     private:
         void WorkerThread();
+        void WorkerThreadImpl();
+        void RecordInternalError(std::string message);
+        void CheckErrorStatus();
         void ProcessFrame(AVFramePtr p, NDArray out_buf);
         NDArray CopyToNDArray(AVFramePtr p);
         NDArray AsNDArray(AVFramePtr p);
@@ -60,6 +63,9 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         AVCodecContextPtr dec_ctx_;
         std::unordered_set<int64_t> discard_pts_;
         std::mutex pts_mutex_;
+        std::mutex error_mutex_;
+        std::atomic<bool> error_status_;
+        std::string error_message_;
 
     DISALLOW_COPY_AND_ASSIGN(FFMPEGThreadedDecoder);
 };
