@@ -22,7 +22,7 @@ using AVFramePool = ffmpeg::AVFramePool;
 using AVPacketPool = ffmpeg::AVPacketPool;
 
 VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height)
-     : ctx_(ctx), codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0),
+     : ctx_(ctx), key_indices_(), frame_ts_(), codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0),
      width_(width), height_(height), eof_(false) {
     // av_register_all deprecated in latest versions
     #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
@@ -39,14 +39,10 @@ VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height)
     }
     fmt_ctx_.reset(fmt_ctx);
 
-    // LOG(INFO) << "opened input";
-
     // find stream info
     if (avformat_find_stream_info(fmt_ctx,  NULL) < 0) {
         LOG(FATAL) << "ERROR getting stream info of file" << fn;
     }
-
-    // LOG(INFO) << "find stream info";
 
     // initialize all video streams and store codecs info
     for (uint32_t i = 0; i < fmt_ctx_->nb_streams; ++i) {
@@ -138,28 +134,9 @@ void VideoReader::SetVideoStream(int stream_nb) {
         height_ = codecpar->height;
     }
 
-    // adjust width to match cpu alignment
-    // if (width_ % kCPUAlignment != 0) {
-    //     int new_width = ((width_ / kCPUAlignment) + 1) * kCPUAlignment;
-    //     int new_height = static_cast<int>(1.f * height_ / width_ * new_width);
-    //     LOG(WARNING) << "Video Reader width: " << width_
-    //         << " is not aligned with CPU alignment preference(" << kCPUAlignment << "),"
-    //         << " causing non-compact array with degraded performance."
-    //         << " Automatically round up resolution to: "
-    //         << new_width << " x " << new_height
-    //         << ".\nYou can set 'VideoReader(..., width=n*32)' to avoid warnings.";
-    //     width_ = new_width;
-    //     height_ = new_height;
-    // }
     ndarray_pool_ = NDArrayPool(32, {height_, width_, 3}, kUInt8, ctx_);
     decoder_->SetCodecContext(dec_ctx, width_, height_);
     IndexKeyframes();
-    // LOG(INFO) << "Printing key frames...";
-    // for (auto i : key_indices_) {
-    //     LOG(INFO) << i;
-    // }
-    // QueryStreams();
-
 }
 
 unsigned int VideoReader::QueryStreams() const {
@@ -198,16 +175,19 @@ unsigned int VideoReader::QueryStreams() const {
 }
 
 int64_t VideoReader::GetFrameCount() const {
-   CHECK(fmt_ctx_ != NULL);
-   CHECK(actv_stm_idx_ >= 0);
-   CHECK(actv_stm_idx_ >= 0 && static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
-   int64_t cnt = fmt_ctx_->streams[actv_stm_idx_]->nb_frames;
-   if (cnt < 1) {
-       AVStream *stm = fmt_ctx_->streams[actv_stm_idx_];
-       // many formats do not provide accurate frame count, use duration and FPS to approximate
-       cnt = static_cast<double>(stm->avg_frame_rate.num) / stm->avg_frame_rate.den * fmt_ctx_->duration / AV_TIME_BASE;
-   }
-   return cnt;
+    if (frame_ts_.size() > 0) {
+        return frame_ts_.size();
+    }
+    CHECK(fmt_ctx_ != NULL);
+    CHECK(actv_stm_idx_ >= 0);
+    CHECK(actv_stm_idx_ >= 0 && static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
+    int64_t cnt = fmt_ctx_->streams[actv_stm_idx_]->nb_frames;
+    if (cnt < 1) {
+        AVStream *stm = fmt_ctx_->streams[actv_stm_idx_];
+        // many formats do not provide accurate frame count, use duration and FPS to approximate
+        cnt = static_cast<double>(stm->avg_frame_rate.num) / stm->avg_frame_rate.den * fmt_ctx_->duration / AV_TIME_BASE;
+    }
+    return cnt;
 }
 
 int64_t VideoReader::GetCurrentPosition() const {
@@ -236,16 +216,7 @@ bool VideoReader::Seek(int64_t pos) {
     eof_ = false;
 
     int64_t ts = FrameToPTS(pos);
-    // LOG(INFO) << "ts as by seek: " << ts;
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
-    // int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_,
-    //                             ts-1, ts, ts+1,
-    //                             AVSEEK_FLAG_BACKWARD);
-    // int tm = av_rescale(pos, fmt_ctx_->streams[actv_stm_idx_]->time_base.den, fmt_ctx_->streams[actv_stm_idx_]->time_base.num) / 1000;
-    // LOG(INFO) << "TM: " << tm;
-    // int ret = avformat_seek_file(fmt_ctx_.get(), actv_stm_idx_,
-    //                             tm, tm, tm,
-    //                             0);
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << pos;
     // LOG(INFO) << "seek return: " << ret;
     decoder_->Start();
@@ -308,21 +279,6 @@ void VideoReader::PushNext() {
             return;
         }
         if (packet->stream_index == actv_stm_idx_) {
-            // LOG(INFO) << "Packet index: " << packet->stream_index << " vs. " << actv_stm_idx_;
-            // av_packet_unref(packet);
-            // LOG(INFO) << "Successfully load packet";
-            // LOG(FATAL) << packet->pts << " dts: " << packet->dts;
-
-            // add discard info to side_data if necessary
-            // if (discard) {
-            //     CHECK(packet->side_data == nullptr);
-            //     AVDictionary * frameDict = nullptr;
-            //     av_dict_set(&frameDict, "discard", std::to_string(1).c_str(), 0);
-            //     int frameDictSize = 0;
-            //     uint8_t *frameDictData = av_packet_pack_dictionary(frameDict, &frameDictSize);
-            //     av_dict_free(&frameDict);
-            //     av_packet_add_side_data(packet.get(), AVPacketSideDataType::AV_PKT_DATA_STRINGS_METADATA, frameDictData, frameDictSize);
-            // }
 
             if (ctx_.device_type != kDLGPU) {
                     // no preallocated memory and memory pool, use FFMPEG AVFrame pool
@@ -368,11 +324,18 @@ NDArray VideoReader::NextFrame() {
 }
 
 void VideoReader::IndexKeyframes() {
+    CHECK(actv_stm_idx_ >= 0) << "Invalid active stream index, not yet initialized!";
     key_indices_.clear();
+    frame_ts_.clear();
     AVPacketPtr packet = AVPacketPool::Get()->Acquire();
     int ret = -1;
     bool eof = false;
     int64_t cnt = 0;
+    frame_ts_.reserve(GetFrameCount());
+    timestamp_t start_sec = fmt_ctx_->streams[actv_stm_idx_]->start_time;
+    auto stm_ts = fmt_ctx_->streams[actv_stm_idx_]->time_base;
+    double ts_factor = stm_ts.den == 0 || stm_ts.num == 0 ? 0. : (double)stm_ts.num / (double)stm_ts.den;
+
     while (!eof) {
         ret = av_read_frame(fmt_ctx_.get(), packet.get());
         if (ret < 0) {
@@ -385,6 +348,10 @@ void VideoReader::IndexKeyframes() {
             break;
         }
         if (packet->stream_index == actv_stm_idx_) {
+            // store the pts info for each frame
+            auto start_pts = (packet->pts - start_sec) * ts_factor;
+            auto stop_pts = (packet->pts + packet->duration - start_sec) * ts_factor;
+            frame_ts_.emplace_back(AVFrameTime(packet->pts, packet->dts, start_pts, stop_pts));
             if (packet->flags & AV_PKT_FLAG_KEY) {
                 key_indices_.emplace_back(cnt);
             }
@@ -397,27 +364,29 @@ void VideoReader::IndexKeyframes() {
 }
 
 runtime::NDArray VideoReader::GetKeyIndices() {
-    DLManagedTensor dlt;
-    dlt.dl_tensor.data = dmlc::BeginPtr(key_indices_);
-    dlt.dl_tensor.dtype = kInt64;
-    dlt.dl_tensor.ctx = kCPU;
     std::vector<int64_t> shape = {static_cast<int64_t>(key_indices_.size())};
-    dlt.dl_tensor.shape = dmlc::BeginPtr(shape);
-    dlt.dl_tensor.ndim = 1;
-    dlt.dl_tensor.byte_offset = 0;
-    dlt.deleter = nullptr;
-    dlt.manager_ctx = nullptr;
-    runtime::NDArray orig = runtime::NDArray::FromDLPack(&dlt);
     runtime::NDArray ret = runtime::NDArray::Empty(shape, kInt64, kCPU);
-    // LOG(INFO) << "begin copy!";
-    ret.CopyFrom(orig);
-    // LOG(INFO) << "copied!";
+    ret.CopyFrom<int64_t>(key_indices_, shape);
+    return ret;
+}
+
+runtime::NDArray VideoReader::GetFramePTS() const {
+    // copy to ndarray
+    std::vector<float> tmp(frame_ts_.size() * 2, 0);
+    for (size_t i = 0; i < frame_ts_.size(); ++i) {
+        auto pos = i << 1;
+        tmp[pos] = frame_ts_[i].start;
+        tmp[pos + 1] = frame_ts_[i].stop;
+    }
+    std::vector<int64_t> shape = {static_cast<int64_t>(frame_ts_.size()), 2};
+    runtime::NDArray ret = runtime::NDArray::Empty(shape, kFloat32, kCPU);
+    ret.CopyFrom<float>(tmp, shape);
     return ret;
 }
 
 double VideoReader::GetAverageFPS() const {
     CHECK(actv_stm_idx_ >= 0);
-    CHECK(actv_stm_idx_ < fmt_ctx_->nb_streams);
+    CHECK(static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
     AVStream *active_st = fmt_ctx_->streams[actv_stm_idx_];
     return static_cast<double>(active_st->avg_frame_rate.num) / active_st->avg_frame_rate.den;
 }

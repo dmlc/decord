@@ -378,7 +378,7 @@ inline void NDArray::CopyFrom(std::vector<T>& other, std::vector<int64_t>& shape
   for (int64_t s : shape) {
     size *= s;
   }
-  CHECK(other.size() == size);
+  CHECK(other.size() == size) << "other: " << other.size() << " this: " << size;
   DLTensor dlt = CreateDLTensorView(other, shape); 
   CopyFromTo(&dlt, &(data_->dl_tensor));
 }
