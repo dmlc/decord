@@ -18,11 +18,8 @@ class ThreadedDecoderInterface {
         virtual void Start() = 0;
         virtual void Stop() = 0;
         virtual void Clear() = 0;
-        // virtual void Push(ffmpeg::AVPacketPtr pkt) = 0;
         virtual void Push(ffmpeg::AVPacketPtr pkt, runtime::NDArray buf) = 0;
-        // virtual void Skip(ffmpeg::AVPacketPtr pkt) = 0;
         virtual bool Pop(runtime::NDArray *frame) = 0;
-        // virtual bool Pop(ffmpeg::AVFramePtr *frame) = 0;
         virtual void SuggestDiscardPTS(std::vector<int64_t> dts) = 0;
         virtual ~ThreadedDecoderInterface() = default;
 };  // class ThreadedDecoderInterface

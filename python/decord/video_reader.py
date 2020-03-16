@@ -40,6 +40,7 @@ class VideoReader(object):
         self._num_frame = _CAPI_VideoReaderGetFrameCount(self._handle)
         assert self._num_frame > 0, "Invalid frame count: {}".format(self._num_frame)
         self._key_indices = _CAPI_VideoReaderGetKeyIndices(self._handle).asnumpy().tolist()
+        self._frame_pts = _CAPI_VideoReaderGetFramePTS(self._handle).asnumpy()
         self._avg_fps = _CAPI_VideoReaderGetAverageFPS(self._handle)
 
     def __del__(self):
@@ -97,22 +98,8 @@ class VideoReader(object):
             raise StopIteration()
         return bridge_out(arr)
 
-    def get_batch(self, indices):
-        """Get entire batch of images. `get_batch` is optimized to handle seeking internally.
-        Duplicate frame indices will be optmized by copying existing frames rather than decode
-        from video again.
-
-        Parameters
-        ----------
-        indices : list of integers
-            A list of non-negative frame indices.
-
-        Returns
-        -------
-        ndarray
-            An entire batch of image frames with shape NxHxWx3, where N is the length of `indices`.
-
-        """
+    def _validate_indices(self, indices):
+        """Validate int64 integers and convert negative integers to positive by backward search"""
         assert self._handle is not None
         indices = np.array(indices, dtype=np.int64)
         # process negative indices
@@ -123,6 +110,46 @@ class VideoReader(object):
         if not (indices < self._num_frame).all():
             raise IndexError('Out of bound indices: {}'.format(indices[indices >= self._num_frame]))
         indices = _nd.array(indices)
+        return indices
+
+    def get_frame_timestamp(self, idx):
+        """Get frame playback timestamp in unit(second).
+
+        Parameters
+        ----------
+        indices: list of integers or slice
+            A list of frame indices. If negative indices detected, the indices will be indexed from backward.
+
+        Returns
+        -------
+        numpy.ndarray
+            numpy.ndarray of shape (N, 2), where N is the size of indices. The format is `(start_second, end_second)`.
+        """
+        assert self._handle is not None
+        if isinstance(idx, slice):
+            idx = self.get_batch(range(*idx.indices(len(self))))
+        idx = self._validate_indices(idx).asnumpy()
+        return self._frame_pts[idx, :]
+
+
+    def get_batch(self, indices):
+        """Get entire batch of images. `get_batch` is optimized to handle seeking internally.
+        Duplicate frame indices will be optmized by copying existing frames rather than decode
+        from video again.
+
+        Parameters
+        ----------
+        indices : list of integers
+            A list of frame indices. If negative indices detected, the indices will be indexed from backward
+
+        Returns
+        -------
+        ndarray
+            An entire batch of image frames with shape NxHxWx3, where N is the length of `indices`.
+
+        """
+        assert self._handle is not None
+        indices = self._validate_indices(indices)
         arr = _CAPI_VideoReaderGetBatch(self._handle, indices)
         return bridge_out(arr)
 

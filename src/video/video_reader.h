@@ -19,6 +19,16 @@
 
 
 namespace decord {
+using timestamp_t = float;
+struct AVFrameTime {
+    int64_t pts;          // presentation timestamp, unit is stream time_base
+    int64_t dts;          // decoding timestamp, unit is stream time_base
+    timestamp_t start;    // real world start timestamp, unit is second
+    timestamp_t stop;     // real world stop timestamp, unit is second
+
+    AVFrameTime(int64_t pts=AV_NOPTS_VALUE, int64_t dts=AV_NOPTS_VALUE, timestamp_t start=0, timestamp_t stop=0)
+     : pts(pts), dts(dts), start(start), stop(stop) {}
+};  // struct AVFrameTime
 
 class VideoReader : public VideoReaderInterface {
     using ThreadedDecoderPtr = std::unique_ptr<ThreadedDecoderInterface>;
@@ -36,7 +46,8 @@ class VideoReader : public VideoReaderInterface {
         void SkipFrames(int64_t num = 1);
         bool Seek(int64_t pos);
         bool SeekAccurate(int64_t pos);
-        runtime::NDArray GetKeyIndices();
+        NDArray GetKeyIndices();
+        NDArray GetFramePTS() const;
         double GetAverageFPS() const;
     protected:
         friend class VideoLoader;
@@ -51,6 +62,8 @@ class VideoReader : public VideoReaderInterface {
 
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
+        /*! \brief a lookup table for per frame pts/dts */
+        std::vector<AVFrameTime> frame_ts_;
         /*! \brief Video Streams Codecs in original videos */
         std::vector<AVCodec*> codecs_;
         /*! \brief Currently active video stream index */

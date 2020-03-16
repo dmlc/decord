@@ -66,6 +66,13 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetKeyIndices")
     *rv = ret;
   });
 
+DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetFramePTS")
+.set_body([] (DECORDArgs args, DECORDRetValue* rv) {
+    VideoReaderInterfaceHandle handle = args[0];
+    NDArray ret = static_cast<VideoReaderInterface*>(handle)->GetFramePTS();
+    *rv = ret;
+  });
+
 DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetBatch")
 .set_body([] (DECORDArgs args, DECORDRetValue* rv) {
     VideoReaderInterfaceHandle handle = args[0];

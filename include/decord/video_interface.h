@@ -44,6 +44,8 @@ class VideoReaderInterface {
     virtual runtime::NDArray NextFrame() = 0;
     /*! \brief retrieve keyframe indices */
     virtual runtime::NDArray GetKeyIndices() = 0;
+    /*! \brief retrieve playback seconds by frame indices */
+    virtual runtime::NDArray GetFramePTS() const = 0;
     /*! \brief read bulk frames, defined by indices */
     virtual runtime::NDArray GetBatch(std::vector<int64_t> indices, runtime::NDArray buf) = 0;
     /*! \brief skip certain frames without decoding */
