@@ -117,7 +117,7 @@ void SaveBinaryToFile(
 void SaveMetaDataToFile(
     const std::string& file_name,
     const std::unordered_map<std::string, FunctionInfo>& fmap) {
-  std::string version = "0.3.5";
+  std::string version = "0.3.6";
   std::ofstream fs(file_name.c_str());
   CHECK(!fs.fail()) << "Cannot open file " << file_name;
   dmlc::JSONWriter writer(&fs);
