@@ -423,7 +423,7 @@ void VideoReader::SkipFrames(int64_t num) {
     auto pts = FramesToPTS(frame_pos);
     decoder_->SuggestDiscardPTS(pts);
     curr_frame_ += num;
-    while (num >= 0) {
+    while (num > 0) {
         PushNext();
         ret = decoder_->Pop(&frame);
         if (!ret) continue;
