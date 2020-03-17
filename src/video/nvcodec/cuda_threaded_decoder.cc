@@ -343,15 +343,21 @@ void CUThreadedDecoder::ConvertThread() {
                                                   ScaleMethod_Linear,
                                                   ChromaUpMethod_Linear);
         int64_t frame_pts = static_cast<int64_t>(frame.disp_info->timestamp);
-        bool no_skip = true;
-        {
-            std::lock_guard<std::mutex> lock(pts_mutex_);
-            no_skip = discard_pts_.find(frame_pts) == discard_pts_.end();
-        }
-        if (no_skip) {
-            // only process frame when not indicated with discard flag
-            ProcessFrame(textures.chroma, textures.luma, dst_ptr, stream_, input_width, input_height, width_, height_);
-        }
+        // (TODO @zhreshold) verify how to precisely align discard pts
+        ProcessFrame(textures.chroma, textures.luma, dst_ptr, stream_, input_width, input_height, width_, height_);
+        // bool no_skip = true;
+        // {
+        //     std::lock_guard<std::mutex> lock(pts_mutex_);
+        //     auto it = discard_pts_.find(frame_pts);
+        //     no_skip = it == discard_pts_.end();
+        //     if (!no_skip) {
+        //         discard_pts_.erase(it);
+        //     }
+        // }
+        // if (no_skip) {
+        //     // only process frame when not indicated with discard flag
+        //     ProcessFrame(textures.chroma, textures.luma, dst_ptr, stream_, input_width, input_height, width_, height_);
+        // }
         // auto frame_num = av_rescale_q(frame.disp_info->timestamp,
         //                               nv_time_base_, frame_base_);
         int64_t desired_pts;
