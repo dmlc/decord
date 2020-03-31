@@ -11,6 +11,7 @@
 #endif
 #include <algorithm>
 #include <decord/runtime/ndarray.h>
+#include <decord/runtime/c_runtime_api.h>
 
 namespace decord {
 
@@ -430,6 +431,7 @@ void VideoReader::SkipFrames(int64_t num) {
         // LOG(INFO) << "skip: " << num;
         --num;
     }
+    decoder_->ClearDiscardPTS();
     // LOG(INFO) << " stopped skipframes: " << curr_frame_;
 }
 
@@ -462,7 +464,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
             uint64_t old_offset = offset / i * it->second;
             auto old_view = buf.CreateOffsetView(frame_shape, kUInt8, &old_offset);
             auto view = buf.CreateOffsetView(frame_shape, kUInt8, &offset);
-            old_view.CopyTo(view); 
+            old_view.CopyTo(view);
         }
         else {
             CHECK_LT(pos, frame_count);

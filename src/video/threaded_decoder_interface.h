@@ -12,6 +12,10 @@
 #include <decord/runtime/ndarray.h>
 
 namespace decord {
+typedef enum {
+    DECORD_SKIP_FRAME   = 0x01,   /**< Set when the frame is not wanted, we can skip image processing  */
+} ThreadedDecoderFlags;
+
 class ThreadedDecoderInterface {
     public:
         virtual void SetCodecContext(AVCodecContext *dec_ctx, int width = -1, int height = -1) = 0;
@@ -21,6 +25,7 @@ class ThreadedDecoderInterface {
         virtual void Push(ffmpeg::AVPacketPtr pkt, runtime::NDArray buf) = 0;
         virtual bool Pop(runtime::NDArray *frame) = 0;
         virtual void SuggestDiscardPTS(std::vector<int64_t> dts) = 0;
+        virtual void ClearDiscardPTS() = 0;
         virtual ~ThreadedDecoderInterface() = default;
 };  // class ThreadedDecoderInterface
 
