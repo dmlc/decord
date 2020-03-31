@@ -20,7 +20,7 @@
 namespace decord {
 namespace ffmpeg {
 
-class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
+class FFMPEGThreadedDecoder final : public ThreadedDecoderInterface {
     using PacketQueue = dmlc::ConcurrentBlockingQueue<AVPacketPtr>;
     using PacketQueuePtr = std::unique_ptr<PacketQueue>;
     using FrameQueue = dmlc::ConcurrentBlockingQueue<NDArray>;
@@ -35,11 +35,10 @@ class FFMPEGThreadedDecoder : public ThreadedDecoderInterface {
         void Start();
         void Stop();
         void Clear();
-        // void Push(AVPacketPtr pkt) {LOG(FATAL);};
         void Push(ffmpeg::AVPacketPtr pkt, runtime::NDArray buf);
-        // bool Pop(AVFramePtr *frame) {LOG(FATAL); return false; };
         bool Pop(runtime::NDArray *frame);
         void SuggestDiscardPTS(std::vector<int64_t> dts);
+        void ClearDiscardPTS();
         ~FFMPEGThreadedDecoder();
     private:
         void WorkerThread();

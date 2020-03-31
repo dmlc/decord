@@ -11,7 +11,7 @@
 namespace decord {
 namespace ffmpeg {
 
-FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), discard_pts_(), error_status_(false), error_message_() {
+FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), error_status_(false), error_message_() {
 }
 
 void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
@@ -83,12 +83,18 @@ void FFMPEGThreadedDecoder::SuggestDiscardPTS(std::vector<int64_t> dts) {
     discard_pts_.insert(dts.begin(), dts.end());
 }
 
+void FFMPEGThreadedDecoder::ClearDiscardPTS() {
+    std::lock_guard<std::mutex> lock(pts_mutex_);
+    discard_pts_.clear();
+}
+
 void FFMPEGThreadedDecoder::Push(AVPacketPtr pkt, runtime::NDArray buf) {
     CHECK(run_.load());
     if (!pkt) {
         CHECK(!draining_.load()) << "Start draining twice...";
         draining_.store(true);
     }
+
     pkt_queue_->Push(pkt);
     buffer_queue_->Push(buf);
 
@@ -104,7 +110,9 @@ bool FFMPEGThreadedDecoder::Pop(runtime::NDArray *frame) {
     if (!frame_count_.load() && !draining_.load()) {
         return false;
     }
+    // LOG(INFO) << "Waiting for pop";
     bool ret = frame_queue_->Pop(frame);
+    // LOG(INFO) << "Poped";
     CheckErrorStatus();
 
     if (ret) {

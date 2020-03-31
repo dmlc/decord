@@ -26,7 +26,7 @@
 namespace decord {
 namespace cuda {
 
-class CUThreadedDecoder : public ThreadedDecoderInterface {
+class CUThreadedDecoder final : public ThreadedDecoderInterface {
     constexpr static int kMaxOutputSurfaces = 20;
     using NDArray = runtime::NDArray;
     using AVPacketPtr = ffmpeg::AVPacketPtr;
@@ -55,6 +55,7 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         void Push(AVPacketPtr pkt, NDArray buf);
         bool Pop(NDArray *frame);
         void SuggestDiscardPTS(std::vector<int64_t> dts);
+        void ClearDiscardPTS();
         ~CUThreadedDecoder();
 
         static int CUDAAPI HandlePictureSequence(void* user_data, CUVIDEOFORMAT* format);
@@ -77,14 +78,14 @@ class CUThreadedDecoder : public ThreadedDecoderInterface {
         CUVideoDecoderImpl decoder_;
         PacketQueuePtr pkt_queue_;
         FrameQueuePtr frame_queue_;
-        BufferQueuePtr buffer_queue_;
-        std::unordered_map<int64_t, runtime::NDArray> reorder_buffer_;
+        //BufferQueuePtr buffer_queue_;
+        //std::unordered_map<int64_t, runtime::NDArray> reorder_buffer_;
         ReorderQueuePtr reorder_queue_;
-        FrameOrderQueuePtr frame_order_;
-        int64_t last_pts_;
+        //FrameOrderQueuePtr frame_order_;
+        // int64_t last_pts_;
         std::thread launcher_t_;
-        std::thread converter_t_;
-        std::vector<PermitQueuePtr> permits_;
+        //std::thread converter_t_;
+        //std::vector<PermitQueuePtr> permits_;
         // std::vector<uint8_t> frame_in_use_;
         std::atomic<bool> run_;
         std::atomic<int> frame_count_;
