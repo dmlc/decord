@@ -135,7 +135,10 @@ void VideoReader::SetVideoStream(int stream_nb) {
         height_ = codecpar->height;
     }
 
-    ndarray_pool_ = NDArrayPool(32, {height_, width_, 3}, kUInt8, ctx_);
+    if (ctx_.device_type == kDLGPU) {
+        ndarray_pool_ = NDArrayPool(32, {height_, width_, 3}, kUInt8, ctx_);
+    }
+    
     decoder_->SetCodecContext(dec_ctx, width_, height_);
     IndexKeyframes();
 }

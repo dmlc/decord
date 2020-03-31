@@ -117,6 +117,12 @@ void CUThreadedDecoder::Start() {
     reorder_queue_.reset(new ReorderQueue());
     //frame_order_.reset(new FrameOrderQueue());
     avcodec_flush_buffers(dec_ctx_.get());
+    parser_ = CUVideoParser(dec_ctx_->codec_id, this, kMaxOutputSurfaces, dec_ctx_->extradata,
+                            dec_ctx_->extradata_size);
+    if (!parser_.Initialized()) {
+        LOG(FATAL) << "Problem creating video parser";
+        return;
+    }
     // frame_in_use_.resize(kMaxOutputSurfaces, 0);
     //CHECK(permits_.size() == 0);
     //permits_.resize(kMaxOutputSurfaces);
