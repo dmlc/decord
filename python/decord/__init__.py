@@ -9,5 +9,8 @@ from .base import ALL
 
 from .ndarray import cpu, gpu
 from . import bridge
+from . import logging
 from .video_reader import VideoReader
 from .video_loader import VideoLoader
+
+logging.set_level(logging.ERROR)
