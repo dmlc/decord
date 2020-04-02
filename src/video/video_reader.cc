@@ -98,7 +98,7 @@ void VideoReader::SetVideoStream(int stream_nb) {
 #ifdef DECORD_USE_CUDA
         // note: cuda threaded decoder will modify codecpar
         decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new cuda::CUThreadedDecoder(
-            ctx_.device_id, codecpar.get()));
+            ctx_.device_id, codecpar.get(), fmt_ctx_->iformat));
 #else
         LOG(FATAL) << "CUDA not enabled. Requested context GPU(" << ctx_.device_id << ").";
 #endif

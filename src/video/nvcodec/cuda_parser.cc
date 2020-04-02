@@ -21,6 +21,14 @@ void CUVideoParser::InitParams(AVCodecID codec, CUThreadedDecoder* decoder, int 
             // this can probably be better
             parser_info_.ulMaxNumDecodeSurfaces = 20;
             break;
+        case AV_CODEC_ID_MPEG4:
+            parser_info_.CodecType = cudaVideoCodec_MPEG4;
+            parser_info_.ulMaxNumDecodeSurfaces = 20;
+            break;
+        case AV_CODEC_ID_VP9:
+            parser_info_.CodecType = cudaVideoCodec_VP9;
+            parser_info_.ulMaxNumDecodeSurfaces = 20;
+            break;
         default:
             LOG(FATAL) << "Invalid codec: " << avcodec_get_name(AVCodecID(codec));
             return;

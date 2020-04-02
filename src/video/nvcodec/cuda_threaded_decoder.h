@@ -46,7 +46,7 @@ class CUThreadedDecoder final : public ThreadedDecoderInterface {
     using FrameOrderQueuePtr = std::unique_ptr<FrameOrderQueue>;
 
     public:
-        CUThreadedDecoder(int device_id, AVCodecParameters *codecpar);
+        CUThreadedDecoder(int device_id, AVCodecParameters *codecpar, AVInputFormat *iformat);
         void SetCodecContext(AVCodecContext *dec_ctx, int width = -1, int height = -1);
         bool Initialized() const;
         void Start();
@@ -68,7 +68,7 @@ class CUThreadedDecoder final : public ThreadedDecoderInterface {
         int HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info);
         void LaunchThread();
         void ConvertThread();
-        void InitBitStreamFilter(AVCodecParameters *codecpar);
+        void InitBitStreamFilter(AVCodecParameters *codecpar, AVInputFormat *iformat);
 
         int device_id_;
         CUStream stream_;

@@ -17,7 +17,7 @@ namespace decord {
 namespace cuda {
 using namespace runtime;
 
-CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar)
+CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar, AVInputFormat *iformat)
     : device_id_(device_id), stream_({-1, false}), device_{}, ctx_{}, parser_{}, decoder_{},
     pkt_queue_{}, frame_queue_{},
     run_(false), frame_count_(0), draining_(false),
@@ -25,7 +25,7 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar)
     dec_ctx_(nullptr), bsf_ctx_(nullptr), width_(-1), height_(-1) {
 
     // initialize bitstream filters
-    InitBitStreamFilter(codecpar);
+    InitBitStreamFilter(codecpar, iformat);
 
     CHECK_CUDA_CALL(cuInit(0));
     CHECK_CUDA_CALL(cuDeviceGet(&device_, device_id_));
@@ -69,7 +69,7 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar)
     }
 }
 
-void CUThreadedDecoder::InitBitStreamFilter(AVCodecParameters *codecpar) {
+void CUThreadedDecoder::InitBitStreamFilter(AVCodecParameters *codecpar, AVInputFormat *iformat) {
     const char* bsf_name = nullptr;
     if (AV_CODEC_ID_H264 == codecpar->codec_id) {
         // H.264
@@ -77,6 +77,11 @@ void CUThreadedDecoder::InitBitStreamFilter(AVCodecParameters *codecpar) {
     } else if (AV_CODEC_ID_HEVC == codecpar->codec_id) {
         // HEVC
         bsf_name = "hevc_mp4toannexb";
+    } else if (AV_CODEC_ID_MPEG4 == codecpar->codec_id && !strcmp(iformat->name, "avi")) {
+        // MPEG4
+        bsf_name = "mpeg4_unpack_bframes";
+    } else {
+        bsf_name = "null";
     }
 
     auto bsf = av_bsf_get_by_name(bsf_name);
