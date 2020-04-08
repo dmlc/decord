@@ -31,3 +31,25 @@ def bridge_out(native_arr):
 
 def bridge_in(arr):
     return _BRIDGE_TYPES[_CURRENT_BRIDGE][1](arr)
+
+class _BridgeScope(object):
+    def __init__(self, bridge_type='native'):
+        self._type = bridge_type
+        self._prev = None
+
+    def __enter__(self):
+        self._prev = _CURRENT_BRIDGE
+        set_bridge(self._type)
+
+    def __exit__(self, type, value, traceback):
+        if self._prev != self._type:
+            set_bridge(self._prev)
+
+def use_mxnet():
+    return _BridgeScope('mxnet')
+
+def use_torch():
+    return _BridgeScope('torch')
+
+def use_tensorflow():
+    return _BridgeScope('tensorflow')
