@@ -178,7 +178,7 @@ class VideoClsCustom(object):
         if self.new_length == 1:
             clip_input = np.squeeze(clip_input, axis=2)    # this is for 2D input case
 
-        return nd.array(clip_input), target
+        return clip_input.as_nd_ndarray(), target
 
     def __len__(self):
         return len(self.clips)
@@ -210,7 +210,7 @@ class VideoClsCustom(object):
     def _sample_train_indices(self, num_frames):
         average_duration = (num_frames - self.skip_length + 1) // self.num_segments
         if average_duration > 0:
-            offsets = np.multiply(list(range(self.num_segments)),
+            offsets = np.multiply(np.array(list(range(self.num_segments))),
                                   average_duration)
             offsets = offsets + np.random.randint(average_duration,
                                                   size=self.num_segments)

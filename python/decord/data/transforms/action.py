@@ -30,8 +30,8 @@ class VideoGroupValTransform(Block):
             self.size = (int(size), int(size))
         else:
             self.size = size
-        self.mean = np.asarray(mean).reshape((len(mean), 1, 1))
-        self.std = np.asarray(std).reshape((len(std), 1, 1))
+        self.mean = np.array(mean).reshape((len(mean), 1, 1))
+        self.std = np.array(std).reshape((len(std), 1, 1))
         self.max_intensity = max_intensity
 
     def forward(self, clips):
@@ -69,8 +69,8 @@ class VideoGroupTrainTransform(Block):
         self.max_distort = max_distort
         self.prob = prob
         self.max_intensity = max_intensity
-        self.mean = np.asarray(mean).reshape((len(mean), 1, 1))
-        self.std = np.asarray(std).reshape((len(std), 1, 1))
+        self.mean = np.array(mean).reshape((len(mean), 1, 1))
+        self.std = np.array(std).reshape((len(std), 1, 1))
 
     def fillFixOffset(self, datum_height, datum_width):
         h_off = int((datum_height - self.height) / 4)
@@ -98,7 +98,7 @@ class VideoGroupTrainTransform(Block):
 
     def fillCropSize(self, input_height, input_width):
         crop_sizes = []
-        base_size = np.min((input_height, input_width))
+        base_size = np.min(np.array((input_height, input_width)))
         scale_rates = self.scale_ratios
         for h, scale_rate_h in enumerate(scale_rates):
             crop_h = int(base_size * scale_rate_h)
@@ -111,6 +111,7 @@ class VideoGroupTrainTransform(Block):
 
     def forward(self, clips):
         h, w, _ = clips[0].shape
+        ctx = clips[0].context
 
         crop_size_pairs = self.fillCropSize(h, w)
         size_sel = random.randint(0, len(crop_size_pairs)-1)
@@ -199,10 +200,11 @@ class VideoNormalize(Block):
 
     def __init__(self, mean, std):
         super(VideoNormalize, self).__init__()
-        self.mean = np.asarray(mean).reshape((len(mean), 1, 1))
-        self.std = np.asarray(std).reshape((len(std), 1, 1))
+        self.mean = np.array(mean).reshape((len(mean), 1, 1))
+        self.std = np.array(std).reshape((len(std), 1, 1))
 
     def forward(self, clips):
+        ctx = clips[0].context
         new_clips = []
         for cur_img in clips:
             new_clips.append((cur_img - self.mean.as_in_context(ctx)) / self.std.as_in_context(ctx))
