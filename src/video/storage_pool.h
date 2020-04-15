@@ -77,7 +77,6 @@ class AutoReleasePool {
          * \return T* New raw pointer
          */
         virtual T* Allocate() {
-            LOG(FATAL) << "No entry";
             return new T;
         }
 
@@ -87,7 +86,6 @@ class AutoReleasePool {
          * \param p Raw pointer to be freed
          */
         virtual void Delete(T* p) {
-            LOG(FATAL) << "No entry";
             delete p;
         }
 

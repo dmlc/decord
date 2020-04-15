@@ -1,5 +1,6 @@
 """Deep Learning Framework bridges."""
 from __future__ import absolute_import
+import threading
 
 from .mxnet import from_decord as to_mxnet
 from .mxnet import to_decord as from_mxnet
@@ -13,10 +14,11 @@ _BRIDGE_TYPES = {
     'tensorflow': (to_tensorflow, from_tensorflow)
 }
 
-_CURRENT_BRIDGE = 'native'
+_CURRENT_BRIDGE = threading.local()
+_CURRENT_BRIDGE.type = 'native'
 
 def reset_bridge():
-    _CURRENT_BRIDGE = 'native'
+    _CURRENT_BRIDGE.type = 'native'
 
 def set_bridge(new_bridge):
     assert isinstance(new_bridge, str), (
@@ -24,10 +26,36 @@ def set_bridge(new_bridge):
     assert new_bridge in _BRIDGE_TYPES.keys(), (
         "valid bridges: {}".format(_BRIDGE_TYPES.keys()))
     global _CURRENT_BRIDGE
-    _CURRENT_BRIDGE = new_bridge
+    _CURRENT_BRIDGE.type = new_bridge
 
 def bridge_out(native_arr):
-    return _BRIDGE_TYPES[_CURRENT_BRIDGE][0](native_arr)
+    return _BRIDGE_TYPES[_CURRENT_BRIDGE.type][0](native_arr)
 
 def bridge_in(arr):
-    return _BRIDGE_TYPES[_CURRENT_BRIDGE][1](arr)
+    return _BRIDGE_TYPES[_CURRENT_BRIDGE.type][1](arr)
+
+class _BridgeScope(object):
+    def __init__(self, bridge_type='native'):
+        self._type = bridge_type
+        self._prev = None
+
+    def __enter__(self):
+        global _CURRENT_BRIDGE
+        try:
+            self._prev = _CURRENT_BRIDGE.type
+        except AttributeError:
+            self._prev = 'native'
+        set_bridge(self._type)
+
+    def __exit__(self, type, value, traceback):
+        if self._prev != self._type:
+            set_bridge(self._prev)
+
+def use_mxnet():
+    return _BridgeScope('mxnet')
+
+def use_torch():
+    return _BridgeScope('torch')
+
+def use_tensorflow():
+    return _BridgeScope('tensorflow')
