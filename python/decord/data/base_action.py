@@ -138,6 +138,10 @@ class VideoClsCustom(object):
                                    "Check your data directory (opt.data-dir)."))
 
     def __getitem__(self, index):
+        if isinstance(index, tuple):
+            index, ctx = index
+        else:
+            ctx = None
         directory, duration, target = self.clips[index]
         if '.' in directory.split('/')[-1]:
             # data in the "setting" file already have extension, e.g., demo.mp4
@@ -146,7 +150,7 @@ class VideoClsCustom(object):
             # data in the "setting" file do not have extension, e.g., demo
             # So we need to provide extension (i.e., .mp4) to complete the file name.
             video_name = '{}.{}'.format(directory, self.video_ext)
-        decord_vr = VideoReader(video_name, width=self.new_width, height=self.new_height, ctx=self.ctx)
+        decord_vr = VideoReader(video_name, width=self.new_width, height=self.new_height, ctx=self.ctx if ctx is None else ctx)
         duration = len(decord_vr)
 
         if self.train and not self.test_mode:
@@ -275,6 +279,8 @@ class VideoClsCustom(object):
                     else:
                         with use_mxnet():
                             vid_frame = video_reader[offset - 1].as_np_ndarray()
+                except KeyboardInterrupt:
+                    raise
                 except:
                     raise RuntimeError('Error occured in reading frames from video {} of duration {}.'.format(directory, duration))
                 sampled_list.append(vid_frame)
@@ -299,6 +305,8 @@ class VideoClsCustom(object):
             with use_mxnet():
                 video_data = video_reader.get_batch(frame_id_list).as_np_ndarray()
             sampled_list = [video_data[vid, :, :, :] for vid, _ in enumerate(frame_id_list)]
+        except KeyboardInterrupt:
+            raise
         except:
             raise RuntimeError('Error occured in reading frames {} from video {} of duration {}.'.format(frame_id_list, directory, duration))
         return sampled_list
@@ -331,6 +339,8 @@ class VideoClsCustom(object):
             with use_mxnet():
                 video_data = video_reader.get_batch(frame_id_list).as_np_ndarray()
             sampled_list = [video_data[vid, :, :, :] for vid, _ in enumerate(frame_id_list)]
+        except KeyboardInterrupt:
+            raise
         except:
             raise RuntimeError('Error occured in reading frames {} from video {} of duration {}.'.format(frame_id_list, directory, duration))
         return sampled_list
