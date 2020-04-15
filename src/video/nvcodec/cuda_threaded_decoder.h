@@ -67,7 +67,9 @@ class CUThreadedDecoder final : public ThreadedDecoderInterface {
         int HandlePictureDecode_(CUVIDPICPARAMS* pic_params);
         int HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info);
         void LaunchThread();
-        void ConvertThread();
+        void LaunchThreadImpl();
+        void RecordInternalError(std::string message);
+        void CheckErrorStatus();
         void InitBitStreamFilter(AVCodecParameters *codecpar, AVInputFormat *iformat);
 
         int device_id_;
@@ -102,6 +104,9 @@ class CUThreadedDecoder final : public ThreadedDecoderInterface {
         // uint64_t decoded_cnt_;
         std::unordered_set<int64_t> discard_pts_;
         std::mutex pts_mutex_;
+        std::mutex error_mutex_;
+        std::atomic<bool> error_status_;
+        std::string error_message_;
 
     DISALLOW_COPY_AND_ASSIGN(CUThreadedDecoder);
 };
