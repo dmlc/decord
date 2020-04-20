@@ -136,9 +136,9 @@ void VideoReader::SetVideoStream(int stream_nb) {
     }
 
     if (ctx_.device_type == kDLGPU) {
-        ndarray_pool_ = NDArrayPool(32, {height_, width_, 3}, kUInt8, ctx_);
+        ndarray_pool_ = NDArrayPool(0, {height_, width_, 3}, kUInt8, ctx_);
     }
-    
+
     decoder_->SetCodecContext(dec_ctx, width_, height_);
     IndexKeyframes();
 }
