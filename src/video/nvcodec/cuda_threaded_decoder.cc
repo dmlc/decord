@@ -18,7 +18,7 @@ namespace cuda {
 using namespace runtime;
 
 CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar, AVInputFormat *iformat)
-    : device_id_(device_id), stream_({-1, false}), device_{}, ctx_{}, parser_{}, decoder_{},
+    : device_id_(device_id), stream_({device_id, false}), device_{}, ctx_{}, parser_{}, decoder_{},
     pkt_queue_{}, frame_queue_{},
     run_(false), frame_count_(0), draining_(false),
     tex_registry_(), nv_time_base_({1, 10000000}), frame_base_({1, 1000000}),
@@ -213,6 +213,7 @@ int CUThreadedDecoder::HandlePictureSequence_(CUVIDEOFORMAT* format) {
 }
 
 int CUThreadedDecoder::HandlePictureDecode_(CUVIDPICPARAMS* pic_params) {
+    if (!run_.load()) return 0;
     CHECK(decoder_.Initialized());
     // CHECK_GE(pic_params->CurrPicIdx, 0);
     // CHECK_LT(pic_params->CurrPicIdx, permits_.size());
@@ -220,7 +221,6 @@ int CUThreadedDecoder::HandlePictureDecode_(CUVIDPICPARAMS* pic_params) {
     // int tmp;
     // while (permit_queue->Size() < 1) continue;
     // int ret = permit_queue->Pop(&tmp);
-    if (!run_.load()) return 0;
     if (!CHECK_CUDA_CALL(cuvidDecodePicture(decoder_, pic_params))) {
         LOG(FATAL) << "Failed to launch cuvidDecodePicture";
         return 0;
@@ -230,6 +230,7 @@ int CUThreadedDecoder::HandlePictureDecode_(CUVIDPICPARAMS* pic_params) {
 }
 
 int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
+    if (!run_.load()) return 0;
     // push to converter
     // LOG(INFO) << "frame in use occupy: " << disp_info->picture_index;
     // frame_in_use_[disp_info->picture_index] = 1;
