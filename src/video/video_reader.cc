@@ -139,7 +139,10 @@ void VideoReader::SetVideoStream(int stream_nb) {
         ndarray_pool_ = NDArrayPool(0, {height_, width_, 3}, kUInt8, ctx_);
     }
 
-    decoder_->SetCodecContext(dec_ctx, width_, height_);
+    int rotation = static_cast<int>(GetRotation());
+    if(rotation == 90 or rotation == 270)
+        std::swap(width_, height_);
+    decoder_->SetCodecContext(dec_ctx, width_, height_, rotation);
     IndexKeyframes();
 }
 
@@ -393,6 +396,26 @@ double VideoReader::GetAverageFPS() const {
     CHECK(static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
     AVStream *active_st = fmt_ctx_->streams[actv_stm_idx_];
     return static_cast<double>(active_st->avg_frame_rate.num) / active_st->avg_frame_rate.den;
+}
+
+double VideoReader::GetRotation() const {
+    CHECK(actv_stm_idx_ >= 0);
+    CHECK(static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
+    AVStream *active_st = fmt_ctx_->streams[actv_stm_idx_];
+    AVDictionaryEntry *rotate = av_dict_get(active_st->metadata, "rotate", NULL, 0);
+
+    double theta = 0;
+    if (rotate && *rotate->value && strcmp(rotate->value, "0"))
+        theta = atof(rotate->value);
+
+    uint8_t* displaymatrix = av_stream_get_side_data(active_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
+    if (displaymatrix && !theta)
+        theta = -av_display_rotation_get((int32_t*) displaymatrix);
+
+    theta = std::fmod(theta, 360);
+    if(theta < 0) theta += 360;
+    
+    return theta;
 }
 
 std::vector<int64_t> VideoReader::GetKeyIndicesVector() const {

@@ -49,6 +49,7 @@ class VideoReader : public VideoReaderInterface {
         NDArray GetKeyIndices();
         NDArray GetFramePTS() const;
         double GetAverageFPS() const;
+        double GetRotation() const;
     protected:
         friend class VideoLoader;
         std::vector<int64_t> GetKeyIndicesVector() const;

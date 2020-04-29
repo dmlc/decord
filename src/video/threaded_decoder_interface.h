@@ -18,7 +18,7 @@ typedef enum {
 
 class ThreadedDecoderInterface {
     public:
-        virtual void SetCodecContext(AVCodecContext *dec_ctx, int width = -1, int height = -1) = 0;
+        virtual void SetCodecContext(AVCodecContext *dec_ctx, int width = -1, int height = -1, int rotation = 0) = 0;
         virtual void Start() = 0;
         virtual void Stop() = 0;
         virtual void Clear() = 0;

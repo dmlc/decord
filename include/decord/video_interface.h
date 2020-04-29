@@ -52,6 +52,8 @@ class VideoReaderInterface {
     virtual void SkipFrames(int64_t num = 1) = 0;
     /*! \brief get average fps */
     virtual double GetAverageFPS() const = 0;
+    /*! \brief get rotation */
+    virtual double GetRotation() const = 0;
     /*! \brief destructor */
     virtual ~VideoReaderInterface() = default;
 
