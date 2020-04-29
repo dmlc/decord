@@ -140,6 +140,8 @@ void VideoReader::SetVideoStream(int stream_nb) {
     }
 
     int rotation = static_cast<int>(GetRotation());
+    if(rotation == 90 or rotation == 270)
+        std::swap(width_, height_);
     decoder_->SetCodecContext(dec_ctx, width_, height_, rotation);
     IndexKeyframes();
 }
