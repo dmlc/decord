@@ -14,15 +14,28 @@ namespace ffmpeg {
 FFMPEGThreadedDecoder::FFMPEGThreadedDecoder() : frame_count_(0), draining_(false), run_(false), error_status_(false), error_message_() {
 }
 
-void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
+void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height, int rotation) {
     bool running = run_.load();
     Clear();
     dec_ctx_.reset(dec_ctx);
     // LOG(INFO) << dec_ctx->width << " x " << dec_ctx->height << " : " << dec_ctx->time_base.num << " , " << dec_ctx->time_base.den;
     // std::string descr = "scale=320:240";
     char descr[128];
-    std::snprintf(descr, sizeof(descr),
-            "scale=%d:%d", width, height);
+    switch(rotation) {
+        case 90:
+            std::snprintf(descr, sizeof(descr), "scale=%d:%d,transpose=1", width, height);
+            break;
+        case 180:
+            std::snprintf(descr, sizeof(descr), "scale=%d:%d,transpose=1,transpose=1", width, height);
+            break;
+        case 270:
+            std::snprintf(descr, sizeof(descr), "scale=%d:%d,transpose=2", width, height);
+            break;
+        case 0:
+        default:
+            std::snprintf(descr, sizeof(descr), "scale=%d:%d", width, height);
+            break;
+    }
     filter_graph_ = FFMPEGFilterGraphPtr(new FFMPEGFilterGraph(descr, dec_ctx_.get()));
     if (running) {
         Start();
