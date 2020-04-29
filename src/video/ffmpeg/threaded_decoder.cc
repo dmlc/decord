@@ -34,7 +34,6 @@ void FFMPEGThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, 
         case 0:
         default:
             std::snprintf(descr, sizeof(descr), "scale=%d:%d", width, height);
-            break;
     }
     filter_graph_ = FFMPEGFilterGraphPtr(new FFMPEGFilterGraph(descr, dec_ctx_.get()));
     if (running) {
