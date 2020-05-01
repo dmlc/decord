@@ -366,8 +366,11 @@ void VideoReader::IndexKeyframes() {
         }
         av_packet_unref(packet.get());
     }
+    std::sort(std::begin(frame_ts_), std::end(frame_ts_),
+            [](const AVFrameTime& a, const AVFrameTime& b) -> bool 
+                {return a.pts < b.pts;});
     curr_frame_ = GetFrameCount();
-	ret = Seek(0);
+    ret = Seek(0);
 }
 
 runtime::NDArray VideoReader::GetKeyIndices() {
