@@ -10,8 +10,8 @@ def _get_default_test_video():
 def _get_corrupted_test_video():
     return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', 'corrupted.mp4')))
 
-def _get_rotated_test_video(rot):
-    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', f'video_{rot}.mov')))
+def _get_rotated_test_video(rot, height=-1, width=-1):
+    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', f'video_{rot}.mov')), height=height, width=width)
 
 def _get_unordered_test_video():
     # video with frames not ordered by pts
@@ -19,7 +19,7 @@ def _get_unordered_test_video():
 
 def test_video_reader_len():
     vr = _get_default_test_video()
-    assert len(vr) == 311
+    assert len(vr) == 310
 
 def test_video_reader_read_sequential():
     vr = _get_default_test_video()
@@ -29,8 +29,8 @@ def test_video_reader_read_sequential():
 def test_video_reader_read_slice():
     vr = _get_default_test_video()
     frames = vr[:]
-    assert frames.shape[0] == len(vr) 
-    
+    assert frames.shape[0] == len(vr)
+
     vr = _get_default_test_video()
     frames = vr[:10]
     assert frames.shape[0] == 10
@@ -70,10 +70,10 @@ def test_rotated_video():
         # shot in portrait mode; correct orientation has
         # swapped width and height
         vr = _get_rotated_test_video(rot)
-        assert vr[0].shape == (568, 320, 3)
+        assert vr[0].shape == (568, 320, 3), vr[0].shape
         assert vr[:].shape == (3, 568, 320, 3)
-        vr = _get_rotated_test_video(rot, height=300, width=300)
-        assert vr[0].shape == (300, 200, 3)
+        vr = _get_rotated_test_video(rot, height=200, width=300)
+        assert vr[0].shape == (300, 200, 3), vr[0].shape
 
 def test_frame_timestamps():
     vr = _get_default_test_video()
@@ -88,7 +88,7 @@ def test_frame_timestamps():
         pts_time=0.062500 dts_time=0.031250
     '''
     frame_ts = vr.get_frame_timestamp(range(4))
-    assert np.allclose(frame_ts[:,0], [0.0, 0.03125, 0.0625, 0.09375])
+    assert np.allclose(frame_ts[:,0], [0.0, 0.03125, 0.0625, 0.09375]), frame_ts[:,0]
 
 
 if __name__ == '__main__':
