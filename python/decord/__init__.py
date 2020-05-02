@@ -7,6 +7,7 @@ from ._ffi.base import DECORDError, __version__
 
 from .base import ALL
 
+from . import ndarray as nd
 from .ndarray import cpu, gpu
 from . import bridge
 from . import logging
