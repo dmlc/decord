@@ -140,8 +140,9 @@ void VideoReader::SetVideoStream(int stream_nb) {
     }
 
     int rotation = static_cast<int>(GetRotation());
-    if(rotation == 90 or rotation == 270)
-        std::swap(width_, height_);
+    if (rotation == 90 || rotation == 270) {
+      std::swap(width_, height_);
+    }
     decoder_->SetCodecContext(dec_ctx, width_, height_, rotation);
     IndexKeyframes();
 }
@@ -367,7 +368,7 @@ void VideoReader::IndexKeyframes() {
         av_packet_unref(packet.get());
     }
     std::sort(std::begin(frame_ts_), std::end(frame_ts_),
-            [](const AVFrameTime& a, const AVFrameTime& b) -> bool 
+            [](const AVFrameTime& a, const AVFrameTime& b) -> bool
                 {return a.pts < b.pts;});
     curr_frame_ = GetFrameCount();
     ret = Seek(0);
@@ -417,7 +418,7 @@ double VideoReader::GetRotation() const {
 
     theta = std::fmod(theta, 360);
     if(theta < 0) theta += 360;
-    
+
     return theta;
 }
 
