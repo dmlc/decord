@@ -1,21 +1,23 @@
 import os
 import random
 import numpy as np
-from decord import VideoReader
+from decord import VideoReader, cpu, gpu
 from decord.base import DECORDError
 
-def _get_default_test_video():
-    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'examples', 'flipping_a_pancake.mkv')))
+CTX = cpu(0)
 
-def _get_corrupted_test_video():
-    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', 'corrupted.mp4')))
+def _get_default_test_video(ctx=CTX):
+    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'examples', 'flipping_a_pancake.mkv')), ctx=ctx)
 
-def _get_rotated_test_video(rot, height=-1, width=-1):
-    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', f'video_{rot}.mov')), height=height, width=width)
+def _get_corrupted_test_video(ctx=CTX):
+    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', 'corrupted.mp4')), ctx=ctx)
 
-def _get_unordered_test_video():
+def _get_rotated_test_video(rot, height=-1, width=-1, ctx=CTX):
+    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', f'video_{rot}.mov')), height=height, width=width, ctx=ctx)
+
+def _get_unordered_test_video(ctx=CTX):
     # video with frames not ordered by pts
-    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', 'unordered.mov')))
+    return VideoReader(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', 'unordered.mov')), ctx=ctx)
 
 def test_video_reader_len():
     vr = _get_default_test_video()
@@ -54,25 +56,27 @@ def test_video_get_batch():
 
 def test_video_corrupted_get_batch():
     from nose.tools import assert_raises
-    vr = _get_corrupted_test_video()
+    vr = _get_corrupted_test_video(ctx=cpu(0))
     assert_raises(DECORDError, vr.get_batch, range(40))
 
 def test_rotated_video():
-    # Input videos are all h=320 w=568, but
-    # with rotation metadata.
+    # Input videos are all h=320 w=568 in metadata, but
+    # rotation should be applied to recover correctly
+    # displayed image (from rotation metadata).
     for rot in [0, 180]:
-        # shot in landscape; correct orientation has
+        # shot in landscape; correct video orientation has
         # same shape as "original" frame
-        vr = _get_rotated_test_video(rot)
+        vr = _get_rotated_test_video(rot, ctx=cpu(0))
         assert vr[0].shape == (320, 568, 3)
         assert vr[:].shape == (3, 320, 568, 3)
     for rot in [90, 270]:
-        # shot in portrait mode; correct orientation has
-        # swapped width and height
-        vr = _get_rotated_test_video(rot)
+        # shot in portrait mode; correct video orientation has
+        # swapped width and height (height>>width)
+        vr = _get_rotated_test_video(rot, ctx=cpu(0))
         assert vr[0].shape == (568, 320, 3), vr[0].shape
         assert vr[:].shape == (3, 568, 320, 3)
-        vr = _get_rotated_test_video(rot, height=200, width=300)
+        # resize is applied in target shape
+        vr = _get_rotated_test_video(rot, height=300, width=200, ctx=cpu(0))
         assert vr[0].shape == (300, 200, 3), vr[0].shape
 
 def test_frame_timestamps():

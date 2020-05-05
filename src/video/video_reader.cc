@@ -107,8 +107,8 @@ void VideoReader::SetVideoStream(int stream_nb) {
     }
 
     auto dec_ctx = avcodec_alloc_context3(dec);
-	dec_ctx->thread_count = 0;
-	// LOG(INFO) << "Original decoder multithreading: " << dec_ctx->thread_count;
+    dec_ctx->thread_count = 0;
+    // LOG(INFO) << "Original decoder multithreading: " << dec_ctx->thread_count;
     // CHECK_GE(avcodec_copy_context(dec_ctx, fmt_ctx_->streams[stream_nb]->codec), 0) << "Error: copy context";
     // CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0) << "Error: copy parameters to codec context.";
     // copy codec parameters to context
@@ -128,21 +128,26 @@ void VideoReader::SetVideoStream(int stream_nb) {
     actv_stm_idx_ = st_nb;
     // LOG(INFO) << "time base: " << fmt_ctx_->streams[st_nb]->time_base.num << " / " << fmt_ctx_->streams[st_nb]->time_base.den;
     dec_ctx->time_base = fmt_ctx_->streams[st_nb]->time_base;
+
+    int rotation = static_cast<int>(GetRotation());
+    int original_width = codecpar->width;
+    int original_height = codecpar->height;
+
+    if ((rotation == 90 || rotation == 270) && ctx_.device_type != kDLGPU) {
+        std::swap(original_width, original_height);
+    }
+
     if (width_ < 1) {
-        width_ = codecpar->width;
+        width_ = original_width;
     }
     if (height_ < 1) {
-        height_ = codecpar->height;
+        height_ = original_height;
     }
 
     if (ctx_.device_type == kDLGPU) {
         ndarray_pool_ = NDArrayPool(0, {height_, width_, 3}, kUInt8, ctx_);
     }
 
-    int rotation = static_cast<int>(GetRotation());
-    if (rotation == 90 || rotation == 270) {
-      std::swap(width_, height_);
-    }
     decoder_->SetCodecContext(dec_ctx, width_, height_, rotation);
     IndexKeyframes();
 }

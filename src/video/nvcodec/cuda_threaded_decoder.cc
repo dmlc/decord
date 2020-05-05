@@ -96,7 +96,7 @@ void CUThreadedDecoder::InitBitStreamFilter(AVCodecParameters *codecpar, AVInput
     bsf_ctx_.reset(bsf_ctx);
 }
 
-void CUThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height) {
+void CUThreadedDecoder::SetCodecContext(AVCodecContext *dec_ctx, int width, int height, int rotation) {
     CHECK(dec_ctx);
     width_ = width;
     height_ = height;
