@@ -22,9 +22,9 @@ using FFMPEGThreadedDecoder = ffmpeg::FFMPEGThreadedDecoder;
 using AVFramePool = ffmpeg::AVFramePool;
 using AVPacketPool = ffmpeg::AVPacketPool;
 
-VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height)
+VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread)
      : ctx_(ctx), key_indices_(), frame_ts_(), codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0),
-     width_(width), height_(height), eof_(false) {
+     nb_thread_decoding_(nb_thread), width_(width), height_(height), eof_(false) {
     // av_register_all deprecated in latest versions
     #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
     av_register_all();
@@ -107,7 +107,8 @@ void VideoReader::SetVideoStream(int stream_nb) {
     }
 
     auto dec_ctx = avcodec_alloc_context3(dec);
-    dec_ctx->thread_count = 0;
+    // LOG(INFO) << "nb_thread_decoding_: " << nb_thread_decoding_;
+    dec_ctx->thread_count = nb_thread_decoding_;
     // LOG(INFO) << "Original decoder multithreading: " << dec_ctx->thread_count;
     // CHECK_GE(avcodec_copy_context(dec_ctx, fmt_ctx_->streams[stream_nb]->codec), 0) << "Error: copy context";
     // CHECK_GE(avcodec_parameters_to_context(dec_ctx, fmt_ctx_->streams[st_nb]->codecpar), 0) << "Error: copy parameters to codec context.";

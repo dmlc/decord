@@ -34,7 +34,7 @@ class VideoReader : public VideoReaderInterface {
     using ThreadedDecoderPtr = std::unique_ptr<ThreadedDecoderInterface>;
     using NDArray = runtime::NDArray;
     public:
-        VideoReader(std::string fn, DLContext ctx, int width=-1, int height=-1);
+        VideoReader(std::string fn, DLContext ctx, int width=-1, int height=-1, int nb_thread=0);
         /*! \brief Destructor, note that FFMPEG resources has to be managed manually to avoid resource leak */
         ~VideoReader();
         void SetVideoStream(int stream_nb = -1);
@@ -73,6 +73,7 @@ class VideoReader : public VideoReaderInterface {
         ffmpeg::AVFormatContextPtr fmt_ctx_;
         ThreadedDecoderPtr decoder_;
         int64_t curr_frame_;  // current frame location
+        int64_t nb_thread_decoding_;  // number of threads for decoding
         int width_;   // output video width
         int height_;  // output video height
         bool eof_;  // end of file indicator
