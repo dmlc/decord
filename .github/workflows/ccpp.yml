@@ -1,0 +1,27 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: install dependencies
+      run: sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
+    - name: configure
+      run: mkdir build && cd build && cmake .. -DUSE_CUDA=0
+    - name: make
+      run: make
+    - name: python install
+      run: pip3 install -e ../python
+    - name: sanity test
+      run: python3 -c "import decord; print(decord.__version__)"
