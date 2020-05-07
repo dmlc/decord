@@ -20,8 +20,8 @@ jobs:
     - name: configure
       run: mkdir build && cd build && cmake .. -DUSE_CUDA=0
     - name: make
-      run: make
+      run: cd build && make -j$(nproc)
     - name: python install
-      run: pip3 install -e ../python
+      run: pip3 install -e ./python
     - name: sanity test
       run: python3 -c "import decord; print(decord.__version__)"
