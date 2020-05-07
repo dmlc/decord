@@ -31,10 +31,11 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetVideoReader")
     int device_id = args[2];
     int width = args[3];
     int height = args[4];
+    int num_thread = args[5];
     DLContext ctx;
     ctx.device_type = static_cast<DLDeviceType>(device_type);
     ctx.device_id = device_id;
-    VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(new VideoReader(fn, ctx, width, height));
+    VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(new VideoReader(fn, ctx, width, height, num_thread));
     *rv = handle;
   });
 

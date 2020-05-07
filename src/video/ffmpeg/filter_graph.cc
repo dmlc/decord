@@ -40,9 +40,9 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 	// AVBufferSinkParams *buffersink_params;
 
 	filter_graph_.reset(avfilter_graph_alloc());
-	/* automatic threading */
+	/* set threads to 1, details see https://github.com/dmlc/decord/pull/63 */
 	//LOG(INFO) << "Original GraphFilter nb_threads: " << filter_graph_->nb_threads;
-	filter_graph_->nb_threads = 0;
+	filter_graph_->nb_threads = 1;
     /* buffer video source: the decoded frames from the decoder will be inserted here. */
 	std::snprintf(args, sizeof(args),
             "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
