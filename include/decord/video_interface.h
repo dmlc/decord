@@ -62,7 +62,7 @@ class VideoReaderInterface {
     // virtual runtime::NDArray Seek(uint64_t pos) = 0;
     /**
      * \brief Seek to nearest keyframe before frame pos
-     * 
+     *
      * \param pos The frame position
      * \return true Success
      * \return false Failed
@@ -70,7 +70,7 @@ class VideoReaderInterface {
     virtual bool Seek(int64_t pos) = 0;
     /**
      * \brief Seek accurately to given position
-     * 
+     *
      * \param pos Frame position
      * \return true Success
      * \return false Failed
@@ -81,11 +81,12 @@ class VideoReaderInterface {
 };  // class VideoReader
 
 
-DECORD_DLL VideoReaderPtr GetVideoReader(std::string fname, DLContext ctx);
+DECORD_DLL VideoReaderPtr GetVideoReader(std::string fname, DLContext ctx,
+                                         int width=-1, int height=-1, int nb_thread=0);
 
 /**
  * \brief Interface of VideoLoader, pure virtual class
- * 
+ *
  */
 class VideoLoaderInterface {
     public:

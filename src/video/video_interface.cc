@@ -17,9 +17,9 @@
 
 namespace decord {
 
-VideoReaderPtr GetVideoReader(std::string fn, DLContext ctx) {
+VideoReaderPtr GetVideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread) {
     std::shared_ptr<VideoReaderInterface> ptr;
-    ptr = std::make_shared<VideoReader>(fn, ctx);
+    ptr = std::make_shared<VideoReader>(fn, ctx, width, height, nb_thread);
     return ptr;
 }
 
