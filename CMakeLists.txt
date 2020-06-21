@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.8.2)
 project(decord C CXX)
 
 # Utility functions
@@ -59,7 +59,7 @@ if(MSVC)
 else(MSVC)
   include(CheckCXXCompilerFlag)
   check_cxx_compiler_flag("-std=c++11"    SUPPORT_CXX11)
-  set(CMAKE_CUDA_FLAGS "-std=c++11 ${CMAKE_CUDA_FLAGS}")
+  #set(CMAKE_CUDA_FLAGS "-std=c++11 ${CMAKE_CUDA_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     message(STATUS "Build in Debug mode")
@@ -98,6 +98,7 @@ add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS
 # target_compile_features(decord PUBLIC cxx_std_11)
 
 target_link_libraries(decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS})
+set_property(TARGET decord PROPERTY CUDA_STANDARD 11)
 
 # More target definitions
 if(MSVC)
