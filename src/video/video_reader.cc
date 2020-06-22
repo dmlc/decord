@@ -10,7 +10,6 @@
 #include "nvcodec/cuda_threaded_decoder.h"
 #endif
 #include <algorithm>
-#include <cstring>
 #include <decord/runtime/ndarray.h>
 #include <decord/runtime/c_runtime_api.h>
 

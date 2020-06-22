@@ -1,7 +1,6 @@
 """Video Reader."""
 from __future__ import absolute_import
 
-import io
 import ctypes
 import numpy as np
 

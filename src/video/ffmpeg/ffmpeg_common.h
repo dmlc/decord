@@ -263,7 +263,7 @@ class AVIOBytesContext {
         if (ctx_) {
             av_freep(&ctx_->buffer);
         }
-        // avio_context_free(&ctx_);
+        avio_context_free(&ctx_);
     }
 
     AVIOContext* get_avio() {
