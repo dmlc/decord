@@ -16,6 +16,13 @@
 namespace decord {
 typedef void* VideoReaderInterfaceHandle;
 typedef void* VideoLoaderInterfaceHandle;
+typedef void* BytesArrayHandle;
+
+enum IOType {
+    kNormal = 0U,    // normal file or URL
+    kDevice,         // device, e.g., camera
+    kBytes,          // raw bytes, e.g., raw data read from python file like object
+};
 
 enum VideoLoaderShuffleType {
     kSequential = 0U,
@@ -82,7 +89,8 @@ class VideoReaderInterface {
 
 
 DECORD_DLL VideoReaderPtr GetVideoReader(std::string fname, DLContext ctx,
-                                         int width=-1, int height=-1, int nb_thread=0);
+                                         int width=-1, int height=-1, int nb_thread=0,
+                                         int io_type=kNormal);
 
 /**
  * \brief Interface of VideoLoader, pure virtual class

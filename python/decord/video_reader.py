@@ -1,6 +1,7 @@
 """Video Reader."""
 from __future__ import absolute_import
 
+import io
 import ctypes
 import numpy as np
 
@@ -33,10 +34,17 @@ class VideoReader(object):
 
     """
     def __init__(self, uri, ctx=cpu(0), width=-1, height=-1, num_threads=0):
-        assert isinstance(ctx, DECORDContext)
         self._handle = None
-        self._handle = _CAPI_VideoReaderGetVideoReader(
-            uri, ctx.device_type, ctx.device_id, width, height, num_threads)
+        assert isinstance(ctx, DECORDContext)
+        io_type = 0
+        fn = uri
+        if isinstance(uri, io.IOBase):
+            ba = bytearray(uri.read())
+            self._handle = _CAPI_VideoReaderGetVideoReaderFromBytes(
+                ba, ctx.device_type, ctx.device_id, width, height, num_threads)
+        else:
+            self._handle = _CAPI_VideoReaderGetVideoReader(
+                fn, ctx.device_type, ctx.device_id, width, height, num_threads, io_type, "")
         if self._handle is None:
             raise RuntimeError("Error reading " + uri + "...")
         self._num_frame = _CAPI_VideoReaderGetFrameCount(self._handle)

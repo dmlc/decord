@@ -10,6 +10,7 @@
 #include "nvcodec/cuda_threaded_decoder.h"
 #endif
 #include <algorithm>
+#include <cstring>
 #include <decord/runtime/ndarray.h>
 #include <decord/runtime/c_runtime_api.h>
 
@@ -22,22 +23,90 @@ using FFMPEGThreadedDecoder = ffmpeg::FFMPEGThreadedDecoder;
 using AVFramePool = ffmpeg::AVFramePool;
 using AVPacketPool = ffmpeg::AVPacketPool;
 
-VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread)
-     : ctx_(ctx), key_indices_(), frame_ts_(), codecs_(), actv_stm_idx_(-1), decoder_(), curr_frame_(0),
-     nb_thread_decoding_(nb_thread), width_(width), height_(height), eof_(false) {
+
+struct buffer_data {
+    uint8_t *ptr;
+    size_t size; ///< size left in the buffer
+};
+static int read_packet(void *opaque, uint8_t *buf, int buf_size)
+{
+    struct buffer_data *bd = (struct buffer_data *)opaque;
+    buf_size = FFMIN(buf_size, bd->size);
+    if (!buf_size)
+        return AVERROR_EOF;
+    // printf("ptr:%p size:%zu\n", bd->ptr, bd->size);
+    // printf("size:%zu\n", buf_size);
+    /* copy internal buffer data to buf */
+    memcpy(buf, bd->ptr, buf_size);
+    bd->ptr  += buf_size;
+    bd->size -= buf_size;
+    return buf_size;
+}
+
+static AVIOContext *avio_ctx = NULL;
+static uint8_t *buffer = NULL;
+static uint8_t *avio_ctx_buffer = NULL;
+static size_t buffer_size;
+static size_t avio_ctx_buffer_size = 4096;
+static struct buffer_data bd = { 0 };
+
+VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread, int io_type, const char* io_format)
+     : ctx_(ctx), key_indices_(), frame_ts_(), codecs_(), actv_stm_idx_(-1), fmt_ctx_(nullptr), decoder_(nullptr), curr_frame_(0),
+     nb_thread_decoding_(nb_thread), width_(width), height_(height), eof_(false), io_ctx_() {
     // av_register_all deprecated in latest versions
     #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
     av_register_all();
     #endif
 
     AVFormatContext *fmt_ctx = nullptr;
-    int open_ret = avformat_open_input(&fmt_ctx, fn.c_str(), NULL, NULL);
+    int open_ret = 1;
+    if (io_type == kDevice) {
+        #ifdef DECORD_USE_LIBAVDEVICE
+            avdevice_register_all();
+            fmt_ctx = avformat_alloc_context();
+            CHECK(fmt_ctx) << "Unable to alloc avformat context";
+            AVInputFormat *ifmt = av_find_input_format(io_format);
+            CHECK(ifmt) << "Unable to find input format: " << io_format;
+            std::string device_name = "video=" + fn;
+            open_ret = avformat_open_input(&fmt_ctx, device_name.c_str(), ifmt, NULL);
+            
+        #else
+            LOG(FATAL) << "Unable to process device IO as decord is not built with libavdevice!";
+        #endif
+    } else if (io_type == kBytes) {
+        // LOG(INFO) << "fn size: " << fn.size() << " value: " << fn.substr(0, 10);
+        io_ctx_ = ffmpeg::AVIOBytesContext(fn, 32768);
+        av_file_map("/home/joshua/Dev/decord/examples/flipping_a_pancake.mkv", &buffer, &buffer_size, 0, NULL);
+        bd.ptr  = buffer;
+        bd.size = buffer_size;
+        LOG(INFO) << "ptr: " << bd.ptr << " bd size: " << bd.size;
+        fmt_ctx = avformat_alloc_context();
+        CHECK(fmt_ctx != nullptr) << "Unable to alloc avformat context";
+        avio_ctx_buffer = static_cast<uint8_t*>(av_malloc(avio_ctx_buffer_size));
+        avio_ctx = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size,
+                                      0, &bd, &read_packet, NULL, NULL);
+        // LOG(INFO) << "io ctx: " << (AVIOContext*)io_ctx_;
+        fmt_ctx->pb = (AVIOContext*)io_ctx_;
+        // fmt_ctx->pb = avio_ctx;
+        open_ret = avformat_open_input(&fmt_ctx, NULL, NULL, NULL);
+        LOG(INFO) << "open ret: " << open_ret;
+    } else if (io_type == kNormal) {
+        open_ret = avformat_open_input(&fmt_ctx, fn.c_str(), NULL, NULL);
+    } else {
+        LOG(WARNING) << "Invalid io type: " << io_type;
+    }
+
     if( open_ret != 0 ) {
         char errstr[200];
         av_strerror(open_ret, errstr, 200);
-        LOG(FATAL) << "ERROR opening file: " << fn.c_str() << ", " << errstr;
+        if (io_type != kBytes) {
+            LOG(WARNING) << "ERROR opening: " << fn.c_str() << ", " << errstr;
+        } else {
+            LOG(WARNING) << "ERROR opening " << fn.size() << " bytes, " << errstr;
+        }
         return;
     }
+    
     fmt_ctx_.reset(fmt_ctx);
 
     // find stream info
@@ -80,7 +149,7 @@ VideoReader::~VideoReader(){
 }
 
 void VideoReader::SetVideoStream(int stream_nb) {
-    CHECK(fmt_ctx_ != NULL);
+    if (!fmt_ctx_) return;
     AVCodec *dec;
     int st_nb = av_find_best_stream(fmt_ctx_.get(), AVMEDIA_TYPE_VIDEO, stream_nb, -1, &dec, 0);
     // LOG(INFO) << "find best stream: " << st_nb;
@@ -154,7 +223,7 @@ void VideoReader::SetVideoStream(int stream_nb) {
 }
 
 unsigned int VideoReader::QueryStreams() const {
-    CHECK(fmt_ctx_ != NULL);
+    if (!fmt_ctx_) return 0;
     for (unsigned int i = 0; i < fmt_ctx_->nb_streams; ++i) {
         // iterate and print stream info
         // feel free to add more if needed
@@ -189,6 +258,7 @@ unsigned int VideoReader::QueryStreams() const {
 }
 
 int64_t VideoReader::GetFrameCount() const {
+    if (!fmt_ctx_) return 0;
     if (frame_ts_.size() > 0) {
         return frame_ts_.size();
     }
@@ -205,6 +275,7 @@ int64_t VideoReader::GetFrameCount() const {
 }
 
 int64_t VideoReader::GetCurrentPosition() const {
+    if (!fmt_ctx_) return 0;
     return curr_frame_;
 }
 
@@ -225,6 +296,7 @@ std::vector<int64_t> VideoReader::FramesToPTS(const std::vector<int64_t>& positi
 }
 
 bool VideoReader::Seek(int64_t pos) {
+    if (!fmt_ctx_) return false;
     if (curr_frame_ == pos) return true;
     decoder_->Clear();
     eof_ = false;
@@ -249,6 +321,7 @@ int64_t VideoReader::LocateKeyframe(int64_t pos) {
 }
 
 bool VideoReader::SeekAccurate(int64_t pos) {
+    if (!fmt_ctx_) return false;
     if (curr_frame_ == pos) return true;
     int64_t key_pos = LocateKeyframe(pos);
     int64_t curr_key_pos = LocateKeyframe(curr_frame_);
@@ -334,6 +407,7 @@ NDArray VideoReader::NextFrameImpl() {
 }
 
 NDArray VideoReader::NextFrame() {
+    if (!fmt_ctx_) return NDArray();
     return  NextFrameImpl();
 }
 
@@ -381,6 +455,7 @@ void VideoReader::IndexKeyframes() {
 }
 
 runtime::NDArray VideoReader::GetKeyIndices() {
+    if (!fmt_ctx_) return NDArray();
     std::vector<int64_t> shape = {static_cast<int64_t>(key_indices_.size())};
     runtime::NDArray ret = runtime::NDArray::Empty(shape, kInt64, kCPU);
     ret.CopyFrom<int64_t>(key_indices_, shape);
@@ -388,6 +463,7 @@ runtime::NDArray VideoReader::GetKeyIndices() {
 }
 
 runtime::NDArray VideoReader::GetFramePTS() const {
+    if (!fmt_ctx_) return NDArray();
     // copy to ndarray
     std::vector<float> tmp(frame_ts_.size() * 2, 0);
     for (size_t i = 0; i < frame_ts_.size(); ++i) {
@@ -402,6 +478,7 @@ runtime::NDArray VideoReader::GetFramePTS() const {
 }
 
 double VideoReader::GetAverageFPS() const {
+    if (!fmt_ctx_) return 0.0;
     CHECK(actv_stm_idx_ >= 0);
     CHECK(static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
     AVStream *active_st = fmt_ctx_->streams[actv_stm_idx_];
@@ -409,6 +486,7 @@ double VideoReader::GetAverageFPS() const {
 }
 
 double VideoReader::GetRotation() const {
+    if (!fmt_ctx_) return 0.0;
     CHECK(actv_stm_idx_ >= 0);
     CHECK(static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
     AVStream *active_st = fmt_ctx_->streams[actv_stm_idx_];
@@ -433,6 +511,7 @@ std::vector<int64_t> VideoReader::GetKeyIndicesVector() const {
 }
 
 void VideoReader::SkipFrames(int64_t num) {
+    if (!fmt_ctx_) return;
     // check if skip pass keyframes, if so, we can seek to latest keyframe first
     // LOG(INFO) << " Skip Frame start: " << num << " current frame: " << curr_frame_;
     if (num < 1) return;
@@ -472,6 +551,7 @@ void VideoReader::SkipFrames(int64_t num) {
 }
 
 NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
+    if (!fmt_ctx_) return NDArray();
     std::size_t bs = indices.size();
     // find the first occurance of each index to avoid duplicate access
     std::unordered_map<int64_t, std::size_t> unique_indices;

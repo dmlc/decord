@@ -22,6 +22,7 @@ extern "C" {
 #endif
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavformat/avio.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
@@ -31,6 +32,10 @@ extern "C" {
 #include <libavutil/version.h>
 #include <libavutil/dict.h>
 #include <libavutil/display.h>
+#include <libavutil/file.h>
+#ifdef DECORD_USE_LIBAVDEVICE
+#include <libavdevice/avdevice.h>
+#endif
 #ifdef __cplusplus
 }
 #endif
@@ -221,6 +226,87 @@ struct AVFrameManager {
 	AVFramePtr ptr;
   int64_t shape[3];
 	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
+};
+
+class AVIOBytesContext {
+  public:
+    AVIOBytesContext() : ctx_(nullptr), pos_(0) {}
+
+    AVIOBytesContext(std::string data, size_t buffer_size): ctx_(nullptr), pos_(0), data_(data), buffer_size_(buffer_size), buffer_(nullptr) {
+        if (buffer_size_ < data_.size()) {
+            // no need to allocate buffer that's larger than the original bytes
+            buffer_size_ = data_.size();
+        }
+        buffer_ = static_cast<uint8_t*>(av_malloc(buffer_size_));
+        if (!buffer_) {
+            LOG(WARNING) << "Unable to allocate AVIOBytes buffer with size: " << buffer_size_;
+            return;
+        }
+
+        LOG(INFO) << "buffer: " << buffer_ << " buffer size: " << buffer_size_;
+
+        ctx_ = avio_alloc_context((unsigned char*) buffer_, buffer_size_, 0, this, 
+                                &AVIOBytesContext::read, 0, &AVIOBytesContext::seek);
+        if (!ctx_) {
+            LOG(WARNING) << "Unable to allocate AVIOContext!";
+            return;
+        }
+        LOG(INFO) << "buffer: " << (void*)buffer_ << " buffer size: " << buffer_size_;
+    }
+
+    ~AVIOBytesContext() {
+        if (ctx_) {
+            av_freep(&ctx_->buffer);
+        }
+        // avio_context_free(&ctx_);
+    }
+
+    operator AVIOContext*() const {
+        CHECK(ctx_) << "Error retriving uninitialized AVIOContext";
+        return ctx_;
+    }
+
+    static int read(void *opaque, uint8_t *buf, int buf_size) {
+        AVIOBytesContext* this_ = static_cast<AVIOBytesContext*>(opaque);
+        // Read from pos to pos + buf_size
+        LOG(INFO) << "pos: " << this_->pos_;
+        if (this_->pos_ + buf_size > this_->data_.size())
+        {
+            int len = this_->data_.size() - this_->pos_;
+            memcpy(buf, this_->data_.data() + this_->pos_, len);
+            return len;
+        }
+        else
+        {
+            memcpy(buf, this_->data_.data() + this_->pos_, buf_size);
+            return buf_size;
+        }
+    }
+
+    static int64_t seek(void *opaque, int64_t offset, int whence)
+    {
+        AVIOBytesContext* this_ = static_cast<AVIOBytesContext*>(opaque);
+
+        if (offset + whence > static_cast<int64_t>(this_->data_.size()))
+        {
+            this_->pos_ = this_->data_.size();
+
+            return -1;
+        }
+        else
+        {
+            this_->pos_ = offset + whence;
+
+            return 0;
+        }
+    }
+
+  private:
+    AVIOContext* ctx_;
+    size_t pos_;
+    std::string data_;
+    size_t buffer_size_;
+    uint8_t *buffer_;
 };
 
 }  // namespace ffmpeg

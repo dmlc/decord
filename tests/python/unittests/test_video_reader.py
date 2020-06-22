@@ -94,6 +94,12 @@ def test_frame_timestamps():
     frame_ts = vr.get_frame_timestamp(range(4))
     assert np.allclose(frame_ts[:,0], [0.0, 0.03125, 0.0625, 0.09375]), frame_ts[:,0]
 
+def test_bytes_io():
+    fn = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'examples', 'flipping_a_pancake.mkv'))
+    with open(fn, 'rb') as f:
+        vr = VideoReader(f)
+        print(len(vr))
+
 
 if __name__ == '__main__':
     import nose
