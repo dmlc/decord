@@ -22,59 +22,10 @@ using AVPacketPtr = ffmpeg::AVPacketPtr;
 using FFMPEGThreadedDecoder = ffmpeg::FFMPEGThreadedDecoder;
 using AVFramePool = ffmpeg::AVFramePool;
 using AVPacketPool = ffmpeg::AVPacketPool;
+static const int AVIO_BUFFER_SIZE = 40960;
 
 
-struct buffer_data {
-    uint8_t *ptr;
-    size_t size; ///< size left in the buffer
-    uint8_t *ori_ptr;
-    size_t file_size;
-};
-static int read_packet(void *opaque, uint8_t *buf, int buf_size)
-{
-    struct buffer_data *bd = (struct buffer_data *)opaque;
-    buf_size = FFMIN(buf_size, bd->size);
-    if (!buf_size)
-        return AVERROR_EOF;
-    // printf("ptr:%p size:%zu\n", bd->ptr, bd->size);
-    // printf("size:%zu\n", buf_size);
-    /* copy internal buffer data to buf */
-    memcpy(buf, bd->ptr, buf_size);
-    bd->ptr  += buf_size;
-    bd->size -= buf_size;
-    return buf_size;
-}
-static int64_t seek_in_buffer(void *opaque, int64_t offset, int whence)
-{
-  buffer_data *bd = (buffer_data *)opaque;
-  int64_t ret = -1;
-
-  // printf("whence=%d , offset=%lld , file_size=%ld\n", whence, offset, bd->file_size);
-  switch (whence)
-  {
-    case AVSEEK_SIZE:
-        ret = bd->file_size;
-        break;
-    case SEEK_SET:
-        bd->ptr = bd->ori_ptr + offset;
-        bd->size = bd->file_size - offset;
-        ret = offset;
-        break;
-    default:
-        LOG(INFO) << " whence not reco: " << whence;
-        break;
-  }
-  return ret;
-}
-
-static AVIOContext *avio_ctx = NULL;
-static uint8_t *buffer = NULL;
-static uint8_t *avio_ctx_buffer = NULL;
-static size_t buffer_size;
-static size_t avio_ctx_buffer_size = 40960;
-static struct buffer_data bd = { 0 };
-
-VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread, int io_type, const char* io_format)
+VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread, int io_type)
      : ctx_(ctx), key_indices_(), frame_ts_(), codecs_(), actv_stm_idx_(-1), fmt_ctx_(nullptr), decoder_(nullptr), curr_frame_(0),
      nb_thread_decoding_(nb_thread), width_(width), height_(height), eof_(false), io_ctx_() {
     // av_register_all deprecated in latest versions
@@ -85,40 +36,30 @@ VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, i
     AVFormatContext *fmt_ctx = nullptr;
     int open_ret = 1;
     if (io_type == kDevice) {
-        #ifdef DECORD_USE_LIBAVDEVICE
-            avdevice_register_all();
-            fmt_ctx = avformat_alloc_context();
-            CHECK(fmt_ctx) << "Unable to alloc avformat context";
-            AVInputFormat *ifmt = av_find_input_format(io_format);
-            CHECK(ifmt) << "Unable to find input format: " << io_format;
-            std::string device_name = "video=" + fn;
-            open_ret = avformat_open_input(&fmt_ctx, device_name.c_str(), ifmt, NULL);
-            
-        #else
-            LOG(FATAL) << "Unable to process device IO as decord is not built with libavdevice!";
-        #endif
-    } else if (io_type == kBytes) {
-        // LOG(INFO) << "fn size: " << fn.size() << " value: " << fn.substr(0, 10);
-        io_ctx_ = ffmpeg::AVIOBytesContext(fn, 4096);
-        // av_file_map("/home/joshua/Dev/decord/examples/flipping_a_pancake.mkv", &buffer, &buffer_size, 0, NULL);
-        buffer = static_cast<uint8_t*>(av_malloc(fn.size()));
-        buffer_size = fn.size();
-        memcpy(buffer, fn.data(), fn.size());
-        bd.ptr  = buffer;
-        bd.ori_ptr = buffer;
-        bd.size = buffer_size;
-        bd.file_size = buffer_size;
-        LOG(INFO) << "ptr: " << bd.ptr << " bd size: " << bd.size;
+        LOG(WARNING) << "Not implemented";
+        return;
+        // #ifdef DECORD_USE_LIBAVDEVICE
+        //     avdevice_register_all();
+        //     fmt_ctx = avformat_alloc_context();
+        //     CHECK(fmt_ctx) << "Unable to alloc avformat context";
+        //     AVInputFormat *ifmt = av_find_input_format(io_format);
+        //     CHECK(ifmt) << "Unable to find input format: " << io_format;
+        //     std::string device_name = "video=" + fn;
+        //     open_ret = avformat_open_input(&fmt_ctx, device_name.c_str(), ifmt, NULL);
+        // #else
+        //     LOG(WARNING) << "Unable to process device IO as decord is not built with libavdevice!";
+        //     return;
+        // #endif
+    } else if (io_type == kRawBytes) {
+        io_ctx_.reset(new ffmpeg::AVIOBytesContext(fn, AVIO_BUFFER_SIZE));
         fmt_ctx = avformat_alloc_context();
         CHECK(fmt_ctx != nullptr) << "Unable to alloc avformat context";
-        avio_ctx_buffer = static_cast<uint8_t*>(av_malloc(avio_ctx_buffer_size));
-        avio_ctx = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size,
-                                      0, &bd, &read_packet, NULL, &seek_in_buffer);
-        // LOG(INFO) << "io ctx: " << (AVIOContext*)io_ctx_;
-        // fmt_ctx->pb = (AVIOContext*)io_ctx_;
-        fmt_ctx->pb = avio_ctx;
+        fmt_ctx->pb = io_ctx_->get_avio();
+        if (!fmt_ctx->pb) {
+            LOG(WARNING) << "Unable to init AVIO from memory buffer";
+            return;
+        }
         open_ret = avformat_open_input(&fmt_ctx, NULL, NULL, NULL);
-        LOG(INFO) << "open ret: " << open_ret;
     } else if (io_type == kNormal) {
         open_ret = avformat_open_input(&fmt_ctx, fn.c_str(), NULL, NULL);
     } else {

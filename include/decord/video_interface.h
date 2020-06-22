@@ -21,7 +21,7 @@ typedef void* BytesArrayHandle;
 enum IOType {
     kNormal = 0U,    // normal file or URL
     kDevice,         // device, e.g., camera
-    kBytes,          // raw bytes, e.g., raw data read from python file like object
+    kRawBytes,          // raw bytes, e.g., raw data read from python file like object
 };
 
 enum VideoLoaderShuffleType {
