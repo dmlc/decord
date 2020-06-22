@@ -27,6 +27,8 @@ using AVPacketPool = ffmpeg::AVPacketPool;
 struct buffer_data {
     uint8_t *ptr;
     size_t size; ///< size left in the buffer
+    uint8_t *ori_ptr;
+    size_t file_size;
 };
 static int read_packet(void *opaque, uint8_t *buf, int buf_size)
 {
@@ -42,12 +44,34 @@ static int read_packet(void *opaque, uint8_t *buf, int buf_size)
     bd->size -= buf_size;
     return buf_size;
 }
+static int64_t seek_in_buffer(void *opaque, int64_t offset, int whence)
+{
+  buffer_data *bd = (buffer_data *)opaque;
+  int64_t ret = -1;
+
+  // printf("whence=%d , offset=%lld , file_size=%ld\n", whence, offset, bd->file_size);
+  switch (whence)
+  {
+    case AVSEEK_SIZE:
+        ret = bd->file_size;
+        break;
+    case SEEK_SET:
+        bd->ptr = bd->ori_ptr + offset;
+        bd->size = bd->file_size - offset;
+        ret = offset;
+        break;
+    default:
+        LOG(INFO) << " whence not reco: " << whence;
+        break;
+  }
+  return ret;
+}
 
 static AVIOContext *avio_ctx = NULL;
 static uint8_t *buffer = NULL;
 static uint8_t *avio_ctx_buffer = NULL;
 static size_t buffer_size;
-static size_t avio_ctx_buffer_size = 4096;
+static size_t avio_ctx_buffer_size = 40960;
 static struct buffer_data bd = { 0 };
 
 VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread, int io_type, const char* io_format)
@@ -75,19 +99,24 @@ VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, i
         #endif
     } else if (io_type == kBytes) {
         // LOG(INFO) << "fn size: " << fn.size() << " value: " << fn.substr(0, 10);
-        io_ctx_ = ffmpeg::AVIOBytesContext(fn, 32768);
-        av_file_map("/home/joshua/Dev/decord/examples/flipping_a_pancake.mkv", &buffer, &buffer_size, 0, NULL);
+        io_ctx_ = ffmpeg::AVIOBytesContext(fn, 4096);
+        // av_file_map("/home/joshua/Dev/decord/examples/flipping_a_pancake.mkv", &buffer, &buffer_size, 0, NULL);
+        buffer = static_cast<uint8_t*>(av_malloc(fn.size()));
+        buffer_size = fn.size();
+        memcpy(buffer, fn.data(), fn.size());
         bd.ptr  = buffer;
+        bd.ori_ptr = buffer;
         bd.size = buffer_size;
+        bd.file_size = buffer_size;
         LOG(INFO) << "ptr: " << bd.ptr << " bd size: " << bd.size;
         fmt_ctx = avformat_alloc_context();
         CHECK(fmt_ctx != nullptr) << "Unable to alloc avformat context";
         avio_ctx_buffer = static_cast<uint8_t*>(av_malloc(avio_ctx_buffer_size));
         avio_ctx = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size,
-                                      0, &bd, &read_packet, NULL, NULL);
+                                      0, &bd, &read_packet, NULL, &seek_in_buffer);
         // LOG(INFO) << "io ctx: " << (AVIOContext*)io_ctx_;
-        fmt_ctx->pb = (AVIOContext*)io_ctx_;
-        // fmt_ctx->pb = avio_ctx;
+        // fmt_ctx->pb = (AVIOContext*)io_ctx_;
+        fmt_ctx->pb = avio_ctx;
         open_ret = avformat_open_input(&fmt_ctx, NULL, NULL, NULL);
         LOG(INFO) << "open ret: " << open_ret;
     } else if (io_type == kNormal) {

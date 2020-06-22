@@ -233,7 +233,7 @@ class AVIOBytesContext {
     AVIOBytesContext() : ctx_(nullptr), pos_(0) {}
 
     AVIOBytesContext(std::string data, size_t buffer_size): ctx_(nullptr), pos_(0), data_(data), buffer_size_(buffer_size), buffer_(nullptr) {
-        if (buffer_size_ < data_.size()) {
+        if (buffer_size_ > data_.size()) {
             // no need to allocate buffer that's larger than the original bytes
             buffer_size_ = data_.size();
         }
@@ -251,7 +251,7 @@ class AVIOBytesContext {
             LOG(WARNING) << "Unable to allocate AVIOContext!";
             return;
         }
-        LOG(INFO) << "buffer: " << (void*)buffer_ << " buffer size: " << buffer_size_;
+        LOG(INFO) << "buffer: " << (void*)buffer_ << " buffer size: " << buffer_size_ << " pos: " << pos_;
     }
 
     ~AVIOBytesContext() {
@@ -269,17 +269,15 @@ class AVIOBytesContext {
     static int read(void *opaque, uint8_t *buf, int buf_size) {
         AVIOBytesContext* this_ = static_cast<AVIOBytesContext*>(opaque);
         // Read from pos to pos + buf_size
-        LOG(INFO) << "pos: " << this_->pos_;
-        if (this_->pos_ + buf_size > this_->data_.size())
-        {
-            int len = this_->data_.size() - this_->pos_;
+        LOG(INFO) << "buf_size: " << buf_size << " : " << static_cast<int>(this_->pos_) << " :" << static_cast<int>(this_->data_.size() - this_->pos_);
+        int len = std::min(buf_size, static_cast<int>(this_->data_.size() - this_->pos_));
+        LOG(INFO) << "pos: " << this_->pos_ << " ptr: " << this_->data_.data() << " size: " << this_->data_.size() << " len: " << len;
+        if (len > 0) {
             memcpy(buf, this_->data_.data() + this_->pos_, len);
+            // this_->pos_ += len;
             return len;
-        }
-        else
-        {
-            memcpy(buf, this_->data_.data() + this_->pos_, buf_size);
-            return buf_size;
+        } else {
+            return AVERROR_EOF;
         }
     }
 
@@ -287,18 +285,14 @@ class AVIOBytesContext {
     {
         AVIOBytesContext* this_ = static_cast<AVIOBytesContext*>(opaque);
 
-        if (offset + whence > static_cast<int64_t>(this_->data_.size()))
-        {
-            this_->pos_ = this_->data_.size();
-
-            return -1;
+        LOG(INFO) << "whence: " << whence << " off: " << offset;
+        if (whence == AVSEEK_SIZE) return this_->data_.size();
+        
+        if (offset > static_cast<int64_t>(this_->data_.size())) {
+            offset = static_cast<int64_t>(this_->data_.size());
         }
-        else
-        {
-            this_->pos_ = offset + whence;
-
-            return 0;
-        }
+        // this_->pos_ = offset;
+        return offset;
     }
 
   private:
