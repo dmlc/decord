@@ -168,6 +168,9 @@ from decord import VideoReader
 from decord import cpu, gpu
 
 vr = VideoReader('examples/flipping_a_pancake.mkv', ctx=cpu(0))
+# a file like object works as well, for in-memory decoding
+with open('examples/flipping_a_pancake.mkv', 'rb') as f:
+  vr = VideoReader(f, ctx=cpu(0))
 print('video frames:', len(vr))
 # 1. the simplest way is to directly access frames
 for i in range(len(vr)):
