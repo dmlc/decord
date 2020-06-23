@@ -7,6 +7,7 @@
 # FFMPEG_LIBAVCODEC
 # FFMPEG_LIBAVFORMAT
 # FFMPEG_LIBAVUTIL
+# FFMPEG_LIBAVDEVICE
 #
 # Copyright (c) 2008 Andreas Schneider <mail@cynapses.org>
 # Modified for other libraries by Lasse Kärkkäinen <tronic>
@@ -23,6 +24,7 @@ if (FFMPEG_DIR)
     ${FFMPEG_DIR}/lib/libavfilter.so
     ${FFMPEG_DIR}/lib/libavcodec.so
     ${FFMPEG_DIR}/lib/libavutil.so
+    ${FFMPEG_DIR}/lib/libavdevice.so
   )
 endif (FFMPEG_DIR)
 
@@ -37,6 +39,7 @@ if (PKG_CONFIG_FOUND)
 pkg_check_modules(_FFMPEG_AVCODEC libavcodec)
 pkg_check_modules(_FFMPEG_AVFORMAT libavformat)
 pkg_check_modules(_FFMPEG_AVUTIL libavutil)
+pkg_check_modules(_FFMPEG_AVDEVICE libavdevice)
 
 pkg_check_modules(_FFMPEG_AVFILTER libavfilter)
 endif (PKG_CONFIG_FOUND)
@@ -62,6 +65,11 @@ NAMES avutil
 PATHS ${_FFMPEG_AVUTIL_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
 
+find_library(FFMPEG_LIBAVDEVICE
+NAMES avdevice
+PATHS ${_FFMPEG_AVDEVICE_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
+)
+
 find_library(FFMPEG_LIBAVFILTER
 NAMES avfilter
 PATHS ${_FFMPEG_AVFILTER_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
@@ -80,6 +88,14 @@ set(FFMPEG_LIBRARIES
   ${FFMPEG_LIBAVCODEC}
   ${FFMPEG_LIBAVUTIL}
 )
+
+if (FFMPEG_LIBAVDEVICE)
+  message(STATUS "Found libavdevice, device input will be enabled")
+  set(FFMPEG_LIBRARIES ${FFMPEG_LIBRARIES} ${FFMPEG_LIBAVDEVICE})
+  add_definitions(-DDECORD_USE_LIBAVDEVICE)
+else (FFMPEG_LIBAVDEVICE)
+  message(STATUS "Unable to find libavdevice, device input API will not work!")
+endif (FFMPEG_LIBAVDEVICE)
 
 endif (FFMPEG_FOUND)
 

@@ -34,7 +34,7 @@ class VideoReader : public VideoReaderInterface {
     using ThreadedDecoderPtr = std::unique_ptr<ThreadedDecoderInterface>;
     using NDArray = runtime::NDArray;
     public:
-        VideoReader(std::string fn, DLContext ctx, int width=-1, int height=-1, int nb_thread=0);
+        VideoReader(std::string fn, DLContext ctx, int width=-1, int height=-1, int nb_thread=0, int io_type=kNormal);
         /*! \brief Destructor, note that FFMPEG resources has to be managed manually to avoid resource leak */
         ~VideoReader();
         void SetVideoStream(int stream_nb = -1);
@@ -60,7 +60,7 @@ class VideoReader : public VideoReaderInterface {
         NDArray NextFrameImpl();
         int64_t FrameToPTS(int64_t pos);
         std::vector<int64_t> FramesToPTS(const std::vector<int64_t>& positions);
-
+        
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
         /*! \brief a lookup table for per frame pts/dts */
@@ -78,6 +78,8 @@ class VideoReader : public VideoReaderInterface {
         int height_;  // output video height
         bool eof_;  // end of file indicator
         NDArrayPool ndarray_pool_;
+        std::unique_ptr<ffmpeg::AVIOBytesContext> io_ctx_;  // avio context for raw memory access
+        
 };  // class VideoReader
 }  // namespace decord
 #endif  // DECORD_VIDEO_VIDEO_READER_H_

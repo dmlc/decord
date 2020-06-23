@@ -17,9 +17,9 @@
 
 namespace decord {
 
-VideoReaderPtr GetVideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread) {
+VideoReaderPtr GetVideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread, int io_type) {
     std::shared_ptr<VideoReaderInterface> ptr;
-    ptr = std::make_shared<VideoReader>(fn, ctx, width, height, nb_thread);
+    ptr = std::make_shared<VideoReader>(fn, ctx, width, height, nb_thread, io_type);
     return ptr;
 }
 
@@ -32,10 +32,16 @@ DECORD_REGISTER_GLOBAL("video_reader._CAPI_VideoReaderGetVideoReader")
     int width = args[3];
     int height = args[4];
     int num_thread = args[5];
+    int io_type = args[6];
     DLContext ctx;
     ctx.device_type = static_cast<DLDeviceType>(device_type);
     ctx.device_id = device_id;
-    VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(new VideoReader(fn, ctx, width, height, num_thread));
+    auto reader = new VideoReader(fn, ctx, width, height, num_thread, io_type);
+    if (reader->GetFrameCount() <= 0) {
+      *rv = nullptr;
+      return;
+    }
+    VideoReaderInterfaceHandle handle = static_cast<VideoReaderInterfaceHandle>(reader);
     *rv = handle;
   });
 

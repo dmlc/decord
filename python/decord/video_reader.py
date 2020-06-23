@@ -33,10 +33,16 @@ class VideoReader(object):
 
     """
     def __init__(self, uri, ctx=cpu(0), width=-1, height=-1, num_threads=0):
-        assert isinstance(ctx, DECORDContext)
         self._handle = None
-        self._handle = _CAPI_VideoReaderGetVideoReader(
-            uri, ctx.device_type, ctx.device_id, width, height, num_threads)
+        assert isinstance(ctx, DECORDContext)
+        if hasattr(uri, 'read'):
+            ba = bytearray(uri.read())
+            uri = '{} bytes'.format(len(ba))
+            self._handle = _CAPI_VideoReaderGetVideoReader(
+                ba, ctx.device_type, ctx.device_id, width, height, num_threads, 2)
+        else:
+            self._handle = _CAPI_VideoReaderGetVideoReader(
+                uri, ctx.device_type, ctx.device_id, width, height, num_threads, 0)
         if self._handle is None:
             raise RuntimeError("Error reading " + uri + "...")
         self._num_frame = _CAPI_VideoReaderGetFrameCount(self._handle)

@@ -22,6 +22,7 @@ extern "C" {
 #endif
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavformat/avio.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
@@ -31,6 +32,10 @@ extern "C" {
 #include <libavutil/version.h>
 #include <libavutil/dict.h>
 #include <libavutil/display.h>
+#include <libavutil/file.h>
+#ifdef DECORD_USE_LIBAVDEVICE
+#include <libavdevice/avdevice.h>
+#endif
 #ifdef __cplusplus
 }
 #endif
@@ -221,6 +226,86 @@ struct AVFrameManager {
 	AVFramePtr ptr;
   int64_t shape[3];
 	explicit AVFrameManager(AVFramePtr p) : ptr(p) {}
+};
+
+struct AVIOBufferData {
+    uint8_t *ptr;
+    size_t size;  ///< size left in the buffer
+    uint8_t *ori_ptr;
+    size_t file_size;
+};
+
+class AVIOBytesContext {
+  public:
+    AVIOBytesContext() {}
+
+    AVIOBytesContext(std::string data, size_t buffer_size): ctx_(nullptr), data_(data) {
+        auto buffer = static_cast<uint8_t*>(av_malloc(buffer_size));
+        if (!buffer) {
+            LOG(WARNING) << "Unable to allocate AVIOBytes buffer with size: " << buffer_size;
+            return;
+        }
+        bd_.ptr = reinterpret_cast<uint8_t*>(&data_[0]);
+        bd_.ori_ptr = bd_.ptr;
+        bd_.size = data_.size();
+        bd_.file_size = bd_.size;
+
+        ctx_ = avio_alloc_context(buffer, buffer_size, 0, &bd_, 
+                                  &AVIOBytesContext::read, 0, &AVIOBytesContext::seek);
+        if (!ctx_) {
+            LOG(WARNING) << "Unable to allocate AVIOContext!";
+            return;
+        }
+        
+    }
+
+    ~AVIOBytesContext() {
+        if (ctx_) {
+            av_freep(&ctx_->buffer);
+        }
+        avio_context_free(&ctx_);
+    }
+
+    AVIOContext* get_avio() {
+        return ctx_;
+    }
+
+    static int read(void *opaque, uint8_t *buf, int buf_size) {
+        struct AVIOBufferData *bd = (struct AVIOBufferData *)opaque;
+        buf_size = FFMIN(buf_size, bd->size);
+        if (!buf_size)
+            return AVERROR_EOF;
+        /* copy internal buffer data to buf */
+        memcpy(buf, bd->ptr, buf_size);
+        bd->ptr  += buf_size;
+        bd->size -= buf_size;
+        return buf_size;
+    }
+
+    static int64_t seek(void *opaque, int64_t offset, int whence) {
+        AVIOBufferData *bd = (AVIOBufferData *)opaque;
+        int64_t ret = -1;
+
+        switch (whence)
+        {
+            case AVSEEK_SIZE:
+                ret = bd->file_size;
+                break;
+            case SEEK_SET:
+                bd->ptr = bd->ori_ptr + offset;
+                bd->size = bd->file_size - offset;
+                ret = offset;
+                break;
+            default:
+                break;
+        }
+        return ret;
+    }
+
+  private:
+    AVIOContext* ctx_;
+    struct AVIOBufferData bd_;
+    std::string data_;
 };
 
 }  // namespace ffmpeg
