@@ -63,6 +63,7 @@ class VideoReader : public VideoReaderInterface {
         
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
+        std::map<int64_t,int64_t > key_indices_ts_;
         /*! \brief a lookup table for per frame pts/dts */
         std::vector<AVFrameTime> frame_ts_;
         /*! \brief Video Streams Codecs in original videos */

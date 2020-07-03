@@ -25,7 +25,7 @@ static const int AVIO_BUFFER_SIZE = 40960;
 
 
 VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread, int io_type)
-     : ctx_(ctx), key_indices_(), frame_ts_(), codecs_(), actv_stm_idx_(-1), fmt_ctx_(nullptr), decoder_(nullptr), curr_frame_(0),
+     : ctx_(ctx), key_indices_(), key_indices_ts_(), frame_ts_(), codecs_(), actv_stm_idx_(-1), fmt_ctx_(nullptr), decoder_(nullptr), curr_frame_(0),
      nb_thread_decoding_(nb_thread), width_(width), height_(height), eof_(false), io_ctx_() {
     // av_register_all deprecated in latest versions
     #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
@@ -249,7 +249,12 @@ int64_t VideoReader::GetCurrentPosition() const {
 }
 
 int64_t VideoReader::FrameToPTS(int64_t pos) {
-    int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / GetFrameCount();
+    std::map<int64_t, int64_t>::iterator iter = key_indices_ts_.find(pos);
+    int64_t ts;
+    if(iter != key_indices_ts_.end())
+        ts = iter->second;
+    else
+        ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / GetFrameCount();
     return ts;
 }
 
@@ -411,6 +416,7 @@ void VideoReader::IndexKeyframes() {
             frame_ts_.emplace_back(AVFrameTime(packet->pts, packet->dts, start_pts, stop_pts));
             if (packet->flags & AV_PKT_FLAG_KEY) {
                 key_indices_.emplace_back(cnt);
+                key_indices_ts_.insert(std::pair<int64_t, int64_t>(cnt, packet->pts));
             }
             ++cnt;
         }
