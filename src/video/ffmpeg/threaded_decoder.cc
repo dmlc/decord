@@ -144,6 +144,7 @@ void FFMPEGThreadedDecoder::ProcessFrame(AVFramePtr frame, NDArray out_buf) {
       std::lock_guard<std::mutex> lock(pts_mutex_);
       skip = discard_pts_.find(frame->pts) != discard_pts_.end();
     }
+    std::cout << "skip " << skip << ", " << frame->pts << std::endl;
     if (skip) {
         // skip resize/filtering
         frame_queue_->Push(NDArray::Empty({1}, kUInt8, kCPU));

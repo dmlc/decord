@@ -56,11 +56,12 @@ class VideoReader : public VideoReaderInterface {
     private:
         void IndexKeyframes();
         void PushNext();
+        bool GoStart();
         int64_t LocateKeyframe(int64_t pos);
         NDArray NextFrameImpl();
         int64_t FrameToPTS(int64_t pos);
         std::vector<int64_t> FramesToPTS(const std::vector<int64_t>& positions);
-        
+
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
         /*! \brief a lookup table for per frame pts/dts */
@@ -79,7 +80,7 @@ class VideoReader : public VideoReaderInterface {
         bool eof_;  // end of file indicator
         NDArrayPool ndarray_pool_;
         std::unique_ptr<ffmpeg::AVIOBytesContext> io_ctx_;  // avio context for raw memory access
-        
+
 };  // class VideoReader
 }  // namespace decord
 #endif  // DECORD_VIDEO_VIDEO_READER_H_

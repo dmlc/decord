@@ -6,6 +6,7 @@ docs/_build
 __pycache__
 *.pyc
 .ipynb_checkpoints
+*.mp4
 
 # Prerequisites
 *.d
