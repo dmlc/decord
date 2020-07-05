@@ -9,7 +9,8 @@ def analysis(filename):
     imgs = list()
     for frame in container_av.decode(video=0):
         imgs.append(frame.to_rgb().to_ndarray())
-    frame_list = np.random.randint(1, len(imgs), size=30)
+    frame_list = np.random.randint(1, len(imgs), size=10)
+    frame_list = [18, 38, 58, 70]
     incorrect = False
     print("==============", frame_list)
     for frame_idx in frame_list:
@@ -17,9 +18,10 @@ def analysis(filename):
         frame_decord = container[frame_idx].asnumpy()
         frame_pyav = imgs[frame_idx]
         if np.sum(abs(frame_pyav - frame_decord)) != 0:
+            print("XXXXXXXXXX _ XXXXXXXXX")
             print("index ", frame_idx, " has different result: ", np.sum(abs(frame_pyav - frame_decord)))
             incorrect = True
     return incorrect
 
 
-print(analysis("videos/zyuOI7nivOA_000043_000053.mp4"))
+print(analysis("decordvid/3N9LxIDyfMk_000008_000018.mp4"))
