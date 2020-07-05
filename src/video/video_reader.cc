@@ -249,7 +249,7 @@ int64_t VideoReader::GetCurrentPosition() const {
 }
 
 int64_t VideoReader::FrameToPTS(int64_t pos) {
-    int64_t ts = pos * fmt_ctx_->streams[actv_stm_idx_]->duration / GetFrameCount();
+    int64_t ts = frame_ts_[pos].pts;
     return ts;
 }
 
