@@ -273,7 +273,7 @@ bool VideoReader::Seek(int64_t pos) {
     int64_t ts = FrameToPTS(pos);
     int flag = curr_frame_ > pos ? AVSEEK_FLAG_BACKWARD : 0;
     // flag = AVSEEK_FLAG_BACKWARD;
-    flag = 0;
+    // flag = 0;
     std::cout << "Seek " << pos << " at pts " << ts << ", flag " << flag << std::endl;
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, flag);
     if (flag != AVSEEK_FLAG_BACKWARD && ret < 0){
@@ -299,6 +299,7 @@ bool VideoReader::GoStart() {
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << 0;
     // LOG(INFO) << "seek return: " << ret;
+    decoder_->Start();
     if (ret >= 0) {
         curr_frame_ = 0;
     }
@@ -546,11 +547,12 @@ void VideoReader::SkipFrames(int64_t num) {
     std::iota(frame_pos.begin(), frame_pos.end(), curr_frame_);
     auto pts = FramesToPTS(frame_pos);
     decoder_->SuggestDiscardPTS(pts);
-    curr_frame_ += num;
     while (num > 0) {
         PushNext();
         ret = decoder_->Pop(&frame);
         if (!ret) continue;
+        std::cout << "## " << frame.pts << std::endl;
+        ++curr_frame_;
         // LOG(INFO) << "skip: " << num;
         --num;
     }
@@ -595,11 +597,14 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
             CHECK_GE(pos, 0);
             if (curr_frame_ == pos) {
                 // no need to seek
+                std::cout << "no need to seek" << std::endl;
             } else if (pos > curr_frame_) {
                 // skip positive number of frames
+                std::cout << "skip " << (pos - curr_frame_) << " frames" << std::endl;
                 SkipFrames(pos - curr_frame_);
             } else {
                 // seek no matter what
+                std::cout << "emmm lets seek " << pos << std::endl;
                 SeekAccurate(pos);
             }
             NDArray frame = NextFrameImpl();

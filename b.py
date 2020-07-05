@@ -10,7 +10,8 @@ def analysis(filename):
     for frame in container_av.decode(video=0):
         imgs.append(frame.to_rgb().to_ndarray())
     frame_list = np.random.randint(1, len(imgs), size=10)
-    frame_list = [18, 38, 58, 70]
+    frame_list = [38, 58, 70]
+    # frame_list = [18]
     incorrect = False
     print("==============", frame_list)
     for frame_idx in frame_list:
