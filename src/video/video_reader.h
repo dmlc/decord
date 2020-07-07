@@ -44,8 +44,6 @@ class VideoReader : public VideoReaderInterface {
         NDArray NextFrame();
         NDArray GetBatch(std::vector<int64_t> indices, NDArray buf);
         void SkipFrames(int64_t num = 1);
-        void SkipFramesImpl(int64_t num = 1);
-        bool checkKeyFrames();
         bool Seek(int64_t pos);
         bool SeekAccurate(int64_t pos);
         NDArray GetKeyIndices();
@@ -60,6 +58,8 @@ class VideoReader : public VideoReaderInterface {
         void PushNext();
         bool GoStart();
         int64_t LocateKeyframe(int64_t pos);
+        void SkipFramesImpl(int64_t num = 1);
+        bool CheckKeyFrames();
         NDArray NextFrameImpl();
         int64_t FrameToPTS(int64_t pos);
         std::vector<int64_t> FramesToPTS(const std::vector<int64_t>& positions);
