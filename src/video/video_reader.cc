@@ -640,11 +640,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
         else {
             CHECK_LT(pos, frame_count);
             CHECK_GE(pos, 0);
-            if (curr_frame_ == pos) {
-                // no need to seek
-                // std::cout << "no need to seek" << std::endl;
-            } else {
-                // seek no matter what
+            if (curr_frame_ != pos) {
                 SeekAccurate(pos);
             }
             NDArray frame = NextFrameImpl();
