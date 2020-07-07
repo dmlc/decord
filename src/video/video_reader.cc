@@ -331,25 +331,25 @@ bool VideoReader::SeekAccurate(int64_t pos) {
         if (!ret) return false;
         ret = Seek(key_pos);
         if (!ret) return false;
-        if(checkKeyFrames(key_pos)){
+        if(checkKeyFrames()){
             if(pos - key_pos > 0){
-                newSkipFrames(pos - curr_frame_);
+                SkipFramesImpl(pos - curr_frame_);
             } else if(pos - key_pos == 0){
                 overrun = true;
             }
         } else {
             if(curr_frame_<pos){
-                newSkipFrames(pos - curr_frame_);
+                SkipFramesImpl(pos - curr_frame_);
             } else {
                 // return SeekAccurate(pos);
                 key_pos = LocateKeyframe(pos);
                 Seek(key_pos);
-                newSkipFrames(pos - key_pos, pos);
+                SkipFramesImpl(pos - key_pos);
             }
         }
     } else {
         // no need to seek to keyframe, since both current and seek position belong to same keyframe
-        newSkipFrames(pos - curr_frame_);
+        SkipFramesImpl(pos - curr_frame_);
     }
     return true;
 }
@@ -394,6 +394,10 @@ void VideoReader::PushNext() {
 }
 
 NDArray VideoReader::NextFrameImpl() {
+    if (overrun)
+    {
+        return tmp_key_frame_;
+    }
     NDArray frame;
     decoder_->Start();
     bool ret = false;
@@ -421,10 +425,6 @@ NDArray VideoReader::NextFrameImpl() {
 
 NDArray VideoReader::NextFrame() {
     if (!fmt_ctx_) return NDArray();
-    if(overrun){
-        std::cout << "overrun" << curr_frame_ <<std::endl;
-        return tmp_key_frame_;
-    }
     return NextFrameImpl();
 }
 
@@ -551,30 +551,11 @@ void VideoReader::SkipFrames(int64_t num) {
         // LOG(INFO) << "current: " << curr_frame_ << ", adjust skip from " << num << " to " << num + old_frame - *it2;
         num += old_frame - *it2;
     }
-    if (num < 1) return;
 
-    // LOG(INFO) << "started skipping with: " << num;
-    NDArray frame;
-    decoder_->Start();
-    bool ret = false;
-    std::vector<int64_t> frame_pos(num);
-    std::iota(frame_pos.begin(), frame_pos.end(), curr_frame_);
-    auto pts = FramesToPTS(frame_pos);
-    decoder_->SuggestDiscardPTS(pts);
-    while (num > 0) {
-        PushNext();
-        ret = decoder_->Pop(&frame);
-        if (!ret) continue;
-        std::cout << "## " << frame.pts << std::endl;
-        ++curr_frame_;
-        // LOG(INFO) << "skip: " << num;
-        --num;
-    }
-    decoder_->ClearDiscardPTS();
-    // LOG(INFO) << " stopped skipframes: " << curr_frame_;
+    SkipFramesImpl(num);
 }
 
-bool VideoReader::checkKeyFrames(int64_t key_pos)
+bool VideoReader::checkKeyFrames()
 {
     NDArray frame;
     decoder_->Start();
@@ -586,10 +567,6 @@ bool VideoReader::checkKeyFrames(int64_t key_pos)
         ret = decoder_->Pop(&frame);
     }
 
-    std::cout << "## " << frame.pts << std::endl;
-    std::cout << "## Current frame" << curr_frame_ << std::endl;
-    std::cout << "## Current frame pts" << frame_ts_[curr_frame_].pts << std::endl;
-
     // check this frame is correct or not
     std::map<int64_t, int64_t>::iterator iter = pts_frame_map_.find(frame.pts);
     if (iter != pts_frame_map_.end())
@@ -597,18 +574,16 @@ bool VideoReader::checkKeyFrames(int64_t key_pos)
     if (curr_frame_ != cf)
     {
         curr_frame_ = cf + 1;
-        std::cout << "## Real Current frame" << cf << std::endl;
         return false;
     } else{
         ++curr_frame_;
         tmp_key_frame_ = frame;
-        // overrun = true;
         return true;
     }
 
 }
 
-void VideoReader::newSkipFrames(int64_t num, int64_t pos)
+void VideoReader::SkipFramesImpl(int64_t num)
 {
     if (!fmt_ctx_)
         return;
@@ -627,18 +602,11 @@ void VideoReader::newSkipFrames(int64_t num, int64_t pos)
         PushNext();
         ret = decoder_->Pop(&frame);
         if (!ret) continue;
-        std::cout << "## " << frame.pts << std::endl;
-        std::cout << "## Current frame" << curr_frame_ << std::endl;
-        std::cout << "## Current frame pts" << frame_ts_[curr_frame_].pts << std::endl;
         ++curr_frame_;
         // LOG(INFO) << "skip: " << num;
         --num;
     }
     decoder_->ClearDiscardPTS();
-}
-
-NDArray VideoReader::GetCurrentKeyFrame(){
-    return tmp_key_frame_;
 }
 
 NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
@@ -679,13 +647,8 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
             if (curr_frame_ == pos) {
                 // no need to seek
                 std::cout << "no need to seek" << std::endl;
-            } else if (pos > curr_frame_) {
-                // skip positive number of frames
-                std::cout << "skip " << (pos - curr_frame_) << " frames" << std::endl;
-                SkipFrames(pos - curr_frame_);
             } else {
                 // seek no matter what
-                std::cout << "emmm lets seek " << pos << std::endl;
                 SeekAccurate(pos);
             }
             NDArray frame = NextFrameImpl();

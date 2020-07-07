@@ -42,12 +42,10 @@ class VideoReader : public VideoReaderInterface {
         int64_t GetFrameCount() const;
         int64_t GetCurrentPosition() const;
         NDArray NextFrame();
-        NDArray GetCurrentKeyFrame();
         NDArray GetBatch(std::vector<int64_t> indices, NDArray buf);
         void SkipFrames(int64_t num = 1);
-        void newSkipFrames(int64_t num = 1, int64_t pos = 0);
-        bool checkKeyFrames(int64_t key_pos);
-
+        void SkipFramesImpl(int64_t num = 1);
+        bool checkKeyFrames();
         bool Seek(int64_t pos);
         bool SeekAccurate(int64_t pos);
         NDArray GetKeyIndices();
