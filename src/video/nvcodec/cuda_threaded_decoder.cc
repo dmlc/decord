@@ -229,7 +229,6 @@ int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
       std::lock_guard<std::mutex> lock(pts_mutex_);
       skip = discard_pts_.find(disp_info->timestamp) != discard_pts_.end();
     }
-    std::cout << "skip " << skip << ", " << disp_info->timestamp << std::endl;
     if (skip) {
         // skip frame processing
         reorder_queue_->Push(arr);
