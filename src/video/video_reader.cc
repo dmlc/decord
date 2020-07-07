@@ -315,7 +315,7 @@ bool VideoReader::SeekAccurate(int64_t pos) {
     int64_t key_pos = LocateKeyframe(pos);
     int64_t curr_key_pos = LocateKeyframe(curr_frame_);
     // std::cout << "seek " << pos << "(" << frame_ts_[pos].pts << "), nearest key " << key_pos << "(" << frame_ts_[key_pos].pts << "), current pos "
-        // << curr_frame_ << "(" << frame_ts_[curr_frame_].pts << "), current key " << curr_key_pos  << "(" << frame_ts_[curr_key_pos].pts << ")" << std:: endl;
+    // << curr_frame_ << "(" << frame_ts_[curr_frame_].pts << "), current key " << curr_key_pos  << "(" << frame_ts_[curr_key_pos].pts << ")" << std:: endl;
     if (key_pos != curr_key_pos || pos<curr_frame_) {
         // need to seek to keyframes first
         // std::cout << "need to seek to keyframe " << key_pos << " first " << std::endl;
