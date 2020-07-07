@@ -335,8 +335,8 @@ bool VideoReader::SeekAccurate(int64_t pos) {
             if(curr_frame_ < pos){
                 SkipFramesImpl(pos - curr_frame_);
             } else {
-                // return SeekAccurate(pos);
                 key_pos = LocateKeyframe(pos);
+                // since curr_frame_ is larger, Seek will use AVSEEK_FLAG_BACKWARD
                 Seek(key_pos);
                 SkipFramesImpl(pos - key_pos);
             }
