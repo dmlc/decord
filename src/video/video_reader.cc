@@ -294,7 +294,6 @@ bool VideoReader::SeekStart() {
     int64_t ts = FrameToPTS(0);
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: 0";
-    decoder_->Start();
     if (ret >= 0) {
         curr_frame_ = 0;
     }
