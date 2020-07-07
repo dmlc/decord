@@ -250,7 +250,6 @@ int64_t VideoReader::GetCurrentPosition() const {
 
 int64_t VideoReader::FrameToPTS(int64_t pos) {
     int64_t ts = frame_ts_[pos].pts;
-    std::cout << "FramesToPTS " << frame_ts_[pos].pts << std::endl;
     return ts;
 }
 
@@ -259,7 +258,6 @@ std::vector<int64_t> VideoReader::FramesToPTS(const std::vector<int64_t>& positi
     ret.reserve(positions.size());
     for (auto pos : positions) {
         ret.emplace_back(frame_ts_[pos].pts);
-        std::cout << "FramesToPTS vectors " << frame_ts_[pos].pts << std::endl;
     }
     return ret;
 }
