@@ -564,7 +564,7 @@ bool VideoReader::CheckKeyFrame()
     }
 
     // find the real current frame after seek
-    std::map<int64_t, int64_t>::iterator iter = pts_frame_map_.find(frame.pts);
+    auto iter = pts_frame_map_.find(frame.pts);
     if (iter != pts_frame_map_.end())
         cf = iter->second;
     if (curr_frame_ != cf)
