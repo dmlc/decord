@@ -42,8 +42,12 @@ class VideoReader : public VideoReaderInterface {
         int64_t GetFrameCount() const;
         int64_t GetCurrentPosition() const;
         NDArray NextFrame();
+        NDArray GetCurrentKeyFrame();
         NDArray GetBatch(std::vector<int64_t> indices, NDArray buf);
         void SkipFrames(int64_t num = 1);
+        void newSkipFrames(int64_t num = 1, int64_t pos = 0);
+        bool checkKeyFrames(int64_t key_pos);
+
         bool Seek(int64_t pos);
         bool SeekAccurate(int64_t pos);
         NDArray GetKeyIndices();
@@ -64,6 +68,9 @@ class VideoReader : public VideoReaderInterface {
 
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
+        std::map<int64_t, int64_t> pts_frame_map_;
+        NDArray tmp_key_frame_;
+        bool overrun;
         /*! \brief a lookup table for per frame pts/dts */
         std::vector<AVFrameTime> frame_ts_;
         /*! \brief Video Streams Codecs in original videos */

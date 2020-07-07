@@ -25,7 +25,7 @@ static const int AVIO_BUFFER_SIZE = 40960;
 
 
 VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread, int io_type)
-     : ctx_(ctx), key_indices_(), frame_ts_(), codecs_(), actv_stm_idx_(-1), fmt_ctx_(nullptr), decoder_(nullptr), curr_frame_(0),
+     : ctx_(ctx), key_indices_(), pts_frame_map_(), tmp_key_frame_(), overrun(false), frame_ts_(), codecs_(), actv_stm_idx_(-1), fmt_ctx_(nullptr), decoder_(nullptr), curr_frame_(0),
      nb_thread_decoding_(nb_thread), width_(width), height_(height), eof_(false), io_ctx_() {
     // av_register_all deprecated in latest versions
     #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
@@ -274,6 +274,7 @@ bool VideoReader::Seek(int64_t pos) {
     int flag = curr_frame_ > pos ? AVSEEK_FLAG_BACKWARD : 0;
     // flag = AVSEEK_FLAG_BACKWARD;
     // flag = 0;
+
     std::cout << "Seek " << pos << " at pts " << ts << ", flag " << flag << std::endl;
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, flag);
     if (flag != AVSEEK_FLAG_BACKWARD && ret < 0){
@@ -315,13 +316,14 @@ int64_t VideoReader::LocateKeyframe(int64_t pos) {
 }
 
 bool VideoReader::SeekAccurate(int64_t pos) {
+    overrun = false;
     if (!fmt_ctx_) return false;
     if (curr_frame_ == pos) return true;
     int64_t key_pos = LocateKeyframe(pos);
     int64_t curr_key_pos = LocateKeyframe(curr_frame_);
     std::cout << "seek " << pos << "(" << frame_ts_[pos].pts << "), nearest key " << key_pos << "(" << frame_ts_[key_pos].pts << "), current pos "
         << curr_frame_ << "(" << frame_ts_[curr_frame_].pts << "), current key " << curr_key_pos  << "(" << frame_ts_[curr_key_pos].pts << ")" << std:: endl;
-    if (key_pos != curr_key_pos) {
+    if (key_pos != curr_key_pos || pos<curr_frame_) {
         // need to seek to keyframes first
         std::cout << "need to seek to keyframe " << key_pos << " first " << std::endl;
         // bool ret = Seek(0);
@@ -329,18 +331,25 @@ bool VideoReader::SeekAccurate(int64_t pos) {
         if (!ret) return false;
         ret = Seek(key_pos);
         if (!ret) return false;
-        SkipFrames(pos - key_pos);
-    } else if (pos < curr_frame_) {
-        // need seek backwards to the nearest keyframe
-        // bool ret = Seek(0);
-        bool ret = GoStart();
-        if (!ret) return false;
-        ret = Seek(key_pos);
-        if (!ret) return false;
-        SkipFrames(pos - key_pos);
+        if(checkKeyFrames(key_pos)){
+            if(pos - key_pos > 0){
+                newSkipFrames(pos - curr_frame_);
+            } else if(pos - key_pos == 0){
+                overrun = true;
+            }
+        } else {
+            if(curr_frame_<pos){
+                newSkipFrames(pos - curr_frame_);
+            } else {
+                // return SeekAccurate(pos);
+                key_pos = LocateKeyframe(pos);
+                Seek(key_pos);
+                newSkipFrames(pos - key_pos, pos);
+            }
+        }
     } else {
         // no need to seek to keyframe, since both current and seek position belong to same keyframe
-        SkipFrames(pos - curr_frame_);
+        newSkipFrames(pos - curr_frame_);
     }
     return true;
 }
@@ -412,7 +421,11 @@ NDArray VideoReader::NextFrameImpl() {
 
 NDArray VideoReader::NextFrame() {
     if (!fmt_ctx_) return NDArray();
-    return  NextFrameImpl();
+    if(overrun){
+        std::cout << "overrun" << curr_frame_ <<std::endl;
+        return tmp_key_frame_;
+    }
+    return NextFrameImpl();
 }
 
 void VideoReader::IndexKeyframes() {
@@ -457,7 +470,8 @@ void VideoReader::IndexKeyframes() {
                 {return a.pts < b.pts;});
 
     for (size_t i = 0; i < frame_ts_.size(); ++i){
-            std::cout << i << ": pts " << frame_ts_[i].pts << ", dts " << frame_ts_[i].dts << ", start pts " << frame_ts_[i].start << ", stop pts " << frame_ts_[i].stop << std::endl;
+        pts_frame_map_.insert(std::pair<int64_t, int64_t>(frame_ts_[i].pts, i));
+        std::cout << i << ": pts " << frame_ts_[i].pts << ", dts " << frame_ts_[i].dts << ", start pts " << frame_ts_[i].start << ", stop pts " << frame_ts_[i].stop << std::endl;
     }
     curr_frame_ = GetFrameCount();
     ret = GoStart();
@@ -558,6 +572,73 @@ void VideoReader::SkipFrames(int64_t num) {
     }
     decoder_->ClearDiscardPTS();
     // LOG(INFO) << " stopped skipframes: " << curr_frame_;
+}
+
+bool VideoReader::checkKeyFrames(int64_t key_pos)
+{
+    NDArray frame;
+    decoder_->Start();
+    bool ret = false;
+    int64_t cf;
+    while (!ret)
+    {
+        PushNext();
+        ret = decoder_->Pop(&frame);
+    }
+
+    std::cout << "## " << frame.pts << std::endl;
+    std::cout << "## Current frame" << curr_frame_ << std::endl;
+    std::cout << "## Current frame pts" << frame_ts_[curr_frame_].pts << std::endl;
+
+    // check this frame is correct or not
+    std::map<int64_t, int64_t>::iterator iter = pts_frame_map_.find(frame.pts);
+    if (iter != pts_frame_map_.end())
+        cf = iter->second; // find the real current frame after seek
+    if (curr_frame_ != cf)
+    {
+        curr_frame_ = cf + 1;
+        std::cout << "## Real Current frame" << cf << std::endl;
+        return false;
+    } else{
+        ++curr_frame_;
+        tmp_key_frame_ = frame;
+        // overrun = true;
+        return true;
+    }
+
+}
+
+void VideoReader::newSkipFrames(int64_t num, int64_t pos)
+{
+    if (!fmt_ctx_)
+        return;
+    num = std::min(GetFrameCount() - curr_frame_, num);
+    if (num < 1) return;
+
+    NDArray frame;
+    decoder_->Start();
+    bool ret = false;
+    std::vector<int64_t> frame_pos(num);
+    std::iota(frame_pos.begin(), frame_pos.end(), curr_frame_);
+    auto pts = FramesToPTS(frame_pos);
+    decoder_->SuggestDiscardPTS(pts);
+
+    while (num > 0) {
+        PushNext();
+        ret = decoder_->Pop(&frame);
+        if (!ret) continue;
+        std::cout << "## " << frame.pts << std::endl;
+        std::cout << "## Current frame" << curr_frame_ << std::endl;
+        std::cout << "## Current frame pts" << frame_ts_[curr_frame_].pts << std::endl;
+        ++curr_frame_;
+        // LOG(INFO) << "skip: " << num;
+        --num;
+    }
+    decoder_->ClearDiscardPTS();
+}
+
+NDArray VideoReader::GetCurrentKeyFrame(){
+    return tmp_key_frame_;
 }
 
 NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
