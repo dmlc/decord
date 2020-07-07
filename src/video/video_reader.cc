@@ -332,7 +332,7 @@ bool VideoReader::SeekAccurate(int64_t pos) {
                 overrun = true;
             }
         } else {
-            if(curr_frame_<pos){
+            if(curr_frame_ < pos){
                 SkipFramesImpl(pos - curr_frame_);
             } else {
                 // return SeekAccurate(pos);
