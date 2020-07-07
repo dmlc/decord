@@ -25,7 +25,7 @@ static const int AVIO_BUFFER_SIZE = 40960;
 
 
 VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread, int io_type)
-     : ctx_(ctx), key_indices_(), pts_frame_map_(), tmp_key_frame_(), overrun(false), frame_ts_(), codecs_(), actv_stm_idx_(-1), fmt_ctx_(nullptr), decoder_(nullptr), curr_frame_(0),
+     : ctx_(ctx), key_indices_(), pts_frame_map_(), tmp_key_frame_(), overrun_(false), frame_ts_(), codecs_(), actv_stm_idx_(-1), fmt_ctx_(nullptr), decoder_(nullptr), curr_frame_(0),
      nb_thread_decoding_(nb_thread), width_(width), height_(height), eof_(false), io_ctx_() {
     // av_register_all deprecated in latest versions
     #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
@@ -329,7 +329,7 @@ bool VideoReader::SeekAccurate(int64_t pos) {
             if(pos - key_pos > 0){
                 SkipFramesImpl(pos - curr_frame_);
             } else if(pos - key_pos == 0){
-                overrun = true;
+                overrun_ = true;
             }
         } else {
             if(curr_frame_ < pos){
@@ -388,9 +388,9 @@ void VideoReader::PushNext() {
 }
 
 NDArray VideoReader::NextFrameImpl() {
-    if (overrun)
+    if (overrun_)
     {
-        overrun = false;
+        overrun_ = false;
         return tmp_key_frame_;
     }
     NDArray frame;

@@ -68,7 +68,7 @@ class VideoReader : public VideoReaderInterface {
         std::vector<int64_t> key_indices_;
         std::map<int64_t, int64_t> pts_frame_map_;
         NDArray tmp_key_frame_;
-        bool overrun;
+        bool overrun_;
         /*! \brief a lookup table for per frame pts/dts */
         std::vector<AVFrameTime> frame_ts_;
         /*! \brief Video Streams Codecs in original videos */
