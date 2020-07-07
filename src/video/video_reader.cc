@@ -286,7 +286,7 @@ bool VideoReader::Seek(int64_t pos) {
     return ret >= 0;
 }
 
-bool VideoReader::GoStart() {
+bool VideoReader::SeekStart() {
     if (!fmt_ctx_) return false;
     if (curr_frame_ == 0) return true;
     decoder_->Clear();
@@ -294,7 +294,6 @@ bool VideoReader::GoStart() {
     int64_t ts = FrameToPTS(0);
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << 0;
-    // LOG(INFO) << "seek return: " << ret;
     decoder_->Start();
     if (ret >= 0) {
         curr_frame_ = 0;
@@ -322,7 +321,7 @@ bool VideoReader::SeekAccurate(int64_t pos) {
         // need to seek to keyframes first
         std::cout << "need to seek to keyframe " << key_pos << " first " << std::endl;
         // bool ret = Seek(0);
-        bool ret = GoStart();
+        bool ret = SeekStart();
         if (!ret) return false;
         ret = Seek(key_pos);
         if (!ret) return false;
@@ -469,7 +468,7 @@ void VideoReader::IndexKeyframes() {
         std::cout << i << ": pts " << frame_ts_[i].pts << ", dts " << frame_ts_[i].dts << ", start pts " << frame_ts_[i].start << ", stop pts " << frame_ts_[i].stop << std::endl;
     }
     curr_frame_ = GetFrameCount();
-    ret = GoStart();
+    ret = SeekStart();
 }
 
 runtime::NDArray VideoReader::GetKeyIndices() {
