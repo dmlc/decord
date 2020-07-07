@@ -556,7 +556,7 @@ bool VideoReader::CheckKeyFrame()
     NDArray frame;
     decoder_->Start();
     bool ret = false;
-    int64_t cf;
+    int64_t cf = curr_frame_;
     while (!ret)
     {
         PushNext();
