@@ -59,7 +59,7 @@ class VideoReader : public VideoReaderInterface {
         bool SeekStart();
         int64_t LocateKeyframe(int64_t pos);
         void SkipFramesImpl(int64_t num = 1);
-        bool CheckKeyFrames();
+        bool CheckKeyFrame();
         NDArray NextFrameImpl();
         int64_t FrameToPTS(int64_t pos);
         std::vector<int64_t> FramesToPTS(const std::vector<int64_t>& positions);

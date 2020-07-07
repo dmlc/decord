@@ -319,12 +319,13 @@ bool VideoReader::SeekAccurate(int64_t pos) {
     if (key_pos != curr_key_pos || pos < curr_frame_) {
         // need to seek to keyframes first
         // std::cout << "need to seek to keyframe " << key_pos << " first " << std::endl;
-        // bool ret = Seek(0);
+        // first rewind to 0, in order to increase seek accuracy
         bool ret = SeekStart();
         if (!ret) return false;
         ret = Seek(key_pos);
         if (!ret) return false;
-        if(CheckKeyFrames()){
+        // double check if keyframe was jumpped correctly
+        if(CheckKeyFrame()){
             if(pos - key_pos > 0){
                 SkipFramesImpl(pos - curr_frame_);
             } else if(pos - key_pos == 0){
@@ -549,8 +550,9 @@ void VideoReader::SkipFrames(int64_t num) {
     SkipFramesImpl(num);
 }
 
-bool VideoReader::CheckKeyFrames()
+bool VideoReader::CheckKeyFrame()
 {
+    // check curr_frame_ is correct or not, by decoding the current frame
     NDArray frame;
     decoder_->Start();
     bool ret = false;
@@ -561,10 +563,10 @@ bool VideoReader::CheckKeyFrames()
         ret = decoder_->Pop(&frame);
     }
 
-    // check this frame is correct or not
+    // find the real current frame after seek
     std::map<int64_t, int64_t>::iterator iter = pts_frame_map_.find(frame.pts);
     if (iter != pts_frame_map_.end())
-        cf = iter->second; // find the real current frame after seek
+        cf = iter->second;
     if (curr_frame_ != cf)
     {
         curr_frame_ = cf + 1;
