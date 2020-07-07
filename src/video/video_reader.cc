@@ -311,7 +311,6 @@ int64_t VideoReader::LocateKeyframe(int64_t pos) {
 }
 
 bool VideoReader::SeekAccurate(int64_t pos) {
-    // overrun = false;
     if (!fmt_ctx_) return false;
     if (curr_frame_ == pos) return true;
     int64_t key_pos = LocateKeyframe(pos);
