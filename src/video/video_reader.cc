@@ -271,10 +271,10 @@ bool VideoReader::Seek(int64_t pos) {
     int64_t ts = FrameToPTS(pos);
     int flag = curr_frame_ > pos ? AVSEEK_FLAG_BACKWARD : 0;
 
-    std::cout << "Seek " << pos << " at pts " << ts << ", flag " << flag << std::endl;
+    // std::cout << "Seek " << pos << " at pts " << ts << ", flag " << flag << std::endl;
     int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, flag);
     if (flag != AVSEEK_FLAG_BACKWARD && ret < 0){
-        std::cout << "seek wrong, retry with flag " << AVSEEK_FLAG_BACKWARD << std::endl;
+        // std::cout << "seek wrong, retry with flag " << AVSEEK_FLAG_BACKWARD << std::endl;
         ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
     }
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << pos;
@@ -311,16 +311,16 @@ int64_t VideoReader::LocateKeyframe(int64_t pos) {
 }
 
 bool VideoReader::SeekAccurate(int64_t pos) {
-    overrun = false;
+    // overrun = false;
     if (!fmt_ctx_) return false;
     if (curr_frame_ == pos) return true;
     int64_t key_pos = LocateKeyframe(pos);
     int64_t curr_key_pos = LocateKeyframe(curr_frame_);
-    std::cout << "seek " << pos << "(" << frame_ts_[pos].pts << "), nearest key " << key_pos << "(" << frame_ts_[key_pos].pts << "), current pos "
-        << curr_frame_ << "(" << frame_ts_[curr_frame_].pts << "), current key " << curr_key_pos  << "(" << frame_ts_[curr_key_pos].pts << ")" << std:: endl;
+    // std::cout << "seek " << pos << "(" << frame_ts_[pos].pts << "), nearest key " << key_pos << "(" << frame_ts_[key_pos].pts << "), current pos "
+        // << curr_frame_ << "(" << frame_ts_[curr_frame_].pts << "), current key " << curr_key_pos  << "(" << frame_ts_[curr_key_pos].pts << ")" << std:: endl;
     if (key_pos != curr_key_pos || pos<curr_frame_) {
         // need to seek to keyframes first
-        std::cout << "need to seek to keyframe " << key_pos << " first " << std::endl;
+        // std::cout << "need to seek to keyframe " << key_pos << " first " << std::endl;
         // bool ret = Seek(0);
         bool ret = GoStart();
         if (!ret) return false;
@@ -391,6 +391,7 @@ void VideoReader::PushNext() {
 NDArray VideoReader::NextFrameImpl() {
     if (overrun)
     {
+        overrun = false;
         return tmp_key_frame_;
     }
     NDArray frame;
@@ -398,7 +399,7 @@ NDArray VideoReader::NextFrameImpl() {
     bool ret = false;
     int rewind_offset = 0;
     while (!ret) {
-        std::cout << "!!" << std::endl;
+        // std::cout << "!!" << std::endl;
         PushNext();
         if (curr_frame_ >= GetFrameCount()) {
             return NDArray::Empty({}, kUInt8, ctx_);
@@ -452,7 +453,7 @@ void VideoReader::IndexKeyframes() {
             auto start_pts = (packet->pts - start_sec) * ts_factor;
             auto stop_pts = (packet->pts + packet->duration - start_sec) * ts_factor;
             frame_ts_.emplace_back(AVFrameTime(packet->pts, packet->dts, start_pts, stop_pts));
-            std::cout << ((packet->flags & AV_PKT_FLAG_KEY) ? "*" : "") << cnt << ": pts " << packet->pts << ", dts " << packet->dts << ", start pts " << start_pts << ", stop pts " << stop_pts << std::endl;
+            // std::cout << ((packet->flags & AV_PKT_FLAG_KEY) ? "*" : "") << cnt << ": pts " << packet->pts << ", dts " << packet->dts << ", start pts " << start_pts << ", stop pts " << stop_pts << std::endl;
             if (packet->flags & AV_PKT_FLAG_KEY) {
                 key_indices_.emplace_back(cnt);
             }
@@ -466,7 +467,7 @@ void VideoReader::IndexKeyframes() {
 
     for (size_t i = 0; i < frame_ts_.size(); ++i){
         pts_frame_map_.insert(std::pair<int64_t, int64_t>(frame_ts_[i].pts, i));
-        std::cout << i << ": pts " << frame_ts_[i].pts << ", dts " << frame_ts_[i].dts << ", start pts " << frame_ts_[i].start << ", stop pts " << frame_ts_[i].stop << std::endl;
+        // std::cout << i << ": pts " << frame_ts_[i].pts << ", dts " << frame_ts_[i].dts << ", start pts " << frame_ts_[i].start << ", stop pts " << frame_ts_[i].stop << std::endl;
     }
     curr_frame_ = GetFrameCount();
     ret = GoStart();
@@ -641,7 +642,7 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
             CHECK_GE(pos, 0);
             if (curr_frame_ == pos) {
                 // no need to seek
-                std::cout << "no need to seek" << std::endl;
+                // std::cout << "no need to seek" << std::endl;
             } else {
                 // seek no matter what
                 SeekAccurate(pos);
