@@ -326,7 +326,7 @@ bool VideoReader::SeekAccurate(int64_t pos) {
         if (!ret) return false;
         ret = Seek(key_pos);
         if (!ret) return false;
-        if(checkKeyFrames()){
+        if(CheckKeyFrames()){
             if(pos - key_pos > 0){
                 SkipFramesImpl(pos - curr_frame_);
             } else if(pos - key_pos == 0){
@@ -551,7 +551,7 @@ void VideoReader::SkipFrames(int64_t num) {
     SkipFramesImpl(num);
 }
 
-bool VideoReader::checkKeyFrames()
+bool VideoReader::CheckKeyFrames()
 {
     NDArray frame;
     decoder_->Start();
