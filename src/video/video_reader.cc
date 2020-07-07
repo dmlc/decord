@@ -563,7 +563,7 @@ bool VideoReader::CheckKeyFrame()
         ret = decoder_->Pop(&frame);
     }
 
-    // find the real current frame after seek
+    // find the real current frame after decoding
     auto iter = pts_frame_map_.find(frame.pts);
     if (iter != pts_frame_map_.end())
         cf = iter->second;
