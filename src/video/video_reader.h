@@ -56,7 +56,6 @@ class VideoReader : public VideoReaderInterface {
     private:
         void IndexKeyframes();
         void PushNext();
-        bool SeekStart();
         int64_t LocateKeyframe(int64_t pos);
         void SkipFramesImpl(int64_t num = 1);
         bool CheckKeyFrame();
