@@ -34,6 +34,8 @@ namespace runtime {
  */
 class NDArray {
  public:
+  // pts of the frame
+  int pts=0;
   // internal container type
   struct Container;
   /*! \brief default constructor */
@@ -56,7 +58,7 @@ class NDArray {
    * \param other The value to be moved
    */
   NDArray(NDArray&& other) // NOLINT(*)
-      : data_(other.data_) {
+      : pts(other.pts), data_(other.data_) {
     other.data_ = nullptr;
   }
   /*! \brief destructor */
@@ -69,6 +71,7 @@ class NDArray {
    */
   void swap(NDArray& other) {  // NOLINT(*)
     std::swap(data_, other.data_);
+    std::swap(pts, other.pts);
   }
   /*!
    * \brief copy assignmemt
@@ -305,7 +308,7 @@ inline NDArray::NDArray(Container* data)
 }
 
 inline NDArray::NDArray(const NDArray& other)
-  : data_(other.data_) {
+  : pts(other.pts), data_(other.data_) {
   if (data_ != nullptr) {
     data_->IncRef();
   }
@@ -368,6 +371,7 @@ inline void NDArray::CopyFrom(DLTensor* other) {
 inline void NDArray::CopyFrom(const NDArray& other) {
   CHECK(data_ != nullptr);
   CHECK(other.data_ != nullptr);
+  pts = other.pts;
   CopyFromTo(&(other.data_->dl_tensor), &(data_->dl_tensor));
 }
 
@@ -379,7 +383,7 @@ inline void NDArray::CopyFrom(std::vector<T>& other, std::vector<int64_t>& shape
     size *= s;
   }
   CHECK(other.size() == size) << "other: " << other.size() << " this: " << size;
-  DLTensor dlt = CreateDLTensorView(other, shape); 
+  DLTensor dlt = CreateDLTensorView(other, shape);
   CopyFromTo(&dlt, &(data_->dl_tensor));
 }
 
@@ -391,6 +395,7 @@ inline void NDArray::CopyTo(DLTensor* other) const {
 inline void NDArray::CopyTo(const NDArray& other) const {
   CHECK(data_ != nullptr);
   CHECK(other.data_ != nullptr);
+  // no copy of pts
   CopyFromTo(&(data_->dl_tensor), &(other.data_->dl_tensor));
 }
 

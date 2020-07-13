@@ -146,7 +146,9 @@ void FFMPEGThreadedDecoder::ProcessFrame(AVFramePtr frame, NDArray out_buf) {
     }
     if (skip) {
         // skip resize/filtering
-        frame_queue_->Push(NDArray::Empty({1}, kUInt8, kCPU));
+        NDArray empty = NDArray::Empty({1}, kUInt8, kCPU);
+        empty.pts = frame->pts;
+        frame_queue_->Push(empty);
         ++frame_count_;
         return;
     }
@@ -260,6 +262,7 @@ NDArray FFMPEGThreadedDecoder::CopyToNDArray(AVFramePtr p) {
             to_ptr, i * linesize,
             linesize, ctx, ctx, kUInt8, nullptr);
     }
+    arr.pts = p->pts;
     return arr;
 }
 
@@ -279,6 +282,7 @@ NDArray FFMPEGThreadedDecoder::AsNDArray(AVFramePtr p) {
 	ToDLTensor(p, manager->dl_tensor, av_manager->shape);
 	manager->deleter = AVFrameManagerDeleter;
 	NDArray arr = NDArray::FromDLPack(manager);
+    arr.pts = p->pts;
 	return arr;
 }
 

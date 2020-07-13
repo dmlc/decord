@@ -57,12 +57,17 @@ class VideoReader : public VideoReaderInterface {
         void IndexKeyframes();
         void PushNext();
         int64_t LocateKeyframe(int64_t pos);
+        void SkipFramesImpl(int64_t num = 1);
+        bool CheckKeyFrame();
         NDArray NextFrameImpl();
         int64_t FrameToPTS(int64_t pos);
         std::vector<int64_t> FramesToPTS(const std::vector<int64_t>& positions);
-        
+
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
+        std::map<int64_t, int64_t> pts_frame_map_;
+        NDArray tmp_key_frame_;
+        bool overrun_;
         /*! \brief a lookup table for per frame pts/dts */
         std::vector<AVFrameTime> frame_ts_;
         /*! \brief Video Streams Codecs in original videos */
@@ -79,7 +84,7 @@ class VideoReader : public VideoReaderInterface {
         bool eof_;  // end of file indicator
         NDArrayPool ndarray_pool_;
         std::unique_ptr<ffmpeg::AVIOBytesContext> io_ctx_;  // avio context for raw memory access
-        
+
 };  // class VideoReader
 }  // namespace decord
 #endif  // DECORD_VIDEO_VIDEO_READER_H_
