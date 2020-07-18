@@ -549,6 +549,16 @@ bool VideoReader::CheckKeyFrame()
         ret = decoder_->Pop(&frame);
     }
 
+    if (eof_ && frame.pts == -1){
+        // wrongly jumpped to the end of file
+        curr_frame_ = GetFrameCount();
+        return false;
+    }
+
+    if(frame.pts == -1){
+        LOG(FATAL) << "Error seeking keyframe: " << curr_frame_ << " with total frames: " << GetFrameCount();
+    }
+
     // find the real current frame after decoding
     auto iter = pts_frame_map_.find(frame.pts);
     if (iter != pts_frame_map_.end())
