@@ -59,6 +59,24 @@ def test_tvm_bridge():
     except ImportError:
         print('Skip test tvm bridge as tvm is not found')
 
+def test_threaded_bridge():
+    # issue #85
+    from decord import cpu, gpu
+    from multiprocessing.dummy import Pool as ThreadPool
+
+    video_paths = [
+      os.path.expanduser('~/Dev/decord/examples/flipping_a_pancake.mkv'), #list of paths to video
+      ]
+
+    def process_path(path):
+        vr = VideoReader(path, ctx=cpu(0))
+
+        for i in range(len(vr)):
+            frame = vr[i]
+
+    pool = ThreadPool(1)
+    pool.map(process_path, video_paths)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

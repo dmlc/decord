@@ -17,9 +17,12 @@ _BRIDGE_TYPES = {
 
 _CURRENT_BRIDGE = threading.local()
 _CURRENT_BRIDGE.type = 'native'
+_GLOBAL_BRIDGE_TYPE = 'native'  # child threads will derive from the global type but not overwrite
 
 def reset_bridge():
     _CURRENT_BRIDGE.type = 'native'
+    if threading.current_thread().name == 'MainThread':
+        _GLOBAL_BRIDGE_TYPE = 'native'
 
 def set_bridge(new_bridge):
     assert isinstance(new_bridge, str), (
@@ -28,11 +31,17 @@ def set_bridge(new_bridge):
         "valid bridges: {}".format(_BRIDGE_TYPES.keys()))
     global _CURRENT_BRIDGE
     _CURRENT_BRIDGE.type = new_bridge
+    if threading.current_thread().name == 'MainThread':
+        _GLOBAL_BRIDGE_TYPE = new_bridge
 
 def bridge_out(native_arr):
+    if not hasattr(_CURRENT_BRIDGE, 'type'):
+        _CURRENT_BRIDGE.type = _GLOBAL_BRIDGE_TYPE
     return _BRIDGE_TYPES[_CURRENT_BRIDGE.type][0](native_arr)
 
 def bridge_in(arr):
+    if not hasattr(_CURRENT_BRIDGE, 'type'):
+        _CURRENT_BRIDGE.type = _GLOBAL_BRIDGE_TYPE
     return _BRIDGE_TYPES[_CURRENT_BRIDGE.type][1](arr)
 
 class _BridgeScope(object):
@@ -42,6 +51,8 @@ class _BridgeScope(object):
 
     def __enter__(self):
         global _CURRENT_BRIDGE
+        if not hasattr(_CURRENT_BRIDGE, 'type'):
+            _CURRENT_BRIDGE.type = _GLOBAL_BRIDGE_TYPE
         try:
             self._prev = _CURRENT_BRIDGE.type
         except AttributeError:
