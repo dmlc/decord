@@ -224,6 +224,7 @@ int CUThreadedDecoder::HandlePictureDisplay_(CUVIDPARSERDISPINFO* disp_info) {
     if (!arr.defined()) {
         return 0;
     }
+    arr.pts = disp_info->timestamp;
     bool skip = false;
     {
       std::lock_guard<std::mutex> lock(pts_mutex_);
