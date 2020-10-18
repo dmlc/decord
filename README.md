@@ -67,14 +67,23 @@ Clone the repo recursively(important)
 git clone --recursive https://github.com/dmlc/decord
 ```
 
-Build the shared library in source root directory, you can specify `-DUSE_CUDA=ON` or `-DUSE_CUDA=/path/to/cuda` to enable NVDEC hardware accelerated decoding:
+Build the shared library in source root directory:
 
 ```bash
 cd decord
 mkdir build && cd build
-cmake .. -DUSE_CUDA=0
+cmake .. -DUSE_CUDA=0 -DCMAKE_BUILD_TYPE=Release
 make
 ```
+
+you can specify `-DUSE_CUDA=ON` or `-DUSE_CUDA=/path/to/cuda` to enable NVDEC hardware accelerated decoding:
+
+```bash
+cmake .. -DUSE_CUDA=ON -DCMAKE_BUILD_TYPE=Release
+```
+
+Note that if you encountered the issue(e.g., the offical nvidia docker, see #102) with `libnvcuvid.so`, it's probably due to the missing link for
+`libnvcuvid.so`, you can manually find(`ldconfig -p | grep libnvcuvid`) and link the library to `CUDA_TOOLKIT_ROOT_DIR\lib64` to allow `decord` smoothly detect and link the correct library.
 
 To specify a customized FFMPEG library path, use `-DFFMPEG_DIR=/path/to/ffmpeg".
 
@@ -120,7 +129,7 @@ Then go to root directory build shared library:
 ```bash
 cd decord
 mkdir build && cd build
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 ```
 
