@@ -268,11 +268,12 @@ bool VideoReader::Seek(int64_t pos) {
     decoder_->Clear();
     eof_ = false;
 
-    int flag = curr_frame_ > pos ? AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME : AVSEEK_FLAG_FRAME;
+    int64_t ts = FrameToPTS(pos);
+    int flag = curr_frame_ > pos ? AVSEEK_FLAG_BACKWARD : 0;
 
-    int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, pos, flag);
-    if (flag == AVSEEK_FLAG_FRAME && ret < 0) {
-      ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, pos, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+    int ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, flag);
+    if (flag != AVSEEK_FLAG_BACKWARD && ret < 0) {
+      ret = av_seek_frame(fmt_ctx_.get(), actv_stm_idx_, ts, AVSEEK_FLAG_BACKWARD);
     }
     if (ret < 0) LOG(WARNING) << "Failed to seek file to position: " << pos;
     decoder_->Start();
