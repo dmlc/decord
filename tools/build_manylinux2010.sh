@@ -3,11 +3,8 @@
 set -e
 
 # build tools
-yum install http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm
-yum install http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 yum install -y autoconf automake gcc gcc-c++ git libtool make nasm pkgconfig wget opencv zlib-devel dbus-devel lua-devel zvbi libdvdread-devel  libdc1394-devel libxcb-devel xcb-util-devel libxml2-devel mesa-libGLU-devel pulseaudio-libs-devel alsa-lib-devel libgcrypt-devel qt-devel
 yum --enablerepo=epel install -y yasm libva-devel libass-devel libkate-devel libbluray-devel libdvdnav-devel libcddb-devel libmodplug-devel
-yum --enablerepo=rpmforge install -y a52dec-devel libmpeg2-devel
 
 # cmake
 cd ~
