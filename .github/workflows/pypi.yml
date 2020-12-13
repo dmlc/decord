@@ -24,10 +24,9 @@ jobs:
     - name: Build manylinux Python wheels
       uses: RalfG/python-wheels-manylinux-build@v0.3.3-manylinux2010_x86_64
       with:
-        python-versions: 'cp36-cp36m cp37-cp37m'
+        python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38m'
         build-requirements: 'numpy'
-        system-packages: 'build-essential python3-dev python3-setuptools make cmake ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev'
-        pre-build-command: 'ffmpeg -version && mkdir build && cd build && cmake .. -DUSE_CUDA=0 && cd build && make -j$(nproc)'
+        pre-build-command: 'chmod +x tools/build_ffmpeg_manylinux2010.sh && bash tools/build_ffmpeg_manylinux2010.sh && mkdir build && cd build && cmake .. -DUSE_CUDA=0 && cd build && make -j$(nproc)'
         package-path: 'python'
         pip-wheel-args: '-w ./dist'
     - name: Publish wheels to PyPI
