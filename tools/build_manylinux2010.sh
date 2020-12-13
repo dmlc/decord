@@ -9,8 +9,8 @@ yum install -y autoconf automake bzip2 bzip2-devel freetype-devel gcc gcc-c++ gi
 cd ~
 curl -O -L https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1-Linux-x86_64.sh
 chmod +x ./cmake-3.19.1-Linux-x86_64.sh
-./cmake-3.19.1-Linux-x86_64.sh --skip-license --prefix=/usr/local/bin
-/usr/local/bin/cmake -version
+./cmake-3.19.1-Linux-x86_64.sh --skip-license --prefix=~/cmake
+~/cmake/bin/cmake -version
 
 # workspace
 mkdir ~/ffmpeg_sources
@@ -80,6 +80,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 pushd $DIR/..
 mkdir build
 cd build
-/usr/local/bin/cmake .. -DUSE_CUDA=0
+~/cmake/bin/cmake .. -DUSE_CUDA=0
 make -j$(nproc)
 popd
