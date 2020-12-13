@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # build tools
 yum install autoconf automake gcc gcc-c++ git libtool make nasm pkgconfig wget opencv zlib-devel dbus-devel lua-devel zvbi libdvdread-devel  libdc1394-devel libxcb-devel xcb-util-devel libxml2-devel mesa-libGLU-devel pulseaudio-libs-devel alsa-lib-devel libgcrypt-devel qt-devel
 yum --enablerepo=epel install yasm libva-devel libass-devel libkate-devel libbluray-devel libdvdnav-devel libcddb-devel libmodplug-devel
@@ -16,7 +18,7 @@ mkdir ~/ffmpeg_sources
 
 # libx264
 cd ~/ffmpeg_sources
-git clone git://git.videolan.org/x264
+git clone --depth 1 https://code.videolan.org/videolan/x264.git
 cd x264
 PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure --prefix="$HOME/ffmpeg_build" --bindir="$HOME/bin" --enable-shared --enable-pic
 make
