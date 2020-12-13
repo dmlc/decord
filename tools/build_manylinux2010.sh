@@ -7,6 +7,7 @@ yum install -y autoconf automake bzip2 bzip2-devel freetype-devel gcc gcc-c++ gi
 
 # cmake
 cd ~
+mkdir -p ~/cmake
 curl -O -L https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1-Linux-x86_64.sh
 chmod +x ./cmake-3.19.1-Linux-x86_64.sh
 ./cmake-3.19.1-Linux-x86_64.sh --skip-license --prefix=~/cmake
