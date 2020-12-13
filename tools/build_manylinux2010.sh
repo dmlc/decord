@@ -9,6 +9,7 @@ yum --enablerepo=epel install -y yasm libva-devel libass-devel libkate-devel lib
 # cmake
 cd ~
 curl -O -L https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1-Linux-x86_64.sh
+chmod +x ./cmake-3.19.1-Linux-x86_64.sh
 ./cmake-3.19.1-Linux-x86_64.sh --skip-license --prefix=/usr/local/bin
 cmake -version
 
