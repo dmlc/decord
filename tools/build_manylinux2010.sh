@@ -33,7 +33,8 @@ make install
 
 # ffmpeg
 cd /opt/source/ffmpeg/
-git clone git://source.ffmpeg.org/ffmpeg
+curl -O -L https://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2
+tar xjf ffmpeg-snapshot.tar.bz2
 cd ffmpeg
 ./configure --enable-gpl --enable-libvpx --enable-libx264 --enable-nonfree --disable-static --enable-shared --enable-pic
 make
