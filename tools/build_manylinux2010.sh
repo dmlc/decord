@@ -8,7 +8,7 @@ yum --enablerepo=rpmforge install a52dec-devel libmpeg2-devel
 # cmake
 cd ~
 curl -O -L https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1-Linux-x86_64.tar.gz
-tar xvf cmake-3.19.1-Linux-x86_64.tar.gz
+tar xf cmake-3.19.1-Linux-x86_64.tar.gz
 cp cmake-3.19.1-Linux-x86_64/bin/cmake /usr/bin/cmake
 cmake -version
 
@@ -25,7 +25,7 @@ make install
 
 # libvpx
 cd /opt/source/ffmpeg/
-git clone http://git.chromium.org/webm/libvpx.git
+git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git
 cd libvpx
 ./configure --enable-shared --enable-pic
 make
