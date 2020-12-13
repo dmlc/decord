@@ -39,5 +39,14 @@ cd ffmpeg
 make
 make install
 
-# test
+# test ffmpeg
 ffmpeg -version
+
+# decord
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+pushd $DIR/..
+mkdir build
+cd build
+cmake .. -DUSE_CUDA=0
+make -j$(nproc)
+popd
