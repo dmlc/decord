@@ -7,36 +7,48 @@ yum --enablerepo=rpmforge install a52dec-devel libmpeg2-devel
 
 # cmake
 cd ~
-curl -O -L https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1-Linux-x86_64.tar.gz
-tar xf cmake-3.19.1-Linux-x86_64.tar.gz
-cp cmake-3.19.1-Linux-x86_64/bin/cmake /usr/bin/cmake
+curl -O -L https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1-Linux-x86_64.sh
+./cmake-3.19.1-Linux-x86_64.sh --skip-license --prefix=/usr/local/bin
 cmake -version
 
 # workspace
-mkdir -p /opt/source/ffmpeg
+mkdir ~/ffmpeg_sources
 
 # libx264
-cd /opt/source/ffmpeg/
+cd ~/ffmpeg_sources
 git clone git://git.videolan.org/x264
 cd x264
-./configure --enable-shared --enable-pic
+PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure --prefix="$HOME/ffmpeg_build" --bindir="$HOME/bin" --enable-shared --enable-pic
 make
 make install
 
 # libvpx
-cd /opt/source/ffmpeg/
+cd ~/ffmpeg_sources
 git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git
 cd libvpx
-./configure --enable-shared --enable-pic
+./configure --prefix="$HOME/ffmpeg_build" --disable-examples --disable-unit-tests --enable-vp9-highbitdepth --as=yasm --enable-shared --enable-pic
 make
 make install
 
 # ffmpeg
-cd /opt/source/ffmpeg/
+cd ~/ffmpeg_sources
 curl -O -L https://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2
 tar xjf ffmpeg-snapshot.tar.bz2
 cd ffmpeg
-./configure --enable-gpl --enable-libvpx --enable-libx264 --enable-nonfree --disable-static --enable-shared --enable-pic
+PATH="$HOME/bin:$PATH" PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure \
+  --prefix="$HOME/ffmpeg_build" \
+  --extra-cflags="-I$HOME/ffmpeg_build/include" \
+  --extra-ldflags="-L$HOME/ffmpeg_build/lib" \
+  --extra-libs=-lpthread \
+  --extra-libs=-lm \
+  --bindir="$HOME/bin" \
+  --enable-gpl \
+  --enable-libvpx \
+  --enable-libx264 \
+  --enable-nonfree \
+  --disable-static \
+  --enable-shared \
+  --enable-pic
 make
 make install
 
