@@ -2,11 +2,14 @@
 
 set -e
 
+# pwd
+pwd
+
 # build tools
 yum install -y autoconf automake bzip2 bzip2-devel freetype-devel gcc gcc-c++ git libtool make mercurial pkgconfig zlib-devel
 
 # cmake
-cd ~
+pushd ~
 curl -O -L https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1-Linux-x86_64.sh
 chmod +x ./cmake-3.19.1-Linux-x86_64.sh
 ./cmake-3.19.1-Linux-x86_64.sh --skip-license --prefix=/usr/local
@@ -79,12 +82,13 @@ make install
 ls ~/ffmpeg_build/lib
 
 # decord
+popd
 pwd
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-echo "Script DIR: " $DIR
-pushd $DIR/..
+# DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+# echo "Script DIR: " $DIR
+# pushd $DIR/..
 mkdir build
-cd build
+pushd build
 /usr/local/bin/cmake .. -DUSE_CUDA=0 -DFFMPEG_DIR=~/ffmpeg_build
 make -j$(nproc)
 popd
