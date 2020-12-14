@@ -17,8 +17,7 @@ mkdir ~/ffmpeg_sources
 
 # nasm
 cd ~/ffmpeg_sources
-curl -O -L https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/nasm-2.14.02.tar.bz2
-tar xjf nasm-2.14.02.tar.bz2
+git clone https://github.com/netwide-assembler/nasm.git -b nasm-2.14.02 nasm-2.14.02
 cd nasm-2.14.02
 ./autogen.sh
 ./configure --prefix="$HOME/ffmpeg_build" --bindir="$HOME/bin"
