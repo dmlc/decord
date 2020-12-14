@@ -75,14 +75,11 @@ PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure \
 make
 make install
 
-# test ffmpeg
-ffmpeg -version
-
 # decord
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 pushd $DIR/..
 mkdir build
 cd build
-/usr/local/bin/cmake .. -DUSE_CUDA=0
+/usr/local/bin/cmake .. -DUSE_CUDA=0 -DFFMPEG_DIR=~/ffmpeg_build
 make -j$(nproc)
 popd
