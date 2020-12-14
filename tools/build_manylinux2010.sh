@@ -84,11 +84,12 @@ ls ~/ffmpeg_build/lib
 # decord
 popd
 pwd
+ls ..
 # DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 # echo "Script DIR: " $DIR
 # pushd $DIR/..
-mkdir build
-pushd build
+mkdir -p ../build
+pushd ../build
 /usr/local/bin/cmake .. -DUSE_CUDA=0 -DFFMPEG_DIR=~/ffmpeg_build
 make -j$(nproc)
 popd
