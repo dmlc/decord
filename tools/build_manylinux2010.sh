@@ -75,8 +75,13 @@ PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure \
 make
 make install
 
+# build libs
+ls ~/ffmpeg_build/lib
+
 # decord
+pwd
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+echo "Script DIR: " $DIR
 pushd $DIR/..
 mkdir build
 cd build
