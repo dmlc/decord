@@ -92,4 +92,5 @@ mkdir -p ../build
 pushd ../build
 /usr/local/bin/cmake .. -DUSE_CUDA=0 -DFFMPEG_DIR=~/ffmpeg_build
 make -j$(nproc)
+cp libdecord.so /usr/local/lib/
 popd
