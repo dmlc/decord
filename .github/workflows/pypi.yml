@@ -35,7 +35,7 @@ jobs:
       run: |
         pwd
         ls ./python/dist/
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
+        find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl.whl" -exec sh -c "python -m pip install '{}' --force-reinstall" \;
         python -m pip install ./python/dist/decord*
         python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish wheels to PyPI
@@ -90,9 +90,7 @@ jobs:
         curl -O -L https://github.com/vmlankub/CloudFiles/raw/5ec06ef8b7568cc3b84d310ef146c63c5e693b54/ffmpeg/ffmpeg-4.2.1-win64-shared.zip
     - name: Extract ffmpeg libs
       shell: powershell
-        run: |
-          Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath .
-          Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
+        run: Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath . && Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
     - name: configure
       run: mkdir build && cd build && cmake .. -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR=..\ffmpeg-4.2.1-win64-dev\include -DFFMPEG_LIBRARIES=..\ffmpeg-4.2.1-win64-dev\lib\*.lib
     - name: build
