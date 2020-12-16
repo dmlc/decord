@@ -17,7 +17,7 @@ else:
 
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
-        return platform.system() == 'Darwin'
+        return platform.system() in ('Darwin', 'Linux')
 
 CURRENT_DIR = os.path.dirname(__file__)
 
@@ -71,13 +71,13 @@ setup(
     version=VERSION,
     description='Decord Video Loader',
     zip_safe=False,
-    maintainer='Decord commiters',
+    maintainer='Decord committers',
     maintainer_email='cheungchih@gmail.com',
     packages=find_packages(),
     install_requires=[
         'numpy>=1.14.0',
     ],
-    url='https://github.com/zhreshold/decord',
+    url='https://github.com/dmlc/decord',
     distclass=BinaryDistribution,
     classifiers=[
         'Development Status :: 3 - Alpha',
