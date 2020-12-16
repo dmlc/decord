@@ -35,8 +35,8 @@ jobs:
       run: |
         pwd
         ls ./python/dist/
-        find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl.whl" -exec sh -c "python -m pip install '{}' --force-reinstall" \;
-        python -m pip install ./python/dist/decord*
+        rm ./python/dist/decord-*-linux_x86_64.whl
+        find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "python -m pip install '{}' --force-reinstall" \;
         python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish wheels to PyPI
       run: |
@@ -65,16 +65,16 @@ jobs:
     - name: Build library and wheel
       run: |
         brew install ffmpeg
-        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF && make -j4 && cd ..
+        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=10.12 && make -j4 && cd ..
         ls build/
         cd python
         python setup.py bdist_wheel
     - name: Sanity Test
       run: |
         pwd
-        ls ./dist/
-        find ./dist/ -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
-        python -m nose -v ../tests/python/unittests/test_video_reader.py
+        ls ./python/dist/
+        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
+        python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish to PYPI
       run: |
         ls ./dist/*
