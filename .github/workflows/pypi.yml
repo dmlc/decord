@@ -3,11 +3,9 @@ name: Publish to PYPI
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
 
 jobs:
-  deploy:
+  manylinux:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -20,7 +18,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install twine
+        pip install twine nose
+    - name: Setup.py hack
+      run: |
+        echo "[install]" > python/setup.cfg
+        echo "install_lib=libdecord.so" >> python/setup.cfg
     - name: Build manylinux Python wheels
       uses: RalfG/python-wheels-manylinux-build@v0.3.3-manylinux2010_x86_64
       with:
@@ -29,6 +31,44 @@ jobs:
         pre-build-command: 'sh ../tools/build_manylinux2010.sh'
         package-path: 'python'
         pip-wheel-args: '-w ./dist --no-deps'
+    - name: Sanity test
+      run: |
+        python -m pip install ./python/dist/decord*
+        python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish wheels to PyPI
+      run: |
+        ls ./python/dist/*
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine nose
+    - name: Setup cmake
+      uses: jwlawson/actions-setup-cmake@v1.4
+      with:
+        cmake-version: '3.16.x'
+    - name: Build library and wheel
+      run: |
+        brew install ffmpeg
+        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF && make -j4 && cd ..
+        pwd
+        ls build/
+    - name: Sanity Test
+      run: |
+        python -m pip install ./python/dist/decord*
+        python -m nose -v ./tests/python/unittests/test_video_reader.py
+    - name: Publish to PYPI
       run: |
         ls ./python/dist/*

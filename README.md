@@ -111,10 +111,10 @@ xcode-select --install
 
 To install other needed packages like cmake, we recommend first installing Homebrew, which is a popular package manager for macOS. Detailed instructions can be found on its [homepage](https://brew.sh/).
 
-After installation of Homebrew, install cmake by:
+After installation of Homebrew, install cmake and ffmpeg by:
 
 ```bash
-brew install cmake
+brew install cmake ffmpeg
 # note: make sure you have cmake 3.8 or later, you can install from cmake official website if it's too old
 ```
 
