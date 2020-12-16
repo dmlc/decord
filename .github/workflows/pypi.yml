@@ -90,7 +90,9 @@ jobs:
         curl -O -L https://github.com/vmlankub/CloudFiles/raw/5ec06ef8b7568cc3b84d310ef146c63c5e693b54/ffmpeg/ffmpeg-4.2.1-win64-shared.zip
     - name: Extract ffmpeg libs
       shell: powershell
-        run: Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath . && Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
+      run: |
+        Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath .
+        Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
     - name: configure
       run: mkdir build && cd build && cmake .. -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR=..\ffmpeg-4.2.1-win64-dev\include -DFFMPEG_LIBRARIES=..\ffmpeg-4.2.1-win64-dev\lib\*.lib
     - name: build
