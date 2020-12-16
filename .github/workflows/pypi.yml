@@ -66,17 +66,18 @@ jobs:
       run: |
         brew install ffmpeg
         mkdir build && cd build && cmake .. -DUSE_CUDA=OFF && make -j4 && cd ..
-        pwd
         ls build/
+        cd python
+        python setup.py bdist_wheel
     - name: Sanity Test
       run: |
         pwd
-        ls ./python/dist/
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
-        python -m nose -v ./tests/python/unittests/test_video_reader.py
+        ls ./dist/
+        find ./dist/ -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
+        python -m nose -v ../tests/python/unittests/test_video_reader.py
     - name: Publish to PYPI
       run: |
-        ls ./python/dist/*
+        ls ./dist/*
   windows:
     runs-on: windows-2016
 
@@ -94,7 +95,10 @@ jobs:
         Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath .
         Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
     - name: configure
-      run: mkdir build && cd build && cmake .. -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR=..\ffmpeg-4.2.1-win64-dev\include -DFFMPEG_LIBRARIES=..\ffmpeg-4.2.1-win64-dev\lib\*.lib
+      run: |
+        dir .
+        dir ffmpeg-4.2.1-win64-dev
+        mkdir build && cd build && cmake .. -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR=..\ffmpeg-4.2.1-win64-dev\include -DFFMPEG_LIBRARIES=..\ffmpeg-4.2.1-win64-dev\lib\*.lib
     - name: build
       run: cmake --build build --config Release
     - name: test
