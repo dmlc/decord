@@ -33,6 +33,7 @@ jobs:
         pip-wheel-args: '-w ./dist --no-deps'
     - name: Sanity test
       run: |
+        pwd
         ls ./python/dist/
         find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
         python -m pip install ./python/dist/decord*
@@ -69,6 +70,7 @@ jobs:
         ls build/
     - name: Sanity Test
       run: |
+        pwd
         ls ./python/dist/
         find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
         python -m nose -v ./tests/python/unittests/test_video_reader.py
@@ -82,8 +84,17 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: recursive
+    - name: Download ffmpeg libs
+      run: |
+        curl -O -L https://github.com/zhreshold/decord-distro/files/5314603/ffmpeg-4.2.1-win64-dev.zip
+        curl -O -L https://github.com/vmlankub/CloudFiles/raw/5ec06ef8b7568cc3b84d310ef146c63c5e693b54/ffmpeg/ffmpeg-4.2.1-win64-shared.zip
+    - name: Extract ffmpeg libs
+      shell: powershell
+        run: |
+          Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath .
+          Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
     - name: configure
-      run: mkdir build && cd build && cmake .. -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release"
+      run: mkdir build && cd build && cmake .. -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR=..\ffmpeg-4.2.1-win64-dev\include -DFFMPEG_LIBRARIES=..\ffmpeg-4.2.1-win64-dev\lib\*.lib
     - name: build
       run: cmake --build build --config Release
     - name: test
