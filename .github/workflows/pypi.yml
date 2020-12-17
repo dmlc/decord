@@ -81,8 +81,9 @@ jobs:
         python -m pip install delocate
         ls -lh ./python/dist/*.whl
         find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps --all '{}'" \;
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -v '{}'" \;
-        ls -lh ./python/dist/*.whl
+        mkdir -p ./python/dist/fixed_wheel
+        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -w ./python/dist/fixed_wheel -v '{}'" \;
+        ls -lh ./python/dist/fixed_wheel/*.whl
   windows:
     runs-on: windows-2016
 
@@ -107,7 +108,7 @@ jobs:
         dir d:/ffmpeg-4.2.1-win64-dev/include
         cmake --version
         mkdir build && cd build
-        cmake -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR="d:/ffmpeg-4.2.1-win64-dev/include" -DFFMPEG_LIBRARIES="d:/ffmpeg-4.2.1-win64-dev/lib/*.lib" ..
+        cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR="d:/ffmpeg-4.2.1-win64-dev/include" -DFFMPEG_LIBRARIES="d:/ffmpeg-4.2.1-win64-dev/lib/*.lib" ..
     - name: build
       run: cmake --build build --config Release
     - name: test
