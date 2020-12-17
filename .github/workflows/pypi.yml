@@ -69,7 +69,7 @@ jobs:
         ls build/
         cd python
         python setup.py bdist_wheel
-        find ./dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\10_14/10_9}' {};
+        find ./dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\10_14/10_9}' {} \;
     - name: Sanity Test
       run: |
         pwd
@@ -99,17 +99,13 @@ jobs:
         curl -O -L https://github.com/vmlankub/CloudFiles/raw/5ec06ef8b7568cc3b84d310ef146c63c5e693b54/ffmpeg/ffmpeg-4.2.1-win64-shared.zip
     - name: Extract ffmpeg libs
       shell: powershell
-      run: |
-        Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath .
-        Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
-        $env:FFMPEG_LIBS=$(Get-ChildItem C:\Users\*\AppData\Local\*.txt)
-        echo $env:FFMPEG_LIBS
+      run: Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath . && Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
     - name: configure
       run: |
         dir ffmpeg-4.2.1-win64-dev\lib
         cmake --version
         mkdir build && cd build
-        cmake .. -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR=../ffmpeg-4.2.1-win64-dev/include -DFFMPEG_LIBRARIES=%FFMPEG_LIBS%
+        cmake -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR="../ffmpeg-4.2.1-win64-dev/include" -DFFMPEG_LIBRARIES="../ffmpeg-4.2.1-win64-dev/lib/*.lib" ..
     - name: build
       run: cmake --build build --config Release
     - name: test
