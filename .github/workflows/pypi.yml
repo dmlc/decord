@@ -45,7 +45,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v2
       with:
@@ -78,7 +78,7 @@ jobs:
         python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish to PYPI
       run: |
-        python -m pip install git+https://github.com/zhreshold/delocate@fix-deep-init
+        python -m pip install delocate
         ls -lh ./python/dist/*.whl
         find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps --all '{}'" \;
         find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -v '{}'" \;
@@ -100,13 +100,14 @@ jobs:
         curl -O -L https://github.com/vmlankub/CloudFiles/raw/5ec06ef8b7568cc3b84d310ef146c63c5e693b54/ffmpeg/ffmpeg-4.2.1-win64-shared.zip
     - name: Extract ffmpeg libs
       shell: powershell
-      run: Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath . ; Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
+      run: Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath d:\ ; Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath d:\
     - name: configure
       run: |
-        dir ffmpeg-4.2.1-win64-dev\lib
+        dir d:/ffmpeg-4.2.1-win64-dev/lib
+        dir d:/ffmpeg-4.2.1-win64-dev/include
         cmake --version
         mkdir build && cd build
-        cmake -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR="../ffmpeg-4.2.1-win64-dev/include" -DFFMPEG_LIBRARIES="../ffmpeg-4.2.1-win64-dev/lib/*.lib" ..
+        cmake -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR="d:/ffmpeg-4.2.1-win64-dev/include" -DFFMPEG_LIBRARIES="d:/ffmpeg-4.2.1-win64-dev/lib/*.lib" ..
     - name: build
       run: cmake --build build --config Release
     - name: test
