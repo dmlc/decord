@@ -35,7 +35,7 @@ jobs:
       run: |
         pwd
         ls ./python/dist/
-        rm ./python/dist/decord-*-linux_x86_64.whl
+        sudo rm ./python/dist/decord-*-linux_x86_64.whl
         find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "python -m pip install '{}' --force-reinstall" \;
         python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish wheels to PyPI
@@ -65,10 +65,11 @@ jobs:
     - name: Build library and wheel
       run: |
         brew install ffmpeg
-        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=10.12 && make -j4 && cd ..
+        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 && make -j4 && cd ..
         ls build/
         cd python
         python setup.py bdist_wheel
+        find ./dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\10_14/10_9}' {};
     - name: Sanity Test
       run: |
         pwd
@@ -77,7 +78,10 @@ jobs:
         python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish to PYPI
       run: |
-        ls ./dist/*
+        python -m pip install git+https://github.com/zhreshold/delocate@fix-deep-init
+        ls -lh ./python/dist/*.whl
+        delocate-wheel ./python/dist/*.whl # copies library dependencies into wheel
+        ls -lh ./python/dist/*.whl
   windows:
     runs-on: windows-2016
 
@@ -98,11 +102,14 @@ jobs:
       run: |
         Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath .
         Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath .
+        $env:FFMPEG_LIBS=$(Get-ChildItem C:\Users\*\AppData\Local\*.txt)
+        echo $env:FFMPEG_LIBS
     - name: configure
       run: |
-        dir .
         dir ffmpeg-4.2.1-win64-dev\lib
-        mkdir build && cd build && cmake .. -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR=..\ffmpeg-4.2.1-win64-dev\include -DFFMPEG_LIBRARIES=..\ffmpeg-4.2.1-win64-dev\lib\*.lib
+        cmake --version
+        mkdir build && cd build
+        cmake .. -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR=../ffmpeg-4.2.1-win64-dev/include -DFFMPEG_LIBRARIES=%FFMPEG_LIBS%
     - name: build
       run: cmake --build build --config Release
     - name: test
