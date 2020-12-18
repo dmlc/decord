@@ -21,8 +21,8 @@ jobs:
         pip install twine nose
     - name: Setup.py hack
       run: |
-        echo "[options.package_data]" > python/setup.cfg
-        echo "* = *.so" >> python/setup.cfg
+        echo "[install]" > python/setup.cfg
+        echo "install_lib=" >> python/setup.cfg
     - name: Build manylinux Python wheels
       uses: RalfG/python-wheels-manylinux-build@v0.3.3-manylinux2010_x86_64
       with:
@@ -67,8 +67,8 @@ jobs:
         cmake-version: '3.16.x'
     - name: Setup.py hack
       run: |
-        echo "[options.package_data]" > python/setup.cfg
-        echo "* = *.dylib" >> python/setup.cfg
+        echo "[install]" > python/setup.cfg
+        echo "install_lib=" >> python/setup.cfg
     - name: Download FFMPEG
       run: |
         curl -O -L https://github.com/dmlc/decord/releases/download/v0.1.0/ffmpeg-4.0.2-macos-10.9-shared.zip
@@ -88,13 +88,15 @@ jobs:
         ls -lh ./python/dist/*.whl
         find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps '{}'" \;
         mkdir -p ./python/dist/fixed_wheel
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -w ./python/dist/fixed_wheel -v '{}'" \;
-        ls -lh ./python/dist/fixed_wheel/*.whl
+        cd ./python/dist/
+        cp $FFMPEG_DIR/lib/libvpx*.dylib .
+        find . -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -w fixed_wheel -v '{}'" \;
+        ls -lh ./fixed_wheel
     - name: Sanity Test
       run: |
         pwd
-        ls ./python/dist/
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
+        ls ./python/dist/fixed_wheel
+        find ./python/dist/fixed_wheel -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
         python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish to PYPI
       run: |
@@ -142,5 +144,6 @@ jobs:
       run: |
         FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\decord*`) DO (SET wheel_name=%%F)
         echo wheel_name=%wheel_name%
+        cd python\dist
         python -m pip install --force-reinstall %wheel_name%
-        python -m nose -v ../tests/python/unittests/test_video_reader.py
+        python -m nose -v ../../tests/python/unittests/test_video_reader.py
