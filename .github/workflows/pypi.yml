@@ -44,6 +44,8 @@ jobs:
     - name: Publish wheels to PyPI
       run: |
         ls ./python/dist/*
+        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\cp36-cp36m/none-any}' {} \;
+        ls -lh ./python/dist/*
   macos:
     runs-on: macos-latest
     strategy:
@@ -84,6 +86,7 @@ jobs:
         find ./dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\10_14/10_9}' {} \;
     - name: Fix wheel by delocate
       run: |
+        FFMPEG_DIR="$PWD"/ffmpeg-4.0.2-macos/build
         python -m pip install delocate
         ls -lh ./python/dist/*.whl
         find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps '{}'" \;
@@ -142,12 +145,20 @@ jobs:
         echo wheel_name=%wheel_name%
         cd python\dist
         7z x "%wheel_name%" -ofixed_wheel
-        dir fixed_wheel\decord
+        dir fixed_wheel
         xcopy /Y d:\ffmpeg-4.2.1-win64-shared\bin\*.dll fixed_wheel\decord
         copy c:\windows\system32\MSVCP140.dll fixed_wheel\decord
         copy c:\windows\system32\VCRUNTIME140.dll fixed_wheel\decord
+        dir fixed_wheel\decord
+    - name: Recreate wheel
+      shell: powershell
+      run: |
         mkdir output
-        7z a output\%wheel_name% ./fixed_wheel/*
+        $wheel_name = Get-ChildItem *.whl
+        Compress-Archive -Path python\dist\fixed_wheel\* -DestinationPath python\dist\output\${wheel_name}
+        cd python\dist\output
+        Get-ChildItem *.whl  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
+        dir .
     - name: Sanity test
       shell: cmd
       run: |
