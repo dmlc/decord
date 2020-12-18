@@ -44,7 +44,7 @@ jobs:
     - name: Publish wheels to PyPI
       run: |
         ls ./python/dist/*
-        find ./python/dist/ -type f -iname "decord*.whl" -exec bash -c 'mv $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
+        find ./python/dist/ -type f -iname "decord*.whl" -exec bash -c 'cp $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
         ls -lh ./python/dist/*
   macos:
     runs-on: macos-latest
@@ -150,7 +150,8 @@ jobs:
       run: |
         cd python\dist
         mkdir output
-        $wheel_name = Get-ChildItem *.whl
+        $wheel_path = Get-ChildItem *.whl
+        $wheel_name = $wheel_path.Name
         Compress-Archive -Path fixed_wheel\* -DestinationPath output\${wheel_name}
         cd output
         Get-ChildItem *.whl  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
