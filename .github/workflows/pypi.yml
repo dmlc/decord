@@ -71,22 +71,18 @@ jobs:
       run: |
         echo "[install]" > python/setup.cfg
         echo "install_lib=" >> python/setup.cfg
-    - name: Download FFMPEG
+    - name: Build deps and library
       run: |
-        curl -O -L https://github.com/dmlc/decord/releases/download/v0.1.0/ffmpeg-4.0.2-macos-10.9-shared.zip
-        unzip ffmpeg-4.0.2-macos-10.9-shared.zip -d ./ffmpeg-4.0.2-macos
-        ls ./ffmpeg-4.0.2-macos/build
-    - name: Build library and wheel
+        sudo chmod +x tools/build_macos_10_9.sh
+        tools/build_macos_10_9.sh || { echo "Build command failed."; exit 1; }
+    - name: Build wheel
       run: |
-        FFMPEG_DIR="$PWD"/ffmpeg-4.0.2-macos/build
-        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 -DFFMPEG_DIR="$FFMPEG_DIR" && make -j4 && cd ..
-        ls -lh build/
         cd python
         python setup.py bdist_wheel
         find ./dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\10_14/10_9}' {} \;
     - name: Fix wheel by delocate
       run: |
-        FFMPEG_DIR="$PWD"/ffmpeg-4.0.2-macos/build
+        FFMPEG_DIR="$HOME"/ffmpeg_build
         python -m pip install delocate
         ls -lh ./python/dist/*.whl
         find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps '{}'" \;
@@ -97,7 +93,6 @@ jobs:
         ls -lh ./fixed_wheel
     - name: Sanity Test
       run: |
-        pwd
         ls ./python/dist/fixed_wheel
         find ./python/dist/fixed_wheel -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
         python -m nose -v ./tests/python/unittests/test_video_reader.py
@@ -153,7 +148,7 @@ jobs:
     - name: Recreate wheel
       shell: powershell
       run: |
-        mkdir output
+        mkdir python\dist\output
         $wheel_name = Get-ChildItem *.whl
         Compress-Archive -Path python\dist\fixed_wheel\* -DestinationPath python\dist\output\${wheel_name}
         cd python\dist\output

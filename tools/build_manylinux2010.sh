@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# this file is actually for building decord for manylinux2010 on github action
+
 set -e
 
 # pwd
@@ -25,7 +27,7 @@ unzip nasm-2.14.02.zip
 cd nasm-2.14.02
 ./autogen.sh
 ./configure --prefix="$HOME/ffmpeg_build" --bindir="$HOME/bin"
-make
+make -j$(nproc)
 make install
 
 # yasm
@@ -34,7 +36,7 @@ curl -O -L https://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz
 tar xzf yasm-1.3.0.tar.gz
 cd yasm-1.3.0
 ./configure --prefix="$HOME/ffmpeg_build" --bindir="$HOME/bin"
-make
+make -j$(nproc)
 make install
 
 # libx264
@@ -43,7 +45,7 @@ git clone --depth 1 https://code.videolan.org/videolan/x264.git
 cd x264
 export PATH="$HOME/bin:$PATH"
 PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure --prefix="$HOME/ffmpeg_build" --bindir="$HOME/bin" --enable-shared --enable-pic
-make
+make -j$(nproc)
 make install
 
 # libvpx
@@ -52,7 +54,7 @@ git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git
 cd libvpx
 export PATH="$HOME/bin:$PATH"
 ./configure --prefix="$HOME/ffmpeg_build" --disable-examples --disable-unit-tests --enable-vp9-highbitdepth --as=yasm --enable-shared --enable-pic
-make
+make -j$(nproc)
 make install
 
 # ffmpeg
@@ -75,7 +77,7 @@ PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure \
   --disable-static \
   --enable-shared \
   --enable-pic
-make
+make -j$(nproc)
 make install
 
 # build libs
@@ -85,9 +87,6 @@ ls ~/ffmpeg_build/lib
 popd
 pwd
 ls ..
-# DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-# echo "Script DIR: " $DIR
-# pushd $DIR/..
 mkdir -p ../build
 pushd ../build
 /usr/local/bin/cmake .. -DUSE_CUDA=0 -DFFMPEG_DIR=~/ffmpeg_build
