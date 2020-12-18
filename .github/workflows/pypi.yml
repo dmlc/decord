@@ -41,15 +41,24 @@ jobs:
         find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "which python && python -m pip install '{}' --force-reinstall" \;
         python -c "import decord; print(decord.__version__)"
         python -m nose -v ./tests/python/unittests/test_video_reader.py
-    - name: Publish wheels to PyPI
+    - name: Rename wheel
       run: |
-        cd ./python/dist
+        cd ./python
         ls -la ./dist
         sudo chmod 755 -R ./dist
         ls -la ./dist/
         cd dist
         find . -type f -iname "decord*.whl" -exec bash -c 'mv $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
         ls -lh .
+    - name: Publish package to TestPyPI
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/
+        packages_dir: python/dist/
+        skip_existing: true
   macos:
     runs-on: macos-latest
     strategy:
@@ -103,6 +112,15 @@ jobs:
     - name: Publish to PYPI
       run: |
         ls -lh ./python/dist/fixed_wheel/
+    - name: Publish package to TestPyPI
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/
+        packages_dir: python/dist/fixed_wheel/
+        skip_existing: true
   windows:
     runs-on: windows-2016
 
@@ -169,3 +187,12 @@ jobs:
         cd python\dist\output
         python -m pip install --force-reinstall %wheel_name%
         python -m nose -v ../../../tests/python/unittests/test_video_reader.py
+    - name: Publish package to TestPyPI
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/
+        packages_dir: python/dist/output/
+        skip_existing: true
