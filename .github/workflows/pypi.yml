@@ -89,7 +89,7 @@ jobs:
         find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps '{}'" \;
         mkdir -p ./python/dist/fixed_wheel
         cd ./python/dist/
-        cp $FFMPEG_DIR/lib/libvpx*.dylib .
+        cp "$FFMPEG_DIR"/lib/libvpx*.dylib .
         find . -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -w fixed_wheel -v '{}'" \;
         ls -lh ./fixed_wheel
     - name: Sanity Test
@@ -129,21 +129,30 @@ jobs:
     - name: Build
       run: |
         cmake --build build --config Release
-        xcopy /Y d:\ffmpeg-4.2.1-win64-shared\bin\*.dll ..\python\decord\*
-        dir c:\
-        copy c:\windows\system32\MSVCP140.dll ..\python\decord\
-        copy c:\windows\system32\VCRUNTIME140.dll ..\python\decord\
     - name: Build wheel
       run: |
         python -m pip install pip --upgrade
         python -m pip install wheel nose twine
         cd python && python setup.py bdist_wheel
         dir ./dist/
-    - name: Sanity test
+    - name: Fix wheel deps
       shell: cmd
       run: |
         FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\decord*`) DO (SET wheel_name=%%F)
         echo wheel_name=%wheel_name%
         cd python\dist
+        7z x "%wheel_name%" -ofixed_wheel
+        dir fixed_wheel\decord
+        xcopy /Y d:\ffmpeg-4.2.1-win64-shared\bin\*.dll fixed_wheel\decord
+        copy c:\windows\system32\MSVCP140.dll fixed_wheel\decord
+        copy c:\windows\system32\VCRUNTIME140.dll fixed_wheel\decord
+        mkdir output
+        7z a output\%wheel_name% ./fixed_wheel/*
+    - name: Sanity test
+      shell: cmd
+      run: |
+        FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\output\decord*`) DO (SET wheel_name=%%F)
+        echo wheel_name=%wheel_name%
+        cd python\dist\output
         python -m pip install --force-reinstall %wheel_name%
-        python -m nose -v ../../tests/python/unittests/test_video_reader.py
+        python -m nose -v ../../../tests/python/unittests/test_video_reader.py
