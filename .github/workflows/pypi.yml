@@ -38,7 +38,7 @@ jobs:
         sudo rm ./python/dist/decord-*-linux_x86_64.whl
         which python
         which pip
-        find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "python -m pip install '{}' --force-reinstall" \;
+        find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "which python && python -m pip install '{}' --force-reinstall" \;
         python -c "import decord; print(decord.__version__)"
         python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish wheels to PyPI
@@ -77,7 +77,7 @@ jobs:
     - name: Build library and wheel
       run: |
         FFMPEG_DIR="$PWD"/ffmpeg-4.0.2-macos/build
-        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 -DFFMPEG_DIR="$FFMPEG_DIR" && make -j$(nproc) && cd ..
+        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 -DFFMPEG_DIR="$FFMPEG_DIR" && make -j4 && cd ..
         ls -lh build/
         cd python
         python setup.py bdist_wheel
@@ -128,7 +128,15 @@ jobs:
         dir c:\
         copy c:\windows\system32\MSVCP140.dll ..\python\decord\
         copy c:\windows\system32\VCRUNTIME140.dll ..\python\decord\
-    - name: Sanity test
+    - name: Build wheel
       run: |
+        python -m pip install pip --upgrade
+        python -m pip install wheel nose twine
         cd python && python setup.py bdist_wheel
         dir ./dist/
+    - name: Sanity test
+      run: |
+        FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d dist\decord*`) DO (SET wheel_name=%%F)
+        echo %wheel_name%
+        python -m pip install --force-reinstall %wheel_name%
+        python -m nose -v ../tests/python/unittests/test_video_reader.py

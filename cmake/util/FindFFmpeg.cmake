@@ -19,13 +19,32 @@
 
 if (FFMPEG_DIR)
   set(FFMPEG_INCLUDE_DIR ${FFMPEG_DIR}/include)
-  set(FFMPEG_LIBRARIES
-    ${FFMPEG_DIR}/lib/libavformat.so
-    ${FFMPEG_DIR}/lib/libavfilter.so
-    ${FFMPEG_DIR}/lib/libavcodec.so
-    ${FFMPEG_DIR}/lib/libavutil.so
-    ${FFMPEG_DIR}/lib/libavdevice.so
-  )
+  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # Mac OS X specific code
+    set(FFMPEG_LIBRARIES
+      ${FFMPEG_DIR}/lib/libavformat.dylib
+      ${FFMPEG_DIR}/lib/libavfilter.dylib
+      ${FFMPEG_DIR}/lib/libavcodec.dylib
+      ${FFMPEG_DIR}/lib/libavutil.dylib
+      ${FFMPEG_DIR}/lib/libavdevice.dylib
+    )
+  elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    set(FFMPEG_LIBRARIES
+      ${FFMPEG_DIR}/lib/libavformat.so
+      ${FFMPEG_DIR}/lib/libavfilter.so
+      ${FFMPEG_DIR}/lib/libavcodec.so
+      ${FFMPEG_DIR}/lib/libavutil.so
+      ${FFMPEG_DIR}/lib/libavdevice.so
+    )
+  else()
+    set(FFMPEG_LIBRARIES
+      ${FFMPEG_DIR}/lib/libavformat.lib
+      ${FFMPEG_DIR}/lib/libavfilter.lib
+      ${FFMPEG_DIR}/lib/libavcodec.lib
+      ${FFMPEG_DIR}/lib/libavutil.lib
+      ${FFMPEG_DIR}/lib/libavdevice.lib
+    )
+  endif()
 endif (FFMPEG_DIR)
 
 if (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
