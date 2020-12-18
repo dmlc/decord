@@ -17,7 +17,7 @@ else:
 
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
-        return platform.system() in ('Darwin', 'Linux')
+        return True
 
 CURRENT_DIR = os.path.dirname(__file__)
 
