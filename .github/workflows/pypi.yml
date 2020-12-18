@@ -82,6 +82,14 @@ jobs:
         cd python
         python setup.py bdist_wheel
         find ./dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\10_14/10_9}' {} \;
+    - name: Fix wheel by delocate
+      run: |
+        python -m pip install delocate
+        ls -lh ./python/dist/*.whl
+        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps '{}'" \;
+        mkdir -p ./python/dist/fixed_wheel
+        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -w ./python/dist/fixed_wheel -v '{}'" \;
+        ls -lh ./python/dist/fixed_wheel/*.whl
     - name: Sanity Test
       run: |
         pwd
@@ -90,12 +98,7 @@ jobs:
         python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish to PYPI
       run: |
-        python -m pip install delocate
-        ls -lh ./python/dist/*.whl
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps '{}'" \;
-        mkdir -p ./python/dist/fixed_wheel
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -w ./python/dist/fixed_wheel -v '{}'" \;
-        ls -lh ./python/dist/fixed_wheel/*.whl
+        ls -lh ./python/dist/fixed_wheel/
   windows:
     runs-on: windows-2016
 
@@ -137,7 +140,7 @@ jobs:
     - name: Sanity test
       shell: cmd
       run: |
-        FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d dist\decord*`) DO (SET wheel_name=%%F)
-        echo %wheel_name%
+        FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\decord*`) DO (SET wheel_name=%%F)
+        echo wheel_name=%wheel_name%
         python -m pip install --force-reinstall %wheel_name%
         python -m nose -v ../tests/python/unittests/test_video_reader.py
