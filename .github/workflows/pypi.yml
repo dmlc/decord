@@ -44,7 +44,7 @@ jobs:
     - name: Publish wheels to PyPI
       run: |
         ls ./python/dist/*
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\cp36-cp36m/none-any}' {} \;
+        find ./python/dist/ -type f -iname "decord*.whl" -exec bash -c 'mv $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
         ls -lh ./python/dist/*
   macos:
     runs-on: macos-latest
@@ -148,10 +148,11 @@ jobs:
     - name: Recreate wheel
       shell: powershell
       run: |
-        mkdir python\dist\output
+        cd python\dist
+        mkdir output
         $wheel_name = Get-ChildItem *.whl
-        Compress-Archive -Path python\dist\fixed_wheel\* -DestinationPath python\dist\output\${wheel_name}
-        cd python\dist\output
+        Compress-Archive -Path fixed_wheel\* -DestinationPath output\${wheel_name}
+        cd output
         Get-ChildItem *.whl  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
         dir .
     - name: Sanity test

@@ -60,6 +60,6 @@ ls ~/ffmpeg_build/lib
 popd
 pwd
 mkdir -p build && cd build
-cmake .. -DUSE_CUDA=0 -DFFMPEG_DIR=~/ffmpeg_build
+cmake .. -DUSE_CUDA=0 -DFFMPEG_DIR="$HOME/ffmpeg_build"
 make -j$(nproc)
 ls -lh
