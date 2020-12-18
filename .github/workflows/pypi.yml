@@ -76,7 +76,8 @@ jobs:
         ls ./ffmpeg-4.0.2-macos/build
     - name: Build library and wheel
       run: |
-        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 -DFFMPEG_DIR="../ffmpeg-4.0.2-macos/build" && make -j4 && cd ..
+        FFMPEG_DIR="$PWD"/ffmpeg-4.0.2-macos/build
+        mkdir build && cd build && cmake .. -DUSE_CUDA=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 -DFFMPEG_DIR="$FFMPEG_DIR" && make -j$(nproc) && cd ..
         ls -lh build/
         cd python
         python setup.py bdist_wheel
@@ -124,8 +125,9 @@ jobs:
       run: |
         cmake --build build --config Release
         xcopy /Y d:\ffmpeg-4.2.1-win64-shared\bin\*.dll ..\python\decord\*
-        copy %WINDIR%\system32\MSVCP140.dll ..\python\decord\
-        copy %WINDIR%\system32\VCRUNTIME140.dll ..\python\decord\
+        dir c:\
+        copy c:\windows\system32\MSVCP140.dll ..\python\decord\
+        copy c:\windows\system32\VCRUNTIME140.dll ..\python\decord\
     - name: Sanity test
       run: |
         cd python && python setup.py bdist_wheel
