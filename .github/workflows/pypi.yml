@@ -43,9 +43,13 @@ jobs:
         python -m nose -v ./tests/python/unittests/test_video_reader.py
     - name: Publish wheels to PyPI
       run: |
-        ls ./python/dist/*
-        find ./python/dist/ -type f -iname "decord*.whl" -exec bash -c 'cp $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
-        ls -lh ./python/dist/*
+        cd ./python/dist
+        ls -la ./dist
+        sudo chmod 755 -R ./dist
+        ls -la ./dist/
+        cd dist
+        find . -type f -iname "decord*.whl" -exec bash -c 'mv $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
+        ls -lh .
   macos:
     runs-on: macos-latest
     strategy:
@@ -151,10 +155,11 @@ jobs:
         cd python\dist
         mkdir output
         $wheel_path = Get-ChildItem *.whl
-        $wheel_name = $wheel_path.Name
-        Compress-Archive -Path fixed_wheel\* -DestinationPath output\${wheel_name}
+        $wheel_name = $wheel_path.BaseName
+        Compress-Archive -Path fixed_wheel\* -DestinationPath output\${wheel_name}.zip
         cd output
-        Get-ChildItem *.whl  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
+        Get-ChildItem *.zip  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
+        Get-ChildItem *.zip  |Rename-Item -NewName {$_.name -replace '.zip','.whl'}
         dir .
     - name: Sanity test
       shell: cmd
