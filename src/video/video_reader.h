@@ -62,6 +62,8 @@ class VideoReader : public VideoReaderInterface {
         NDArray NextFrameImpl();
         int64_t FrameToPTS(int64_t pos);
         std::vector<int64_t> FramesToPTS(const std::vector<int64_t>& positions);
+        void CacheFrame(NDArray frame);
+        bool FetchCachedFrame(NDArray &frame);
 
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
@@ -84,7 +86,9 @@ class VideoReader : public VideoReaderInterface {
         bool eof_;  // end of file indicator
         NDArrayPool ndarray_pool_;
         std::unique_ptr<ffmpeg::AVIOBytesContext> io_ctx_;  // avio context for raw memory access
-
+        std::string filename_;  // file name if from file directly, can be empty if from bytes
+        NDArray cached_frame_;  // last valid frame, for error tolerance
+        bool use_cached_frame_;  // switch to enable cache
 };  // class VideoReader
 }  // namespace decord
 #endif  // DECORD_VIDEO_VIDEO_READER_H_

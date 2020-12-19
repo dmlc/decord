@@ -22,11 +22,13 @@ using FFMPEGThreadedDecoder = ffmpeg::FFMPEGThreadedDecoder;
 using AVFramePool = ffmpeg::AVFramePool;
 using AVPacketPool = ffmpeg::AVPacketPool;
 static const int AVIO_BUFFER_SIZE = 40960;
+static const int REWIND_RETRY_MAX = 16;
+static const int EOF_RETRY_MAX = 1024;
 
 
 VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, int nb_thread, int io_type)
      : ctx_(ctx), key_indices_(), pts_frame_map_(), tmp_key_frame_(), overrun_(false), frame_ts_(), codecs_(), actv_stm_idx_(-1), fmt_ctx_(nullptr), decoder_(nullptr), curr_frame_(0),
-     nb_thread_decoding_(nb_thread), width_(width), height_(height), eof_(false), io_ctx_() {
+     nb_thread_decoding_(nb_thread), width_(width), height_(height), eof_(false), io_ctx_(), use_cached_frame_(true) {
     // av_register_all deprecated in latest versions
     #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
     av_register_all();
@@ -50,6 +52,7 @@ VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, i
         //     return;
         // #endif
     } else if (io_type == kRawBytes) {
+        filename_ = "BytesIO";
         io_ctx_.reset(new ffmpeg::AVIOBytesContext(fn, AVIO_BUFFER_SIZE));
         fmt_ctx = avformat_alloc_context();
         CHECK(fmt_ctx != nullptr) << "Unable to alloc avformat context";
@@ -60,6 +63,7 @@ VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, i
         }
         open_ret = avformat_open_input(&fmt_ctx, NULL, NULL, NULL);
     } else if (io_type == kNormal) {
+        filename_ = fn;
         open_ret = avformat_open_input(&fmt_ctx, fn.c_str(), NULL, NULL);
     } else {
         LOG(WARNING) << "Invalid io type: " << io_type;
@@ -266,6 +270,7 @@ bool VideoReader::Seek(int64_t pos) {
     if (!fmt_ctx_) return false;
     if (curr_frame_ == pos) return true;
     decoder_->Clear();
+    cached_frame_ = NDArray();
     eof_ = false;
 
     int64_t ts = FrameToPTS(pos);
@@ -355,7 +360,6 @@ void VideoReader::PushNext() {
             return;
         }
         if (packet->stream_index == actv_stm_idx_) {
-
             if (ctx_.device_type != kDLGPU) {
                     // no preallocated memory and memory pool, use FFMPEG AVFrame pool
                     decoder_->Push(packet, NDArray());
@@ -380,8 +384,8 @@ NDArray VideoReader::NextFrameImpl() {
     decoder_->Start();
     bool ret = false;
     int rewind_offset = 0;
+    int retry = 0;
     while (!ret) {
-        // std::cout << "!!" << std::endl;
         PushNext();
         if (curr_frame_ >= GetFrameCount()) {
             return NDArray::Empty({}, kUInt8, ctx_);
@@ -389,14 +393,34 @@ NDArray VideoReader::NextFrameImpl() {
         ret = decoder_->Pop(&frame);
         if (frame.Size() <= 1) {
             if (frame.defined() && frame.data_->dl_tensor.dtype == kInt64) {
+              // draining finished
+              if (FetchCachedFrame(frame)) {
+                ret = true;
+              } else {
+                if (rewind_offset > REWIND_RETRY_MAX) {
+                  LOG(FATAL) << "[" << filename_ << "]Unable to handle EOF, exit...";
+                }
                 SeekAccurate(curr_frame_ - rewind_offset);
                 ++rewind_offset;
+                ret = false;
+              }
+            } else {
+              // skipped frames or waiting for more packets
+              if (eof_ && retry > EOF_RETRY_MAX) {
+                if (FetchCachedFrame(frame)) {
+                  break;
+                } else {
+                  LOG(FATAL) << "[" << filename_ << "]Unable to handle EOF, exit...";
+                }
+              }
+              retry++;
+              ret = false;
             }
-            ret = false;
         }
     }
     if (frame.defined()) {
         ++curr_frame_;
+        CacheFrame(frame);
     }
     return frame;
 }
@@ -648,6 +672,26 @@ NDArray VideoReader::GetBatch(std::vector<int64_t> indices, NDArray buf) {
         }
     }
     return buf;
+}
+
+void VideoReader::CacheFrame(NDArray frame) {
+  if (!use_cached_frame_) return;
+  if (!cached_frame_.defined()) {
+    cached_frame_ = NDArray::Empty({height_, width_, 3}, kUInt8, ctx_);
+  }
+  if (!frame.defined()) return;
+  if (cached_frame_.Size() != frame.Size()) return;
+  cached_frame_.CopyFrom(frame);
+}
+
+bool VideoReader::FetchCachedFrame(NDArray &frame) {
+  if (!use_cached_frame_) return false;
+  if (cached_frame_.Size() <= 1) return false;
+  if (!frame.defined() || frame.Size() != cached_frame_.Size()) {
+    frame = NDArray::Empty({height_, width_, 3}, kUInt8, ctx_);
+  }
+  frame.CopyFrom(cached_frame_);
+  return true;
 }
 
 }  // namespace decord
