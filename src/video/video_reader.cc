@@ -267,7 +267,7 @@ int64_t VideoReader::GetFrameCount() const {
         cnt = static_cast<double>(stm->avg_frame_rate.num) / stm->avg_frame_rate.den * fmt_ctx_->duration / AV_TIME_BASE;
     }
     if (cnt < 1) {
-        LOG(FATAL) << "[" << filename_ << "] Failed to measure duration/frame-count due to broken metadata."
+        LOG(FATAL) << "[" << filename_ << "] Failed to measure duration/frame-count due to broken metadata.";
     }
     return cnt;
 }
@@ -717,13 +717,14 @@ bool VideoReader::FetchCachedFrame(NDArray &frame, int64_t pos) {
   }
   frame.CopyFrom(cached_frame_);
   failed_idx_.insert(pos);
+  int64_t failed_count = failed_idx_.size();
   if (fault_tol_thresh_ >= 0) {
-      if (failed_idx_.size() > fault_tol_thresh_) {
+      if (failed_count > fault_tol_thresh_) {
           LOG(FATAL) << "[" << filename_ << "]You have received more than " << fault_tol_thresh_
             << " duplicate frames that are corrupted and recovered from nearest frames.";
       }
   }
-  if (failed_idx_.size() > DUPLICATE_WARNING_THRESHOLD * GetFrameCount()) {
+  if (failed_count > DUPLICATE_WARNING_THRESHOLD * GetFrameCount()) {
       if (!fault_warn_emit_) {
           LOG(WARNING) << "[" << filename_ << "]You have received more than " << failed_idx_.size()
             << " frames corrupted and recovered from nearest frames."
