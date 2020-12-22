@@ -34,7 +34,8 @@ class VideoReader : public VideoReaderInterface {
     using ThreadedDecoderPtr = std::unique_ptr<ThreadedDecoderInterface>;
     using NDArray = runtime::NDArray;
     public:
-        VideoReader(std::string fn, DLContext ctx, int width=-1, int height=-1, int nb_thread=0, int io_type=kNormal);
+        VideoReader(std::string fn, DLContext ctx, int width=-1, int height=-1,
+                    int nb_thread=0, int io_type=kNormal, std::string fault_tol="-1");
         /*! \brief Destructor, note that FFMPEG resources has to be managed manually to avoid resource leak */
         ~VideoReader();
         void SetVideoStream(int stream_nb = -1);
@@ -62,6 +63,8 @@ class VideoReader : public VideoReaderInterface {
         NDArray NextFrameImpl();
         int64_t FrameToPTS(int64_t pos);
         std::vector<int64_t> FramesToPTS(const std::vector<int64_t>& positions);
+        void CacheFrame(NDArray frame);
+        bool FetchCachedFrame(NDArray &frame, int64_t pos);
 
         DLContext ctx_;
         std::vector<int64_t> key_indices_;
@@ -84,7 +87,12 @@ class VideoReader : public VideoReaderInterface {
         bool eof_;  // end of file indicator
         NDArrayPool ndarray_pool_;
         std::unique_ptr<ffmpeg::AVIOBytesContext> io_ctx_;  // avio context for raw memory access
-
+        std::string filename_;  // file name if from file directly, can be empty if from bytes
+        NDArray cached_frame_;  // last valid frame, for error tolerance
+        bool use_cached_frame_;  // switch to enable frame recovery if failed to decode
+        std::unordered_set<int64_t> failed_idx_;  // idx of failed frames(recovered from other frames)
+        int64_t fault_tol_thresh_;  // fault tolerance threshold, raise if recovered frames retrieved exceeds thresh
+        bool fault_warn_emit_;  // whether a fault warning has been emitted
 };  // class VideoReader
 }  // namespace decord
 #endif  // DECORD_VIDEO_VIDEO_READER_H_

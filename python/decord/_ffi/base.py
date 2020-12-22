@@ -28,6 +28,10 @@ class DECORDError(Exception):
     """Error thrown by DECORD function"""
     pass  # pylint: disable=unnecessary-pass
 
+class DECORDLimitReachedError(Exception):
+    """Limit Reached Error thrown by DECORD function"""
+    pass  # pylint: disable=unnecessary-pass
+
 def _load_lib():
     """Load libary by searching possible path."""
     lib_path = libinfo.find_lib_path()
@@ -45,6 +49,9 @@ _LIB, _LIB_NAME = _load_lib()
 # The FFI mode of DECORD
 _FFI_MODE = os.environ.get("DECORD_FFI", "auto")
 
+# enable stack trace or not
+_ENABLE_STACK_TRACE = int(os.environ.get("DECORD_ENABLE_STACK_TRACE", "0"))
+
 #----------------------------
 # helper function in ctypes.
 #----------------------------
@@ -60,7 +67,15 @@ def check_call(ret):
         return value from API calls
     """
     if ret != 0:
-        raise DECORDError(py_str(_LIB.DECORDGetLastError()))
+        err_str = py_str(_LIB.DECORDGetLastError())
+        if not _ENABLE_STACK_TRACE:
+            if 'Stack trace' in err_str:
+                err_str = err_str.split('Stack trace')[0].strip()
+        if 'recovered from nearest frames' in err_str:
+            if 'Stack trace' in err_str:
+                err_str = err_str.split('Stack trace')[0].strip()
+            raise DECORDLimitReachedError(err_str)
+        raise DECORDError(err_str)
 
 
 def c_str(string):

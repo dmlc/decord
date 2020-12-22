@@ -14,6 +14,10 @@ namespace runtime {
 
 std::vector<std::string> SplitString(std::string const &in, char sep);
 
-}  // namespace decord
+std::string GetEnvironmentVariableOrDefault(const std::string& variable_name,
+                                            const std::string& default_value);
+
+int ParseIntOrFloat(const std::string& str, int64_t& ivalue, double& fvalue);
+}  // namespace runtime
 }  // namespace decord
 #endif  // DECORD_RUNTIME_STR_UTIL_H_
