@@ -266,6 +266,9 @@ int64_t VideoReader::GetFrameCount() const {
         // many formats do not provide accurate frame count, use duration and FPS to approximate
         cnt = static_cast<double>(stm->avg_frame_rate.num) / stm->avg_frame_rate.den * fmt_ctx_->duration / AV_TIME_BASE;
     }
+    if (cnt < 1) {
+        LOG(FATAL) << "[" << filename_ << "] Failed to measure duration/frame-count due to broken metadata."
+    }
     return cnt;
 }
 
