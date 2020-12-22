@@ -30,19 +30,29 @@ class VideoReader(object):
         Desired output height of the video, unchanged if `-1` is specified.
     num_threads : int, default is 0
         Number of decoding thread, auto if `0` is specified.
+    fault_tol : int, default is -1
+        The threshold of corupted and recovered frames. This is to prevent silent fault
+        tolerance when for example 50% frames of a video cannot be decoded and duplicate
+        frames are returned. You may find the fault tolerant feature sweet in many cases,
+        but not for training models. Say `N = # recovered frames`
+        If `fault_tol` < 0, nothing will happen.
+        If 0 < `fault_tol` < 1.0, if N > `fault_tol * len(video)`, raise `DECORDLimitReachedError`.
+        If 1 < `fault_tol`, if N > `fault_tol`, raise `DECORDLimitReachedError`.
+
 
     """
-    def __init__(self, uri, ctx=cpu(0), width=-1, height=-1, num_threads=0):
+    def __init__(self, uri, ctx=cpu(0), width=-1, height=-1, num_threads=0, fault_tol=-1):
         self._handle = None
         assert isinstance(ctx, DECORDContext)
+        fault_tol = str(fault_tol)
         if hasattr(uri, 'read'):
             ba = bytearray(uri.read())
             uri = '{} bytes'.format(len(ba))
             self._handle = _CAPI_VideoReaderGetVideoReader(
-                ba, ctx.device_type, ctx.device_id, width, height, num_threads, 2)
+                ba, ctx.device_type, ctx.device_id, width, height, num_threads, 2, fault_tol)
         else:
             self._handle = _CAPI_VideoReaderGetVideoReader(
-                uri, ctx.device_type, ctx.device_id, width, height, num_threads, 0)
+                uri, ctx.device_type, ctx.device_id, width, height, num_threads, 0, fault_tol)
         if self._handle is None:
             raise RuntimeError("Error reading " + uri + "...")
         self._num_frame = _CAPI_VideoReaderGetFrameCount(self._handle)
