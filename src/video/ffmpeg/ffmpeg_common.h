@@ -33,6 +33,7 @@ extern "C" {
 #include <libavutil/dict.h>
 #include <libavutil/display.h>
 #include <libavutil/file.h>
+#include <libavutil/timestamp.h>
 #ifdef DECORD_USE_LIBAVDEVICE
 #include <libavdevice/avdevice.h>
 #endif
@@ -250,13 +251,13 @@ class AVIOBytesContext {
         bd_.size = data_.size();
         bd_.file_size = bd_.size;
 
-        ctx_ = avio_alloc_context(buffer, buffer_size, 0, &bd_, 
+        ctx_ = avio_alloc_context(buffer, buffer_size, 0, &bd_,
                                   &AVIOBytesContext::read, 0, &AVIOBytesContext::seek);
         if (!ctx_) {
             LOG(WARNING) << "Unable to allocate AVIOContext!";
             return;
         }
-        
+
     }
 
     ~AVIOBytesContext() {
