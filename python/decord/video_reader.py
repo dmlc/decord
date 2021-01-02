@@ -127,7 +127,6 @@ class VideoReader(object):
                 'Invalid negative indices: {}'.format(indices[indices < 0] + self._num_frame))
         if not (indices < self._num_frame).all():
             raise IndexError('Out of bound indices: {}'.format(indices[indices >= self._num_frame]))
-        indices = _nd.array(indices)
         return indices
 
     def get_frame_timestamp(self, idx):
@@ -146,7 +145,7 @@ class VideoReader(object):
         assert self._handle is not None
         if isinstance(idx, slice):
             idx = self.get_batch(range(*idx.indices(len(self))))
-        idx = self._validate_indices(idx).asnumpy()
+        idx = self._validate_indices(idx)
         if self._frame_pts is None:
             self._frame_pts = _CAPI_VideoReaderGetFramePTS(self._handle).asnumpy()
         return self._frame_pts[idx, :]
@@ -169,7 +168,7 @@ class VideoReader(object):
 
         """
         assert self._handle is not None
-        indices = self._validate_indices(indices)
+        indices = _nd.array(self._validate_indices(indices))
         arr = _CAPI_VideoReaderGetBatch(self._handle, indices)
         return bridge_out(arr)
 
