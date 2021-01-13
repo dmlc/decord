@@ -17,10 +17,11 @@ namespace decord {
     public:
         AudioReader(std::string fn, int sampleRate, int numChannels);
         ~AudioReader();
-        NDArrays GetBatch(std::vector<int> indices, NDArrays buffer);
+        NDArray GetBatch(std::vector<int> indices, NDArray buffer);
     private:
         int Decode(std::string fn);
         int DecodePacket(AVPacket *pPacket, AVCodecContext *pCodecContext, AVFrame *pFrame, int streamIndex);
+        void handleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame);
         int ToNDArray();
         int Resample(int sampleRate, int numChannels);
 
@@ -29,7 +30,7 @@ namespace decord {
         std::vector<AVCodecParameters*> codecParameters;
         std::vector<int> audioStreamIndices;
         std::vector<std::unique_ptr<AudioStream>> audios;
-        std::vector<NDArray> audioOutputs;
+        NDArray audioOutputs;
         std::string filename;
         int sampleRate;
         int numChannels;

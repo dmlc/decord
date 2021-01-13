@@ -8,7 +8,7 @@
 #include "../video/ffmpeg/ffmpeg_common.h"
 
 namespace decord {
-    using AVFrames = std::vector<AVFrame>;
+    using NDArray = runtime::NDArray;
 
     class AudioStream {
     public:
@@ -17,7 +17,7 @@ namespace decord {
         int64_t GetSampleRate();
         int32_t GetDuration();
 
-        AVFrames audioFrames;
+        NDArray audioFrames;
         int streamSampleRate;
         int streamNumChannels;
         int64_t duration;

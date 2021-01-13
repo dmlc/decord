@@ -16,4 +16,8 @@ namespace decord {
     int64_t AudioStream::GetSampleRate() {
         return streamSampleRate;
     }
+
+    AudioStream::~AudioStream() {
+
+    }
 }

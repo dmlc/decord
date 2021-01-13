@@ -10,12 +10,11 @@
 
 namespace decord {
     using NDArray = runtime::NDArray;
-    using NDArrays = std::vector<NDArray>;
 
     class AudioReaderInterface {
     public:
         virtual ~AudioReaderInterface() = default;
-        virtual NDArrays GetBatch(std::vector<int> indices, NDArray buffer) = 0;
+        virtual NDArray GetBatch(std::vector<int> indices, NDArray buffer) = 0;
 
     };
 
