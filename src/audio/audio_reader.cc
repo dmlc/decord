@@ -124,11 +124,17 @@ namespace decord {
                 break;
             }
         }
+        // Drain the decoder
+        drainDecoder(pCodecContext, pFrame);
 
         return ret;
     }
 
     void AudioReader::handleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame) {
+
+    }
+
+    void AudioReader::drainDecoder(AVCodecContext *pCodecContext, AVFrame *pFrame) {
 
     }
 

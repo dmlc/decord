@@ -22,6 +22,7 @@ namespace decord {
         int Decode(std::string fn);
         int DecodePacket(AVPacket *pPacket, AVCodecContext *pCodecContext, AVFrame *pFrame, int streamIndex);
         void handleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame);
+        void drainDecoder(AVCodecContext *pCodecContext, AVFrame *pFrame);
         int ToNDArray();
         int Resample(int sampleRate, int numChannels);
 
