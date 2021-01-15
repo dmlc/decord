@@ -5,11 +5,17 @@
 #ifndef DECORD_AUDIO_READER_H_
 #define DECORD_AUDIO_READER_H_
 
-#include <libswresample/swresample.h>
 #include <vector>
 
 #include "../../include/decord/audio_interface.h"
 #include "audio_stream.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <libswresample/swresample.h>
+#ifdef __cplusplus
+}
+#endif
 
 namespace decord {
 
@@ -23,10 +29,12 @@ namespace decord {
         int DecodePacket(AVPacket *pPacket, AVCodecContext *pCodecContext, AVFrame *pFrame, int streamIndex);
         void handleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame);
         void drainDecoder(AVCodecContext *pCodecContext, AVFrame *pFrame);
+        void initSWR(AVCodecContext *pCodecContext);
         int ToNDArray();
         int Resample(int sampleRate, int numChannels);
 
         AVFormatContext *pFormatContext;
+        struct SwrContext* swr;
         std::vector<AVCodec*> codecs;
         std::vector<AVCodecParameters*> codecParameters;
         std::vector<int> audioStreamIndices;
