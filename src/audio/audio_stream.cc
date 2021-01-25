@@ -6,7 +6,7 @@
 
 namespace decord {
 
-    AudioStream::AudioStream(int sr, int nc, int duration)
+    AudioStream::AudioStream(int sr, int nc, double duration)
     : streamSampleRate(sr), streamNumChannels(nc), duration(duration) { }
 
     int32_t AudioStream::GetDuration() {

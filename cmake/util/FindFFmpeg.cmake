@@ -16,7 +16,7 @@
 # Redistribution and use is allowed according to the terms of the New
 # BSD license.
 #
-
+set(FFMPEG_DIR "/usr/local/Cellar/ffmpeg/4.3.1_9")
 if (FFMPEG_DIR)
   set(FFMPEG_INCLUDE_DIR ${FFMPEG_DIR}/include)
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -49,7 +49,6 @@ if (FFMPEG_DIR)
     )
   endif()
 endif (FFMPEG_DIR)
-message("${FFMPEG_DIR}")
 
 if (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
 # in cache already
@@ -66,7 +65,6 @@ pkg_check_modules(_FFMPEG_AVDEVICE libavdevice)
 
 pkg_check_modules(_FFMPEG_AVFILTER libavfilter)
 pkg_check_modules(_FFMPEG_SWRESAMPLE libswresample)
-message("pkg_check_module swresample: ${_FFMPEG_SWRESAMPLE}")
 endif (PKG_CONFIG_FOUND)
 
 find_path(FFMPEG_AVCODEC_INCLUDE_DIR
@@ -99,13 +97,11 @@ find_library(FFMPEG_LIBAVFILTER
 NAMES avfilter
 PATHS ${_FFMPEG_AVFILTER_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
-message("filter: ${FFMPEG_LIBAVFILTER}")
 
 find_library(FFMPEG_LIBSWRESAMPLE
 NAMES libswresample
 PATHS ${_FFMPEG_SWRESAMPLE_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
-message("resample: ${FFMPEG_LIBSWRESAMPLE}")
 
 if (FFMPEG_LIBAVCODEC AND FFMPEG_LIBAVFORMAT)
 set(FFMPEG_FOUND TRUE)

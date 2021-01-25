@@ -16,33 +16,49 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+#include <fstream>
 
 namespace decord {
 
     class AudioReader: public AudioReaderInterface {
     public:
-        AudioReader(std::string fn, int sampleRate, int numChannels);
+        AudioReader(std::string fn, int sampleRate, DLContext ctx);
         ~AudioReader();
-        NDArray GetBatch(std::vector<int> indices, NDArray buffer);
+        NDArray GetNDArray();
+        int GetNumPaddingSamples();
+        double GetDuration();
+        int64_t GetNumSamplesPerChannel();
+        int GetNumChannels();
     private:
-        int Decode(std::string fn);
-        int DecodePacket(AVPacket *pPacket, AVCodecContext *pCodecContext, AVFrame *pFrame, int streamIndex);
-        void handleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame);
-        void drainDecoder(AVCodecContext *pCodecContext, AVFrame *pFrame);
-        void initSWR(AVCodecContext *pCodecContext);
-        int ToNDArray();
-        int Resample(int sampleRate, int numChannels);
+        void Decode(std::string fn);
+        void DecodePacket(AVPacket *pPacket, AVCodecContext *pCodecContext, AVFrame *pFrame, int streamIndex);
+        void HandleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame);
+        void DrainDecoder(AVCodecContext *pCodecContext, AVFrame *pFrame);
+        void InitSWR(AVCodecContext *pCodecContext);
+        void ToNDArray();
+        void SaveToVector(float** buffer, int numChannels, int numSamples);
 
+        DLContext ctx;
         AVFormatContext *pFormatContext;
         struct SwrContext* swr;
-        std::vector<AVCodec*> codecs;
-        std::vector<AVCodecParameters*> codecParameters;
-        std::vector<int> audioStreamIndices;
-        std::vector<std::unique_ptr<AudioStream>> audios;
-        NDArray audioOutputs;
+        AVCodec* pCodec;
+        AVCodecParameters* pCodecParameters;
+        AVCodecContext * pCodecContext;
+        int audioStreamIndex;
+//        std::vector<std::unique_ptr<AudioStream>> audios;
+        std::vector<std::vector<float>> outputVector;
+        NDArray output;
+        // padding is the start time in seconds of the first audio sample
+        double padding;
         std::string filename;
-        int sampleRate;
+        int originalSampleRate;
+        int targetSampleRate;
         int numChannels;
+        int totalSamplesPerChannel;
+        int totalConvertedSamplesPerChannel;
+        double timeBase;
+        double duration;
+        std::ofstream outfile;
     };
 
 }

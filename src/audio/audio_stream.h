@@ -12,15 +12,15 @@ namespace decord {
 
     class AudioStream {
     public:
-        AudioStream(int sr, int nc, int duration);
+        AudioStream(int sr, int nc, double duration);
         ~AudioStream();
         int64_t GetSampleRate();
         int32_t GetDuration();
 
-        NDArray audioFrames;
+        NDArray audioSamples;
         int streamSampleRate;
         int streamNumChannels;
-        int64_t duration;
+        double duration;
 
     };
 }

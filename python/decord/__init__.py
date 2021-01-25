@@ -13,5 +13,6 @@ from . import bridge
 from . import logging
 from .video_reader import VideoReader
 from .video_loader import VideoLoader
+from .audio_reader import AudioReader
 
 logging.set_level(logging.ERROR)
