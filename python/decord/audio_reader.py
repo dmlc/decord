@@ -20,8 +20,16 @@ class AudioReader(object):
     def __init__(self, uri, ctx=cpu(0), sample_rate=44100):
         self._handle = None
         assert isinstance(ctx, DECORDContext)
-        self._handle = _CAPI_AudioReaderGetAudioReader(
-            uri, ctx.device_type, ctx.device_id, sample_rate)
+        if hasattr(uri, 'read'):
+            ba = bytearray(uri.read())
+            uri = '{} bytes'.format(len(ba))
+            self._handle = _CAPI_AudioReaderGetAudioReader(
+                ba, ctx.device_type, ctx.device_id, sample_rate, 2)
+        else:
+            self._handle = _CAPI_AudioReaderGetAudioReader(
+                uri, ctx.device_type, ctx.device_id, sample_rate, 0)
+        if self._handle is None:
+            raise RuntimeError("Error reading " + uri + "...")
         self._array = _CAPI_AudioReaderGetNDArray(self._handle)
         self._array = bridge_out(self._array)
         self._array = self._array.asnumpy()
@@ -52,6 +60,9 @@ class AudioReader(object):
     def get_num_padding(self):
         self._num_padding = _CAPI_AudioReaderGetNumPaddingSamples(self._handle)
         return self._num_padding
+
+    def get_info(self):
+        _CAPI_AudioReaderGetInfo(self._handle)
 
     def __time_to_sample(self, timestamp):
         return math.ceil(timestamp * self.sample_rate)

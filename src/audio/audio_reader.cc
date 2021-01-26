@@ -3,26 +3,29 @@
 //
 
 #include "audio_reader.h"
+#include "../runtime/str_util.h"
 #include <memory>
 
 namespace decord {
+    // AVIO buffer size when reading from raw bytes
+    static const int AVIO_BUFFER_SIZE = std::stoi(runtime::GetEnvironmentVariableOrDefault("DECORD_AVIO_BUFFER_SIZE", "40960"));
 
-    AudioReader::AudioReader(std::string fn, int sampleRate, DLContext ctx)
-    : ctx(ctx), pFormatContext(nullptr), swr(nullptr), pCodec(nullptr), pCodecParameters(nullptr),
+    AudioReader::AudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type)
+    : ctx(ctx), io_ctx_(), pFormatContext(nullptr), swr(nullptr), pCodec(nullptr), pCodecParameters(nullptr),
       pCodecContext(nullptr), audioStreamIndex(-1), outputVector(), output(), padding(-1.0), filename(fn), originalSampleRate(0),
       targetSampleRate(sampleRate), numChannels(0), totalSamplesPerChannel(0), totalConvertedSamplesPerChannel(0),
       timeBase(0.0), duration(0.0), outfile()
     {
         outfile.open("/Users/weisy/Developer/yinweisu/decord/tests/cpp/audio/test.raw", std::ios::out | std::ios::binary);
-        Decode(fn);
+        Decode(fn, io_type);
         avformat_close_input(&pFormatContext);
         // Calculate accurate duration
         duration = totalSamplesPerChannel / originalSampleRate;
         // Construct NDArray
         ToNDArray();
-        std::cout << "Total samples: " << totalSamplesPerChannel << std::endl;
+//        std::cout << "Total samples: " << totalSamplesPerChannel << std::endl;
 //        std::cout << "Total converted samples: " << convertedSamples << std::endl;
-        std::cout << "NDArray size: " << output.Size() << std::endl;
+//        std::cout << "NDArray size: " << output.Size() << std::endl;
     }
 
     AudioReader::~AudioReader() {
@@ -50,15 +53,54 @@ namespace decord {
         return numChannels;
     }
 
-    void AudioReader::Decode(std::string fn) {
+    void AudioReader::GetInfo() {
+        std::cout << "audio stream [" << audioStreamIndex << "]: " << std::endl
+            << "start time: " << std::endl
+            << padding << std::endl
+            << "duration: " << std::endl
+            << duration << std::endl
+            << "original sample rate: " << std::endl
+            << originalSampleRate << std::endl
+            << "target sample rate: " << std::endl
+            << targetSampleRate << std::endl
+            << "number of channels: " << std::endl
+            << numChannels << std::endl
+            << "total original samples per channel: " << std::endl
+            << totalSamplesPerChannel << std::endl
+            << "total original samples: " << std::endl
+            << totalSamplesPerChannel * numChannels << std::endl
+            << "total resampled samples per channel: " << std::endl
+            << totalConvertedSamplesPerChannel << std::endl
+            << "total resampled samples: " << std::endl
+            << totalConvertedSamplesPerChannel  * numChannels << std::endl;
+    }
+
+    void AudioReader::Decode(std::string fn, int io_type) {
         // Get format context
         pFormatContext = avformat_alloc_context();
         CHECK(pFormatContext != nullptr) << "Unable to alloc avformat context";
         // Open input
         // TODO: Support Raw Bytes
         int formatOpenRet = 1;
-        std::cout << fn.c_str() << std::endl;
-        formatOpenRet = avformat_open_input(&pFormatContext, fn.c_str(), NULL, NULL);
+
+        if (io_type == kDevice) {
+            LOG(WARNING) << "Not implemented";
+            return;
+        } else if (io_type == kRawBytes) {
+            filename = "BytesIO";
+            io_ctx_.reset(new ffmpeg::AVIOBytesContext(fn, AVIO_BUFFER_SIZE));
+            pFormatContext->pb = io_ctx_->get_avio();
+            if (!pFormatContext->pb) {
+                LOG(WARNING) << "Unable to init AVIO from memory buffer";
+                return;
+            }
+            formatOpenRet = avformat_open_input(&pFormatContext, NULL, NULL, NULL);
+        } else if (io_type == kNormal) {
+            formatOpenRet = avformat_open_input(&pFormatContext, fn.c_str(), NULL, NULL);
+        } else {
+            LOG(WARNING) << "Invalid io type: " << io_type;
+        }
+//        std::cout << fn.c_str() << std::endl;
         if (formatOpenRet != 0) {
             char errstr[200];
             av_strerror(formatOpenRet, errstr, 200);
@@ -79,9 +121,9 @@ namespace decord {
                 pCodecParameters = tempCodecParameters;
                 originalSampleRate = tempCodecParameters->sample_rate;
                 numChannels = tempCodecParameters->channels;
-                std::cout << "duration: " << duration << std::endl;
-                std::cout << "sample rate: " << originalSampleRate << std::endl;
-                std::cout << "number channels: " << numChannels << std::endl;
+//                std::cout << "duration: " << duration << std::endl;
+//                std::cout << "sample rate: " << originalSampleRate << std::endl;
+//                std::cout << "number channels: " << numChannels << std::endl;
                 break;
             }
         }
@@ -157,6 +199,8 @@ namespace decord {
         // clean up
         av_frame_free(&pFrame);
         avcodec_close(pCodecContext);
+        swr_close(swr);
+        swr_free(&swr);
         avcodec_free_context(&pCodecContext);
     }
 
@@ -168,9 +212,9 @@ namespace decord {
             padding = 0.0;
             if ((pFrame->pts * timeBase) > 0) {
                 padding = pFrame->pts * timeBase;
-                std::cout << "PTS: " << pFrame->pts << std::endl;
-                std::cout << "PTS in seconds:" << pFrame->pts * timeBase << std::endl;
-                std::cout << "Need padding: " << padding * targetSampleRate << std::endl;
+//                std::cout << "PTS: " << pFrame->pts << std::endl;
+//                std::cout << "PTS in seconds:" << pFrame->pts * timeBase << std::endl;
+//                std::cout << "Need padding: " << padding * targetSampleRate << std::endl;
             }
         }
         int ret = 0;
@@ -191,6 +235,7 @@ namespace decord {
         }
         int gotSamples = 0;
         gotSamples = swr_convert(this->swr, (uint8_t**)outBuffer, outNumSamples, (const uint8_t**)pFrame->extended_data, pFrame->nb_samples);
+        totalConvertedSamplesPerChannel += gotSamples;
         CHECK_GE(gotSamples, 0) << "ERROR Failed to resample samples";
 //        std::cout << "regular resample: " << gotSamples << std::endl;
         outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
@@ -199,6 +244,7 @@ namespace decord {
             // flush buffer
             gotSamples = swr_convert(this->swr, (uint8_t**)outBuffer, outNumSamples, NULL, 0);
             CHECK_GE(gotSamples, 0) << "ERROR Failed to flush resample buffer";
+            totalConvertedSamplesPerChannel += gotSamples;
 //            std::cout << "resample flushing: " << gotSamples << std::endl;
             outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
             SaveToVector(outBuffer, outNumChannels, gotSamples);

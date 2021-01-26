@@ -7,6 +7,6 @@
 
 
 int main() {
-    auto audioReader = decord::GetAudioReader("/Users/weisy/Developer/yinweisu/decord/tests/cpp/audio/Kalimba.mp3", 44100, decord::kCPU);
+    auto audioReader = decord::GetAudioReader("/Users/weisy/Developer/yinweisu/decord/tests/cpp/audio/Kalimba.mp3", 44100, decord::kCPU, 0);
     return 0;
 }

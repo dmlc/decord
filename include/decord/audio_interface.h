@@ -11,6 +11,12 @@
 namespace decord {
     typedef void* AudioReaderInterfaceHandle;
 
+    enum IOType {
+        kNormal = 0U,    // normal file or URL
+        kDevice,         // device, e.g., camera
+        kRawBytes,       // raw bytes, e.g., raw data read from python file like object
+    };
+
     class AudioReaderInterface;
     typedef std::shared_ptr<AudioReaderInterface> AudioReaderPtr;
 
@@ -24,9 +30,10 @@ namespace decord {
         virtual double GetDuration() = 0;
         virtual int64_t GetNumSamplesPerChannel() = 0;
         virtual int GetNumChannels() = 0;
+        virtual void GetInfo() = 0;
     };
 
-    DECORD_DLL AudioReaderPtr GetAudioReader(std::string fname, int sampleRate, DLContext ctx);
+    DECORD_DLL AudioReaderPtr GetAudioReader(std::string fname, int sampleRate, DLContext ctx, int io_type);
 }
 
 #endif //DECORD_AUDIO_INTERFACE_H

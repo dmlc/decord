@@ -3,9 +3,12 @@ import sys
 
 filename = sys.argv[1]
 sr = int(sys.argv[2])
-ar = AudioReader(filename, sample_rate = sr)
+# ar = AudioReader(filename, sample_rate = sr)
+with open(filename, 'rb') as f:
+    ar = AudioReader(f, sample_rate = sr)
 print(ar[0])
 print(ar[:])
 print(ar.size())
 print(ar.duration())
 print(ar.get_num_padding())
+ar.get_info()
