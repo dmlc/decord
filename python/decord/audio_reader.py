@@ -38,7 +38,6 @@ class AudioReader(object):
         self._num_channels = _CAPI_AudioReaderGetNumChannels(self._handle)
         self.sample_rate = sample_rate
 
-
     def __getitem__(self, idx):
         if isinstance(idx, slice):
             return self.get_batch(list(range(*idx.indices(self._num_samples_per_channel))))
@@ -57,17 +56,22 @@ class AudioReader(object):
     def duration(self):
         return self._duration
 
-    def get_num_padding(self):
+    def __get_num_padding(self):
         self._num_padding = _CAPI_AudioReaderGetNumPaddingSamples(self._handle)
         return self._num_padding
+
+    def add_padding(self):
+        self._array = np.pad(self._array, ((0, 0), (self.__get_num_padding(), 0)), 'constant', constant_values=0)
+        self._duration += self.__get_num_padding() * self.sample_rate
+        return self.__get_num_padding()
 
     def get_info(self):
         _CAPI_AudioReaderGetInfo(self._handle)
 
-    def __time_to_sample(self, timestamp):
+    def time_to_sample(self, timestamp):
         return math.ceil(timestamp * self.sample_rate)
         
-    def __times_to_samples(self, timestamps):
-        return [self.__time_to_sample(timestamp) for timestamp in timestamps]
+    def times_to_samples(self, timestamps):
+        return [self.time_to_sample(timestamp) for timestamp in timestamps]
 
 _init_api("decord.audio_reader")

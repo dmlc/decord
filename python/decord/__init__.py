@@ -14,5 +14,6 @@ from . import logging
 from .video_reader import VideoReader
 from .video_loader import VideoLoader
 from .audio_reader import AudioReader
+from .av_reader import AVReader
 
 logging.set_level(logging.ERROR)

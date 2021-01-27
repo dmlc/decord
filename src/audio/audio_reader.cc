@@ -17,7 +17,10 @@ namespace decord {
       timeBase(0.0), duration(0.0), outfile()
     {
         outfile.open("/Users/weisy/Developer/yinweisu/decord/tests/cpp/audio/test.raw", std::ios::out | std::ios::binary);
-        Decode(fn, io_type);
+        if (Decode(fn, io_type) == -1) {
+            avformat_close_input(&pFormatContext);
+            return;
+        }
         avformat_close_input(&pFormatContext);
         // Calculate accurate duration
         duration = totalSamplesPerChannel / originalSampleRate;
@@ -75,7 +78,7 @@ namespace decord {
             << totalConvertedSamplesPerChannel  * numChannels << std::endl;
     }
 
-    void AudioReader::Decode(std::string fn, int io_type) {
+    int AudioReader::Decode(std::string fn, int io_type) {
         // Get format context
         pFormatContext = avformat_alloc_context();
         CHECK(pFormatContext != nullptr) << "Unable to alloc avformat context";
@@ -84,27 +87,33 @@ namespace decord {
         int formatOpenRet = 1;
 
         if (io_type == kDevice) {
-            LOG(WARNING) << "Not implemented";
-            return;
+            LOG(FATAL) << "Not implemented";
+            return -1;
         } else if (io_type == kRawBytes) {
             filename = "BytesIO";
             io_ctx_.reset(new ffmpeg::AVIOBytesContext(fn, AVIO_BUFFER_SIZE));
             pFormatContext->pb = io_ctx_->get_avio();
             if (!pFormatContext->pb) {
-                LOG(WARNING) << "Unable to init AVIO from memory buffer";
-                return;
+                LOG(FATAL) << "Unable to init AVIO from memory buffer";
+                return -1;
             }
             formatOpenRet = avformat_open_input(&pFormatContext, NULL, NULL, NULL);
         } else if (io_type == kNormal) {
             formatOpenRet = avformat_open_input(&pFormatContext, fn.c_str(), NULL, NULL);
         } else {
-            LOG(WARNING) << "Invalid io type: " << io_type;
+            LOG(FATAL) << "Invalid io type: " << io_type;
+            return -1;
         }
 //        std::cout << fn.c_str() << std::endl;
         if (formatOpenRet != 0) {
             char errstr[200];
             av_strerror(formatOpenRet, errstr, 200);
-            LOG(FATAL) << "ERROR opening " << fn.size() << " bytes, " << errstr;
+            if (io_type != kBytes) {
+                LOG(FATAL) << "ERROR opening: " << fn.c_str() << ", " << errstr;
+            } else {
+                LOG(FATAL) << "ERROR opening " << fn.size() << " bytes, " << errstr;
+            }
+            return -1;
         }
         // Read stream
         avformat_find_stream_info(pFormatContext, NULL);
@@ -127,7 +136,10 @@ namespace decord {
                 break;
             }
         }
-        if (audioStreamIndex == -1) { LOG(FATAL) << "Can't find audio stream"; }
+        if (audioStreamIndex == -1) {
+            LOG(FATAL) << "Can't find audio stream";
+            return -1;
+        }
 
         // prepare codec
         pCodec = avcodec_find_decoder(pCodecParameters->codec_id);
@@ -140,10 +152,11 @@ namespace decord {
         if (codecOpenRet < 0) {
             char errstr[200];
             av_strerror(codecOpenRet, errstr, 200);
-            LOG(FATAL) << "ERROR open codec through avcodec_open2: " << errstr;
             avcodec_close(pCodecContext);
             avcodec_free_context(&pCodecContext);
             avformat_close_input(&pFormatContext);
+            LOG(FATAL) << "ERROR open codec through avcodec_open2: " << errstr;
+            return -1;
         }
         // https://www.bilibili.com/read/cv2680761/
         pCodecContext->pkt_timebase = pFormatContext->streams[audioStreamIndex]->time_base;
@@ -151,6 +164,8 @@ namespace decord {
         AVPacket *pPacket = av_packet_alloc();
         AVFrame *pFrame = av_frame_alloc();
         DecodePacket(pPacket, pCodecContext, pFrame, audioStreamIndex);
+
+        return 0;
     }
 
     void AudioReader::DecodePacket(AVPacket *pPacket, AVCodecContext *pCodecContext, AVFrame *pFrame, int streamIndex) {
@@ -238,7 +253,7 @@ namespace decord {
         totalConvertedSamplesPerChannel += gotSamples;
         CHECK_GE(gotSamples, 0) << "ERROR Failed to resample samples";
 //        std::cout << "regular resample: " << gotSamples << std::endl;
-        outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
+//        outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
         SaveToVector(outBuffer, outNumChannels, gotSamples);
         while (gotSamples > 0) {
             // flush buffer
@@ -246,7 +261,7 @@ namespace decord {
             CHECK_GE(gotSamples, 0) << "ERROR Failed to flush resample buffer";
             totalConvertedSamplesPerChannel += gotSamples;
 //            std::cout << "resample flushing: " << gotSamples << std::endl;
-            outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
+//            outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
             SaveToVector(outBuffer, outNumChannels, gotSamples);
         }
         // Convert to NDArray

@@ -31,7 +31,7 @@ namespace decord {
         int GetNumChannels();
         void GetInfo();
     private:
-        void Decode(std::string fn, int io_type);
+        int Decode(std::string fn, int io_type);
         void DecodePacket(AVPacket *pPacket, AVCodecContext *pCodecContext, AVFrame *pFrame, int streamIndex);
         void HandleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame);
         void DrainDecoder(AVCodecContext *pCodecContext, AVFrame *pFrame);
