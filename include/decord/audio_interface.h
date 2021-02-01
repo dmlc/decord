@@ -33,7 +33,7 @@ namespace decord {
         virtual void GetInfo() = 0;
     };
 
-    DECORD_DLL AudioReaderPtr GetAudioReader(std::string fname, int sampleRate, DLContext ctx, int io_type);
+    DECORD_DLL AudioReaderPtr GetAudioReader(std::string fname, int sampleRate, DLContext ctx, int io_type, bool mono);
 }
 
 #endif //DECORD_AUDIO_INTERFACE_H

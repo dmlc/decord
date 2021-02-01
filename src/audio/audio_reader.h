@@ -22,7 +22,7 @@ namespace decord {
 
     class AudioReader: public AudioReaderInterface {
     public:
-        AudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type=kNormal);
+        AudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type=kNormal, bool mono=true);
         ~AudioReader();
         NDArray GetNDArray();
         int GetNumPaddingSamples();
@@ -56,6 +56,7 @@ namespace decord {
         int originalSampleRate;
         int targetSampleRate;
         int numChannels;
+        bool mono;
         int totalSamplesPerChannel;
         int totalConvertedSamplesPerChannel;
         double timeBase;

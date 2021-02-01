@@ -20,7 +20,7 @@ def test_bytes_io():
         av2 = get_normal_av_reader()
         audio, video = av[10]
         audio2, video2 = av2[10]
-        assert np.allclose(audio, audio2)
+        assert np.allclose(audio.asnumpy(), audio2.asnumpy())
         assert np.allclose(video.asnumpy(), video2.asnumpy())
 
 def test_no_audio_stream():
@@ -45,7 +45,7 @@ def test_sync():
     audio = av[25:40][0]
     buffer = np.array([], dtype='float32')
     for samples in audio:
-        buffer = np.append(buffer, samples)
+        buffer = np.append(buffer, samples.asnumpy())
     play = simpleaudio.play_buffer(buffer, 1, 4, 44100)
     play.wait_done()
 

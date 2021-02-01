@@ -11,9 +11,9 @@
 
 namespace decord {
 
-    AudioReaderPtr GetAudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type) {
+    AudioReaderPtr GetAudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type, bool mono) {
         std::shared_ptr<AudioReaderInterface> ptr;
-        ptr = std::make_shared<AudioReader>(fn, sampleRate, ctx, io_type);
+        ptr = std::make_shared<AudioReader>(fn, sampleRate, ctx, io_type, mono);
         return ptr;
     }
 
@@ -26,12 +26,13 @@ namespace decord {
             int device_id = args[2];
             int sampleRate = args[3];
             int io_type = args[4];
+            bool mono = int(args[5]) == 1 ? true : false;
 
             // TODO: add io type
             DLContext ctx;
             ctx.device_type = static_cast<DLDeviceType>(device_type);
             ctx.device_id = device_id;
-            auto reader = new AudioReader(fn, sampleRate, ctx, io_type);
+            auto reader = new AudioReader(fn, sampleRate, ctx, io_type, mono);
             if (reader->GetNumSamplesPerChannel() <= 0) {
                 *rv = nullptr;
                 return;
@@ -79,6 +80,13 @@ namespace decord {
         .set_body([](DECORDArgs args, DECORDRetValue* rv) {
             AudioReaderInterfaceHandle handle = args[0];
             static_cast<AudioReaderInterface*>(handle)->GetInfo();
+        });
+
+        DECORD_REGISTER_GLOBAL("audio_reader._CAPI_AudioReaderFree")
+        .set_body([](DECORDArgs args, DECORDRetValue* rv) {
+            AudioReaderInterfaceHandle handle = args[0];
+            auto p = static_cast<AudioReaderInterface*>(handle);
+            if (p) delete p;
         });
     }
 }

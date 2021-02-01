@@ -10,10 +10,10 @@ namespace decord {
     // AVIO buffer size when reading from raw bytes
     static const int AVIO_BUFFER_SIZE = std::stoi(runtime::GetEnvironmentVariableOrDefault("DECORD_AVIO_BUFFER_SIZE", "40960"));
 
-    AudioReader::AudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type)
+    AudioReader::AudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type, bool mono)
     : ctx(ctx), io_ctx_(), pFormatContext(nullptr), swr(nullptr), pCodec(nullptr), pCodecParameters(nullptr),
       pCodecContext(nullptr), audioStreamIndex(-1), outputVector(), output(), padding(-1.0), filename(fn), originalSampleRate(0),
-      targetSampleRate(sampleRate), numChannels(0), totalSamplesPerChannel(0), totalConvertedSamplesPerChannel(0),
+      targetSampleRate(sampleRate), numChannels(0), mono(mono), totalSamplesPerChannel(0), totalConvertedSamplesPerChannel(0),
       timeBase(0.0), duration(0.0), outfile()
     {
         outfile.open("/Users/weisy/Developer/yinweisu/decord/tests/cpp/audio/test.raw", std::ios::out | std::ios::binary);
@@ -83,7 +83,6 @@ namespace decord {
         pFormatContext = avformat_alloc_context();
         CHECK(pFormatContext != nullptr) << "Unable to alloc avformat context";
         // Open input
-        // TODO: Support Raw Bytes
         int formatOpenRet = 1;
 
         if (io_type == kDevice) {
@@ -129,6 +128,7 @@ namespace decord {
 //                audios.push_back(std::move(stream));
                 pCodecParameters = tempCodecParameters;
                 originalSampleRate = tempCodecParameters->sample_rate;
+                if (targetSampleRate == -1) targetSampleRate = originalSampleRate;
                 numChannels = tempCodecParameters->channels;
 //                std::cout << "duration: " << duration << std::endl;
 //                std::cout << "sample rate: " << originalSampleRate << std::endl;
@@ -236,7 +236,8 @@ namespace decord {
         // allocate resample buffer
         float** outBuffer;
         int outLinesize = 0;
-        int outNumChannels = av_get_channel_layout_nb_channels(pFrame->channel_layout);
+        int outNumChannels = av_get_channel_layout_nb_channels(mono ? AV_CH_LAYOUT_MONO : pFrame->channel_layout);
+        numChannels = outNumChannels;
 //        int outNumSamples = av_rescale_rnd(swr_get_delay(this->swr, pFrame->sample_rate) + pFrame->nb_samples,
 //                                           this->sampleRate, pFrame->sample_rate, AV_ROUND_UP);
         int outNumSamples = av_rescale_rnd(pFrame->nb_samples,
@@ -253,7 +254,7 @@ namespace decord {
         totalConvertedSamplesPerChannel += gotSamples;
         CHECK_GE(gotSamples, 0) << "ERROR Failed to resample samples";
 //        std::cout << "regular resample: " << gotSamples << std::endl;
-//        outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
+        outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
         SaveToVector(outBuffer, outNumChannels, gotSamples);
         while (gotSamples > 0) {
             // flush buffer
@@ -261,7 +262,7 @@ namespace decord {
             CHECK_GE(gotSamples, 0) << "ERROR Failed to flush resample buffer";
             totalConvertedSamplesPerChannel += gotSamples;
 //            std::cout << "resample flushing: " << gotSamples << std::endl;
-//            outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
+            outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
             SaveToVector(outBuffer, outNumChannels, gotSamples);
         }
         // Convert to NDArray
@@ -296,7 +297,7 @@ namespace decord {
             pCodecContext->channel_layout = av_get_default_channel_layout( pCodecContext->channels );
         }
         av_opt_set_channel_layout(this->swr, "in_channel_layout",  pCodecContext->channel_layout, 0);
-        av_opt_set_channel_layout(this->swr, "out_channel_layout", pCodecContext->channel_layout,  0);
+        av_opt_set_channel_layout(this->swr, "out_channel_layout", mono ? AV_CH_LAYOUT_MONO : pCodecContext->channel_layout,  0);
         av_opt_set_int(this->swr, "in_sample_rate",     pCodecContext->sample_rate,                0);
         av_opt_set_int(this->swr, "out_sample_rate",    this->targetSampleRate,                0);
         av_opt_set_sample_fmt(this->swr, "in_sample_fmt",  pCodecContext->sample_fmt, 0);
