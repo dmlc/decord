@@ -16,7 +16,6 @@ namespace decord {
       targetSampleRate(sampleRate), numChannels(0), mono(mono), totalSamplesPerChannel(0), totalConvertedSamplesPerChannel(0),
       timeBase(0.0), duration(0.0), outfile()
     {
-        outfile.open("/Users/weisy/Developer/yinweisu/decord/tests/cpp/audio/test.raw", std::ios::out | std::ios::binary);
         if (Decode(fn, io_type) == -1) {
             avformat_close_input(&pFormatContext);
             return;
@@ -26,9 +25,6 @@ namespace decord {
         duration = totalSamplesPerChannel / originalSampleRate;
         // Construct NDArray
         ToNDArray();
-//        std::cout << "Total samples: " << totalSamplesPerChannel << std::endl;
-//        std::cout << "Total converted samples: " << convertedSamples << std::endl;
-//        std::cout << "NDArray size: " << output.Size() << std::endl;
     }
 
     AudioReader::~AudioReader() {
@@ -103,7 +99,6 @@ namespace decord {
             LOG(FATAL) << "Invalid io type: " << io_type;
             return -1;
         }
-//        std::cout << fn.c_str() << std::endl;
         if (formatOpenRet != 0) {
             char errstr[200];
             av_strerror(formatOpenRet, errstr, 200);
@@ -124,15 +119,10 @@ namespace decord {
                 audioStreamIndex = i;
                 timeBase = (double)pFormatContext->streams[i]->time_base.num / (double)pFormatContext->streams[i]->time_base.den;
                 duration = (double)pFormatContext->streams[i]->duration * timeBase;
-//                std::unique_ptr<AudioStream> stream(new AudioStream(sr, nc, duration));
-//                audios.push_back(std::move(stream));
                 pCodecParameters = tempCodecParameters;
                 originalSampleRate = tempCodecParameters->sample_rate;
                 if (targetSampleRate == -1) targetSampleRate = originalSampleRate;
                 numChannels = tempCodecParameters->channels;
-//                std::cout << "duration: " << duration << std::endl;
-//                std::cout << "sample rate: " << originalSampleRate << std::endl;
-//                std::cout << "number channels: " << numChannels << std::endl;
                 break;
             }
         }
@@ -220,16 +210,11 @@ namespace decord {
     }
 
     void AudioReader::HandleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame) {
-//        std::cout << "PTS: " << pFrame->pts << std::endl;
-//        std::cout << "PTS in seconds:" << pFrame->pts * timeBase << std::endl;
         // Add padding if necessary
         if (padding == -1.0) {
             padding = 0.0;
             if ((pFrame->pts * timeBase) > 0) {
                 padding = pFrame->pts * timeBase;
-//                std::cout << "PTS: " << pFrame->pts << std::endl;
-//                std::cout << "PTS in seconds:" << pFrame->pts * timeBase << std::endl;
-//                std::cout << "Need padding: " << padding * targetSampleRate << std::endl;
             }
         }
         int ret = 0;
@@ -238,12 +223,8 @@ namespace decord {
         int outLinesize = 0;
         int outNumChannels = av_get_channel_layout_nb_channels(mono ? AV_CH_LAYOUT_MONO : pFrame->channel_layout);
         numChannels = outNumChannels;
-//        int outNumSamples = av_rescale_rnd(swr_get_delay(this->swr, pFrame->sample_rate) + pFrame->nb_samples,
-//                                           this->sampleRate, pFrame->sample_rate, AV_ROUND_UP);
         int outNumSamples = av_rescale_rnd(pFrame->nb_samples,
                                            this->targetSampleRate, pFrame->sample_rate, AV_ROUND_UP);
-//        std::cout << "original numSamples: " << pFrame->nb_samples << std::endl;
-//        std::cout << "calculated outNumSamples: " << outNumSamples << std::endl;
         if ((ret = av_samples_alloc_array_and_samples((uint8_t***)&outBuffer, &outLinesize, outNumChannels, outNumSamples,
                                                       AV_SAMPLE_FMT_FLTP, 0)) < 0)
         {
@@ -253,16 +234,12 @@ namespace decord {
         gotSamples = swr_convert(this->swr, (uint8_t**)outBuffer, outNumSamples, (const uint8_t**)pFrame->extended_data, pFrame->nb_samples);
         totalConvertedSamplesPerChannel += gotSamples;
         CHECK_GE(gotSamples, 0) << "ERROR Failed to resample samples";
-//        std::cout << "regular resample: " << gotSamples << std::endl;
-        outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
         SaveToVector(outBuffer, outNumChannels, gotSamples);
         while (gotSamples > 0) {
             // flush buffer
             gotSamples = swr_convert(this->swr, (uint8_t**)outBuffer, outNumSamples, NULL, 0);
             CHECK_GE(gotSamples, 0) << "ERROR Failed to flush resample buffer";
             totalConvertedSamplesPerChannel += gotSamples;
-//            std::cout << "resample flushing: " << gotSamples << std::endl;
-            outfile.write((char *)outBuffer[0], sizeof(float)*gotSamples);
             SaveToVector(outBuffer, outNumChannels, gotSamples);
         }
         // Convert to NDArray

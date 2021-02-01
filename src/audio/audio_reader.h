@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "../../include/decord/audio_interface.h"
-#include "audio_stream.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
