@@ -98,8 +98,10 @@ NAMES avfilter
 PATHS ${_FFMPEG_AVFILTER_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
 
-find_library(FFMPEG_LIBSWRESAMPLE
-NAMES libswresample
+message("Resample lib located: ${_FFMPEG_SWRESAMPLE_LIBRARY_DIRS}")
+
+find_library(FFMPEG_SWRESAMPLE
+NAMES libswresample swresample
 PATHS ${_FFMPEG_SWRESAMPLE_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
 
@@ -110,12 +112,14 @@ endif()
 if (FFMPEG_FOUND)
 set(FFMPEG_INCLUDE_DIR ${FFMPEG_AVCODEC_INCLUDE_DIR})
 
+message("Resample lib: ${FFMPEG_SWRESAMPLE}")
+
 set(FFMPEG_LIBRARIES
   ${FFMPEG_LIBAVFORMAT}
   ${FFMPEG_LIBAVFILTER}
   ${FFMPEG_LIBAVCODEC}
   ${FFMPEG_LIBAVUTIL}
-  ${FFMPEG_LIBSWRESAMPLE}
+  ${FFMPEG_SWRESAMPLE}
 )
 
 if (FFMPEG_LIBAVDEVICE)
