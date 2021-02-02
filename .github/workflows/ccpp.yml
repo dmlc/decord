@@ -16,7 +16,7 @@ jobs:
       with:
         submodules: recursive
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
+      run: sudo apt-get update && sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev
     - name: configure
       run: mkdir build && cd build && cmake .. -DUSE_CUDA=0
     - name: make
