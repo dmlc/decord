@@ -6,6 +6,14 @@
 #include "../runtime/str_util.h"
 #include <memory>
 
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
+//#include <libswresample/swresample.h>
+//#ifdef __cplusplus
+//}
+//#endif
+
 namespace decord {
     // AVIO buffer size when reading from raw bytes
     static const int AVIO_BUFFER_SIZE = std::stoi(runtime::GetEnvironmentVariableOrDefault("DECORD_AVIO_BUFFER_SIZE", "40960"));
@@ -14,7 +22,7 @@ namespace decord {
     : ctx(ctx), io_ctx_(), pFormatContext(nullptr), swr(nullptr), pCodec(nullptr), pCodecParameters(nullptr),
       pCodecContext(nullptr), audioStreamIndex(-1), outputVector(), output(), padding(-1.0), filename(fn), originalSampleRate(0),
       targetSampleRate(sampleRate), numChannels(0), mono(mono), totalSamplesPerChannel(0), totalConvertedSamplesPerChannel(0),
-      timeBase(0.0), duration(0.0), outfile()
+      timeBase(0.0), duration(0.0)
     {
         if (Decode(fn, io_type) == -1) {
             avformat_close_input(&pFormatContext);

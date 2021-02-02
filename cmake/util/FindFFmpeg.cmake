@@ -16,7 +16,7 @@
 # Redistribution and use is allowed according to the terms of the New
 # BSD license.
 #
-#set(FFMPEG_DIR "/usr/local/Cellar/ffmpeg/4.3.1_9")
+
 if (FFMPEG_DIR)
   set(FFMPEG_INCLUDE_DIR ${FFMPEG_DIR}/include)
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -98,8 +98,6 @@ NAMES avfilter
 PATHS ${_FFMPEG_AVFILTER_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
 
-message("Resample lib located: ${_FFMPEG_SWRESAMPLE_LIBRARY_DIRS}")
-
 find_library(FFMPEG_SWRESAMPLE
 NAMES libswresample swresample
 PATHS ${_FFMPEG_SWRESAMPLE_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
@@ -111,8 +109,6 @@ endif()
 
 if (FFMPEG_FOUND)
 set(FFMPEG_INCLUDE_DIR ${FFMPEG_AVCODEC_INCLUDE_DIR})
-
-message("Resample lib: ${FFMPEG_SWRESAMPLE}")
 
 set(FFMPEG_LIBRARIES
   ${FFMPEG_LIBAVFORMAT}

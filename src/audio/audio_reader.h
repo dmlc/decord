@@ -8,14 +8,6 @@
 #include <vector>
 
 #include "../../include/decord/audio_interface.h"
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <libswresample/swresample.h>
-#ifdef __cplusplus
-}
-#endif
-#include <fstream>
 
 namespace decord {
 
@@ -60,7 +52,6 @@ namespace decord {
         int totalConvertedSamplesPerChannel;
         double timeBase;
         double duration;
-        std::ofstream outfile;
     };
 
 }

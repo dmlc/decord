@@ -27,7 +27,9 @@ class AudioReader(object):
     sample_rate: int, default is -1
         Desired output sample rate of the audio, unchanged if `-1` is specified.
     mono: bool, default is True
-        Desired output channel layout of the audio. `True` is mono layout. `False` is unchanged.
+        Desired output channel layout of the audio. 
+        Setting `True` will return the audio as mono layout. 
+        Setting `False` will return the audio channel layout intact.
 
     """
 
@@ -46,12 +48,12 @@ class AudioReader(object):
         if self._handle is None:
             raise RuntimeError("Error reading " + uri + "...")
         self._array = _CAPI_AudioReaderGetNDArray(self._handle)
-        # self._array = bridge_out(self._array)
         self._array = self._array.asnumpy()
         self._duration = _CAPI_AudioReaderGetDuration(self._handle)
         self._num_samples_per_channel = _CAPI_AudioReaderGetNumSamplesPerChannel(self._handle)
         self._num_channels = _CAPI_AudioReaderGetNumChannels(self._handle)
         self.sample_rate = sample_rate
+        self._num_padding = None
 
     def __del__(self):
         if self._handle:
@@ -124,7 +126,8 @@ class AudioReader(object):
 
     def __get_num_padding(self):
         """Get number of samples needed to pad the audio to start at time 0."""
-        self._num_padding = _CAPI_AudioReaderGetNumPaddingSamples(self._handle)
+        if self._num_padding is None:
+            self._num_padding = _CAPI_AudioReaderGetNumPaddingSamples(self._handle)
         return self._num_padding
 
     def add_padding(self):
