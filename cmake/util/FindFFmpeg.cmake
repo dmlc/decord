@@ -16,7 +16,7 @@
 # Redistribution and use is allowed according to the terms of the New
 # BSD license.
 #
-set(FFMPEG_DIR "/usr/local/Cellar/ffmpeg/4.3.1_9")
+#set(FFMPEG_DIR "/usr/local/Cellar/ffmpeg/4.3.1_9")
 if (FFMPEG_DIR)
   set(FFMPEG_INCLUDE_DIR ${FFMPEG_DIR}/include)
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
