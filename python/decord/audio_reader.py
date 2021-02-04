@@ -60,7 +60,7 @@ class AudioReader(object):
             _CAPI_AudioReaderFree(self._handle)
 
     def __getitem__(self, idx):
-        """Get sample at `idx`.
+        """Get sample at `idx`. idx is the index of resampled audio, unit is sample.
 
         Parameters
         ----------
