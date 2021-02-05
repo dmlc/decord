@@ -3,8 +3,8 @@ name: Publish to PYPI
 on:
   push:
     branches: [ master ]
-  tags:
-    - "v*"
+    tags:
+      - "v*"
 
 jobs:
   manylinux:
