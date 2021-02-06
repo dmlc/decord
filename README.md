@@ -1,5 +1,7 @@
 # Decord
 
+![CI Build](https://github.com/dmlc/decord/workflows/C/C++%20CI/badge.svg?branch=master)
+![Release Build](https://github.com/dmlc/decord/workflows/Publish%20to%20PYPI/badge.svg?branch=master)
 [![PyPI](https://img.shields.io/pypi/v/decord.svg)](https://pypi.python.org/pypi/decord)
 [![Downloads](http://pepy.tech/badge/decord)](http://pepy.tech/project/decord)
 
