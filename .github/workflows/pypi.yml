@@ -50,6 +50,7 @@ jobs:
         sudo chmod 755 -R ./dist
         ls -la ./dist/
         cd dist
+        sudo chmod 755 ./*.whl
         find . -type f -iname "decord*.whl" -exec bash -c 'mv $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
         ls -lh .
     - name: Store the source distribution
@@ -169,7 +170,8 @@ jobs:
         mkdir output
         $wheel_path = Get-ChildItem *.whl
         $wheel_name = $wheel_path.BaseName
-        Compress-Archive -Path fixed_wheel\* -DestinationPath output\${wheel_name}.zip
+        Install-Module 7Zip4PowerShell -Force -Verbose
+        Compress-7Zip "fixed_wheel\*" -ArchiveFileName "output\${wheel_name}.zip" -Format Zip
         cd output
         Get-ChildItem *.zip  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
         Get-ChildItem *.zip  |Rename-Item -NewName {$_.name -replace '.zip','.whl'}
