@@ -171,10 +171,10 @@ jobs:
         $wheel_path = Get-ChildItem *.whl
         $wheel_name = $wheel_path.BaseName
         Install-Module 7Zip4PowerShell -Force -Verbose
-        Compress-7Zip "fixed_wheel\*" -ArchiveFileName "output\${wheel_name}.zip" -Format Zip
-        cd output
+        cd fixed_wheel
+        Compress-7Zip -Path . -ArchiveFileName "../output/${wheel_name}.whl" -Format Zip
+        cd ../output
         Get-ChildItem *.zip  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
-        Get-ChildItem *.zip  |Rename-Item -NewName {$_.name -replace '.zip','.whl'}
         dir .
     - name: Sanity test
       shell: cmd
