@@ -50,7 +50,7 @@ cd ffmpeg
   --enable-libvpx \
   --enable-libx264 \
   --disable-static
-make -j$(nproc)
+make
 make install
 
 # built libs
