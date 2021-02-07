@@ -8,7 +8,7 @@ on:
 
 jobs:
   manylinux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
       with:
@@ -180,7 +180,7 @@ jobs:
         FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\output\decord*`) DO (SET wheel_name=%%F)
         echo wheel_name=%wheel_name%
         cd python\dist\output
-        python -m pip install --force-reinstall %wheel_name%
+        python -m pip install --force-reinstall --no-cache-dir %wheel_name%
         python -m nose -v ../../../tests/python/unittests/test_video_reader.py
     - name: Store the source distribution
       uses: actions/upload-artifact@v2

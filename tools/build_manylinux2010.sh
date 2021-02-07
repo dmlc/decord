@@ -25,6 +25,7 @@ cd ~/ffmpeg_sources
 curl -O -L https://github.com/dmlc/decord/files/5685923/nasm-2.14.02.zip
 unzip nasm-2.14.02.zip
 cd nasm-2.14.02
+autoupdate
 ./autogen.sh
 ./configure --prefix="$HOME/ffmpeg_build" --bindir="$HOME/bin"
 make -j$(nproc)
