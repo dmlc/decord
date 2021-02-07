@@ -180,7 +180,7 @@ jobs:
         FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\output\decord*`) DO (SET wheel_name=%%F)
         echo wheel_name=%wheel_name%
         cd python\dist\output
-        rmdir /Q /S %LocalAppData%/pip/Cache
+        rmdir /Q /S "%LocalAppData%/pip/Cache"
         python -m pip install --force-reinstall --no-cache-dir %wheel_name%
         python -m nose -v ../../../tests/python/unittests/test_video_reader.py
     - name: Store the source distribution
