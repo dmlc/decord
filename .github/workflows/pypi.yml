@@ -26,7 +26,7 @@ jobs:
         echo "[install]" > python/setup.cfg
         echo "install_lib=" >> python/setup.cfg
     - name: Build manylinux Python wheels
-      uses: RalfG/python-wheels-manylinux-build@v0.3.3-manylinux2010_x86_64
+      uses: zhreshold/python-wheels-manylinux-build@v0.0.1-manylinux2010_x86_64
       with:
         python-versions: 'cp36-cp36m'
         build-requirements: 'numpy'
@@ -170,7 +170,7 @@ jobs:
         mkdir output
         $wheel_path = Get-ChildItem *.whl
         $wheel_name = $wheel_path.BaseName
-        7z a -tzip "output/${wheel_name}.whl" fixed_wheel\*
+        7z a -tzip "output/${wheel_name}.whl" .\fixed_wheel\*
         cd output
         Get-ChildItem *.whl  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
         dir .
@@ -180,7 +180,6 @@ jobs:
         FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\output\decord*`) DO (SET wheel_name=%%F)
         echo wheel_name=%wheel_name%
         cd python\dist\output
-        rmdir /Q /S "%LocalAppData%/pip/Cache"
         python -m pip install --force-reinstall --no-cache-dir %wheel_name%
         python -m nose -v ../../../tests/python/unittests/test_video_reader.py
     - name: Store the source distribution
