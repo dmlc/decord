@@ -50,7 +50,7 @@ jobs:
         sudo chmod 755 -R ./dist
         ls -la ./dist/
         cd dist
-        find . -type f -iname "decord*.whl" -exec bash -c 'cp $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
+        sudo find . -type f -iname "decord*.whl" -exec bash -c 'mv $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
         ls -lh .
     - name: Store the source distribution
       uses: actions/upload-artifact@v2
