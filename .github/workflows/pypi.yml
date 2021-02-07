@@ -214,3 +214,11 @@ jobs:
         repository_url: https://test.pypi.org/legacy/
         packages_dir: dist/
         skip_existing: true
+    - name: Publish package to PyPI
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        packages_dir: dist/
+        skip_existing: true
