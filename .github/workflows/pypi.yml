@@ -26,7 +26,7 @@ jobs:
         echo "[install]" > python/setup.cfg
         echo "install_lib=" >> python/setup.cfg
     - name: Build manylinux Python wheels
-      uses: zhreshold/python-wheels-manylinux-build@v0.0.1-manylinux2010_x86_64
+      uses: zhreshold/python-wheels-manylinux-build@v0.0.1
       with:
         python-versions: 'cp36-cp36m'
         build-requirements: 'numpy'
