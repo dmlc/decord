@@ -42,8 +42,8 @@ jobs:
         sudo rm ./python/dist/decord-*-linux_x86_64.whl
         which python
         which pip
-        find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'numpy/*' | true" \;
-        find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'pip/*' | true" \;
+        sudo find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'numpy/*' | true" \;
+        sudo find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'pip/*' | true" \;
         find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "which python && python -m pip install '{}' --force-reinstall" \;
         python -c "import decord; print(decord.__version__)"
         python -m nose -v ./tests/python/unittests/test_video_reader.py
