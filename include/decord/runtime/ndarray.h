@@ -21,6 +21,8 @@ namespace decord {
 class NDArrayPool;
 class VideoReader;
 class VideoLoader;
+class AudioReader;
+
 namespace ffmpeg {
 class FFMPEGThreadedDecoder;
 }
@@ -219,6 +221,7 @@ class NDArray {
   friend class decord::NDArrayPool;
   friend class decord::VideoReader;
   friend class decord::VideoLoader;
+  friend class decord::AudioReader;
 };
 
 /*!

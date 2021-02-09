@@ -33,6 +33,7 @@ extern "C" {
 #include <libavutil/dict.h>
 #include <libavutil/display.h>
 #include <libavutil/file.h>
+#include <libswresample/swresample.h>
 #ifdef DECORD_USE_LIBAVDEVICE
 #include <libavdevice/avdevice.h>
 #endif

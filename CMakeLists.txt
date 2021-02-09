@@ -85,7 +85,7 @@ assign_source_group("Source" ${GROUP_SOURCE})
 assign_source_group("Include" ${GROUP_INCLUDE})
 
 # Source file lists
-file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc src/sampler/*.cc)
+file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc src/sampler/*.cc src/audio/*.cc src/av_wrapper/*.cc)
 
 # Module rules
 include(cmake/modules/FFmpeg.cmake)
@@ -116,13 +116,13 @@ if(GTEST_LIB)
     string(REPLACE ".cc" "" __execname ${__srcname})
     add_executable(${__execname} ${__srcpath})
     list(APPEND TEST_EXECS ${__execname})
-	if (MSVC)
-	  set(GTEST_ADD_LIBS "")
-	else(MSVC)
-	  set(GTEST_ADD_LIBS pthread dl)
-	endif(MSVC)
-	target_link_libraries(${__execname}
-		decord ${GTEST_LIB} ${GTEST_ADD_LIBS})
+    if (MSVC)
+      set(GTEST_ADD_LIBS "")
+    else(MSVC)
+      set(GTEST_ADD_LIBS pthread dl)
+    endif(MSVC)
+    target_link_libraries(${__execname}
+        decord ${GTEST_LIB} ${GTEST_ADD_LIBS})
     set_target_properties(${__execname} PROPERTIES EXCLUDE_FROM_ALL 1)
     set_target_properties(${__execname} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD 1)
   endforeach()
