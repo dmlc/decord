@@ -5,14 +5,7 @@
 #include "audio_reader.h"
 #include "../runtime/str_util.h"
 #include <memory>
-
-//#ifdef __cplusplus
-//extern "C" {
-//#endif
-//#include <libswresample/swresample.h>
-//#ifdef __cplusplus
-//}
-//#endif
+#include <cmath>
 
 namespace decord {
     // AVIO buffer size when reading from raw bytes
