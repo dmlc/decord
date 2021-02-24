@@ -15,6 +15,8 @@
 
 `Decord` was designed to handle awkward video shuffling experience in order to provide smooth experiences similar to random image loader for deep learning.
 
+`Decord` is also able to decode audio from both video and audio files. One can slice video and audio together to get a synchronized result; hence providing a one-stop solution for both video and audio decoding.
+
 Table of contents
 =================
 
@@ -236,6 +238,45 @@ shuffle = 1  # random filename order, no random access for each video, very effi
 shuffle = 2  # random order
 shuffle = 3  # random frame access in each video only
 ```
+
+### AudioReader
+
+AudioReader is used to access samples directly from both video(if there's an audio track) and audio files.
+
+```python
+from decord import AudioReader
+from decord import cpu, gpu
+
+# You can specify the desired sample rate and channel layout
+# For channels there are two options: default to the original layout or mono
+ar = AudioReader('example.mp3', ctx=cpu(0), sample_rate=44100, mono=False)
+print('Shape of audio samples: ', ar.shape())
+# To access the audio samples
+print('The first sample: ', ar[0])
+print('The first five samples: ', ar[0:5])
+print('Get a batch of samples: ', ar.get_batch([1,3,5]))
+```
+
+### AVReader
+
+AVReader is a wraper for both AudioReader and VideoReader. It enables you to slice the video and audio simultaneously.
+
+```python
+from decord import AVReader
+from decord import cpu, gpu
+
+av = AVReader('example.mov', ctx=cpu(0))
+# To access both the video frames and corresponding audio samples
+audio, video = av[0:20]
+# Each element in audio will be a batch of samples corresponding to a frame of video
+print('Frame #: ', len(audio))
+print('Shape of the audio samples of the first frame: ', audio[0].shape)
+print('Shape of the first frame: ', video.asnumpy()[0].shape)
+# Similarly, to get a batch
+audio2, video2 = av.get_batch([1,3,5])
+```
+
+
 
 ## Bridges for deep learning frameworks:
 
