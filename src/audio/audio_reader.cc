@@ -113,7 +113,7 @@ namespace decord {
         // Read stream
         avformat_find_stream_info(pFormatContext, NULL);
 
-        for (auto i = 0; i < pFormatContext->nb_streams; i++) {
+        for (auto i = 0; i < int(pFormatContext->nb_streams); i++) {
             // find the stream needed
             AVCodecParameters *tempCodecParameters = pFormatContext->streams[i]->codecpar;
             if (tempCodecParameters->codec_type == AVMEDIA_TYPE_AUDIO) {
