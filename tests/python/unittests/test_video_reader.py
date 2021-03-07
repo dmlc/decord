@@ -100,7 +100,7 @@ def test_bytes_io():
         vr = VideoReader(f)
         assert len(vr) == 310
         vr2 = _get_default_test_video()
-        assert np.allclose(vr[10].asnumpy(), vr2[10].asnumpy())
+        assert np.mean(np.abs(vr[10].asnumpy().astype('float') - vr2[10].asnumpy().astype('float'))) < 2 # average pixel diff < 2
         
 
 if __name__ == '__main__':

@@ -27,7 +27,7 @@ static const int AVIO_BUFFER_SIZE = std::stoi(runtime::GetEnvironmentVariableOrD
 // (corrupted video only): Max retry when cache frame is unavailable and rewind is required to decode a frame
 static const int REWIND_RETRY_MAX = std::stoi(runtime::GetEnvironmentVariableOrDefault("DECORD_REWIND_RETRY_MAX", "16"));
 // (corrupted video only): Max retry when eof is detected but last few frames are not available
-static const int EOF_RETRY_MAX = std::stoi(runtime::GetEnvironmentVariableOrDefault("DECORD_EOF_RETRY_MAX", "1024"));
+static const int EOF_RETRY_MAX = std::stoi(runtime::GetEnvironmentVariableOrDefault("DECORD_EOF_RETRY_MAX", "10240"));
 // (corrupted video only): The warning threshold(0.0 - 1.0) when multiple frames are unavailable and fallbacked to cached frames
 static const float DUPLICATE_WARNING_THRESHOLD = std::stof(runtime::GetEnvironmentVariableOrDefault("DECORD_DUPLICATE_WARNING_THRESHOLD", "0.25"));
 
@@ -423,7 +423,9 @@ NDArray VideoReader::NextFrameImpl() {
                 break;
               } else {
                 if (rewind_offset > REWIND_RETRY_MAX) {
-                  LOG(FATAL) << "[" << filename_ << "]Unable to handle EOF, exit...";
+                  LOG(FATAL) << "[" << filename_ << "]Unable to handle EOF because the video might have corrupted frames" 
+                  << "and `DECORD_REWIND_RETRY_MAX=" << REWIND_RETRY_MAX << "`. You may override the limit by `export DECORD_REWIND_RETRY_MAX=32`"
+                  << " for example to allow more auto-substituded frames, exit...";
                 }
                 SeekAccurate(curr_frame_ - rewind_offset);
                 ++rewind_offset;
@@ -435,7 +437,9 @@ NDArray VideoReader::NextFrameImpl() {
                 if (FetchCachedFrame(frame, curr_frame_)) {
                   break;
                 } else {
-                  LOG(FATAL) << "[" << filename_ << "]Unable to handle EOF, exit...";
+                  LOG(FATAL) << "[" << filename_ << "]Unable to handle EOF because it takes too long to retrieve last few frames and "
+                  << "`DECORD_EOF_RETRY_MAX=" << EOF_RETRY_MAX << "`. You may override the limit by `export DECORD_EOF_RETRY_MAX=20480`"
+                  << " for example to allow more EOF retry attempts, exit...";
                 }
               }
               retry++;
