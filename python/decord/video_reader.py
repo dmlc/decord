@@ -62,8 +62,11 @@ class VideoReader(object):
         self._avg_fps = None
 
     def __del__(self):
-        if self._handle:
-            _CAPI_VideoReaderFree(self._handle)
+        try:
+            if self._handle is not None:
+                _CAPI_VideoReaderFree(self._handle)
+        except TypeError:
+            pass
 
     def __len__(self):
         """Get length of the video. Note that sometimes FFMPEG reports inaccurate number of frames,
