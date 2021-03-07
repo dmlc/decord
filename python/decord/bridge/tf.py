@@ -18,7 +18,11 @@ def try_import_tfdl():
 def to_tensorflow(decord_arr):
     """from decord to tensorflow, no copy"""
     tfdl = try_import_tfdl()
-    return tfdl.from_dlpack(decord_arr.to_dlpack())
+    from tensorflow.python import pywrap_tfe
+    from tensorflow.python.eager import context
+    ctx = context.context()
+    ctx.ensure_initialized()
+    return pywrap_tfe.TFE_FromDlpackCapsule(decord_arr.to_dlpack(), ctx._handle)
 
 def from_tensorflow(tf_tensor):
     """from tensorflow to decord, no copy"""
