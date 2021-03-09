@@ -55,6 +55,16 @@ class AudioReader(object):
         self.sample_rate = sample_rate
         self._num_padding = None
 
+    def __len__(self):
+        """Get length of the audio. The length refer to the shape's first dimension. In this case,
+        the length is the number of channels.
+        Returns
+        -------
+        int
+            The number of channels in the audio track.
+        """
+        return self.shape[0]
+
     def __del__(self):
         if self._handle:
             _CAPI_AudioReaderFree(self._handle)
@@ -102,6 +112,7 @@ class AudioReader(object):
         indices = list(indices)
         return bridge_out(_nd.array(self._array[:, indices]))
 
+    @property
     def shape(self):
         """Get shape of the entire audio samples.
 

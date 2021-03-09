@@ -17,6 +17,11 @@ namespace decord {
       targetSampleRate(sampleRate), numChannels(0), mono(mono), totalSamplesPerChannel(0), totalConvertedSamplesPerChannel(0),
       timeBase(0.0), duration(0.0)
     {
+        // av_register_all deprecated in latest versions
+        #if ( LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100) )
+        av_register_all();
+        #endif
+
         if (Decode(fn, io_type) == -1) {
             avformat_close_input(&pFormatContext);
             return;
