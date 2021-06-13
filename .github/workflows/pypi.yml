@@ -34,7 +34,7 @@ jobs:
         build-requirements: 'numpy'
         pre-build-command: 'sh ../tools/build_manylinux2010.sh'
         package-path: 'python'
-        pip-wheel-args: '-w ./dist --no-deps'
+        pip-wheel-args: '-w ./dist'
     - name: Sanity test
       run: |
         pwd
