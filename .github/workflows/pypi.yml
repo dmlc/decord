@@ -52,7 +52,7 @@ jobs:
         sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^numpy/d' '{}'/RECORD" \;
         sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^pip/d' '{}'/RECORD" \;
         cd ..
-        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "rm '{}' && zip -r '{}' decord-cwd/*" \;
+        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "rm '{}' && cd decord-cwd && zip -r ../'{}' ./*" \;
         find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "which python && python -m pip install '{}' --force-reinstall" \;
         python -c "import decord; print(decord.__version__)"
         python -m nose -v ./tests/python/unittests/test_video_reader.py
