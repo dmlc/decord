@@ -35,9 +35,9 @@ make install
 
 # ffmpeg
 cd ~/ffmpeg_sources
-curl -O -L https://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2
-tar xjf ffmpeg-snapshot.tar.bz2
-cd ffmpeg
+curl -O -L https://ffmpeg.org/releases/ffmpeg-4.1.6.tar.bz2
+tar xjf ffmpeg-4.1.6.tar.bz2
+cd ffmpeg-4.1.6
 ./configure \
   --prefix="$HOME/ffmpeg_build" \
   --enable-shared \

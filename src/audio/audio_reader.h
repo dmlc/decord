@@ -34,7 +34,7 @@ namespace decord {
         std::unique_ptr<ffmpeg::AVIOBytesContext> io_ctx_;  // avio context for raw memory access
         AVFormatContext *pFormatContext;
         struct SwrContext* swr;
-        AVCodec* pCodec;
+        // AVCodec* pCodec;
         AVCodecParameters* pCodecParameters;
         AVCodecContext * pCodecContext;
         int audioStreamIndex;

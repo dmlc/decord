@@ -34,7 +34,7 @@ jobs:
         build-requirements: 'numpy'
         pre-build-command: 'sh ../tools/build_manylinux2010.sh'
         package-path: 'python'
-        pip-wheel-args: '-w ./dist'
+        pip-wheel-args: '-w ./dist --no-deps'
     - name: Sanity test
       run: |
         pwd
@@ -42,8 +42,17 @@ jobs:
         sudo rm ./python/dist/decord-*-linux_x86_64.whl
         which python
         which pip
-        sudo find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'numpy/*' | true" \;
-        sudo find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'pip/*' | true" \;
+        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'numpy/*' | true" \;
+        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'pip/*' | true" \;
+        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "unzip '{}' -d ./decord-cwd" \;
+        ls
+        cd ./decord-cwd
+        ls -la
+        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "echo decord > '{}'/top_level.txt" \;
+        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^numpy/d' '{}'/RECORD" \;
+        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^pip/d' '{}'/RECORD" \;
+        cd ..
+        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "rm '{}' && cd decord-cwd && zip -r ../'{}' ./*" \;
         find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "which python && python -m pip install '{}' --force-reinstall" \;
         python -c "import decord; print(decord.__version__)"
         python -m nose -v ./tests/python/unittests/test_video_reader.py

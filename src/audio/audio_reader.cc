@@ -12,7 +12,7 @@ namespace decord {
     static const int AVIO_BUFFER_SIZE = std::stoi(runtime::GetEnvironmentVariableOrDefault("DECORD_AVIO_BUFFER_SIZE", "40960"));
 
     AudioReader::AudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type, bool mono)
-    : ctx(ctx), io_ctx_(), pFormatContext(nullptr), swr(nullptr), pCodec(nullptr), pCodecParameters(nullptr),
+    : ctx(ctx), io_ctx_(), pFormatContext(nullptr), swr(nullptr), pCodecParameters(nullptr),
       pCodecContext(nullptr), audioStreamIndex(-1), outputVector(), output(), padding(-1.0), filename(fn), originalSampleRate(0),
       targetSampleRate(sampleRate), numChannels(0), mono(mono), totalSamplesPerChannel(0), totalConvertedSamplesPerChannel(0),
       timeBase(0.0), duration(0.0)
@@ -138,7 +138,7 @@ namespace decord {
         }
 
         // prepare codec
-        pCodec = avcodec_find_decoder(pCodecParameters->codec_id);
+        auto pCodec = avcodec_find_decoder(pCodecParameters->codec_id);
         CHECK(pCodec != nullptr) << "ERROR Decoder not found. THe codec is not supported.";
         pCodecContext = avcodec_alloc_context3(pCodec);
         CHECK(pCodecContext != nullptr) << "ERROR Could not allocate a decoding context.";
