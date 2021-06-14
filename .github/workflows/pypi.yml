@@ -48,9 +48,9 @@ jobs:
         ls
         cd ./decord-cwd
         ls -la
-        find . -type d -iname "decord-*.dist-info" -exec sh -c "echo decord > '{}'/top_level.txt" \;
-        find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^numpy/d' '{}'/RECORD" \;
-        find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^pip/d' '{}'/RECORD" \;
+        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "echo decord > '{}'/top_level.txt" \;
+        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^numpy/d' '{}'/RECORD" \;
+        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^pip/d' '{}'/RECORD" \;
         cd ..
         sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "rm '{}' && zip -r '{}' decord-cwd/*" \;
         find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "which python && python -m pip install '{}' --force-reinstall" \;
