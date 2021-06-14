@@ -74,7 +74,7 @@ class VideoReader : public VideoReaderInterface {
         /*! \brief a lookup table for per frame pts/dts */
         std::vector<AVFrameTime> frame_ts_;
         /*! \brief Video Streams Codecs in original videos */
-        std::vector<AVCodec*> codecs_;
+        std::vector<const AVCodec*> codecs_;
         /*! \brief Currently active video stream index */
         int actv_stm_idx_;
         /*! \brief AV format context holder */

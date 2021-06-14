@@ -60,7 +60,7 @@ make install
 # ffmpeg
 cd ~/ffmpeg_sources
 curl -O -L https://ffmpeg.org/releases/ffmpeg-4.1.6.tar.bz2
-tar xjf ffmpeg-snapshot.tar.bz2
+tar xjf ffmpeg-4.1.6.tar.bz2
 cd ffmpeg
 export PATH="$HOME/bin:$PATH"
 PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure \

@@ -97,13 +97,13 @@ VideoReader::VideoReader(std::string fn, DLContext ctx, int width, int height, i
     // initialize all video streams and store codecs info
     for (uint32_t i = 0; i < fmt_ctx_->nb_streams; ++i) {
         AVStream *st = fmt_ctx_->streams[i];
-        AVCodec *local_codec = avcodec_find_decoder(st->codecpar->codec_id);
+        const AVCodec *local_codec = avcodec_find_decoder(st->codecpar->codec_id);
         if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             // store video stream codecs only
             codecs_.emplace_back(local_codec);
         } else {
             // audio, subtitle... skip
-            AVCodec *tmp = NULL;
+            const AVCodec *tmp = NULL;
             codecs_.emplace_back(tmp);
         }
     }
@@ -223,7 +223,7 @@ unsigned int VideoReader::QueryStreams() const {
         // iterate and print stream info
         // feel free to add more if needed
         AVStream *st = fmt_ctx_->streams[i];
-        AVCodec *codec = codecs_[i];
+        const AVCodec *codec = codecs_[i];
         if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             LOG(INFO) << "video stream [" << i << "]:"
                 << " Average FPS: "
