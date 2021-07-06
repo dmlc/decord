@@ -34,7 +34,7 @@ namespace decord {
     }
 
     AudioReader::~AudioReader() {
-
+        delete pCodecParameters;
     }
 
     NDArray AudioReader::GetNDArray() {
@@ -213,6 +213,7 @@ namespace decord {
         swr_close(swr);
         swr_free(&swr);
         avcodec_free_context(&pCodecContext);
+        avformat_close_input(&pFormatContext);
     }
 
     void AudioReader::HandleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame) {
@@ -248,7 +249,9 @@ namespace decord {
             totalConvertedSamplesPerChannel += gotSamples;
             SaveToVector(outBuffer, outNumChannels, gotSamples);
         }
-        // Convert to NDArray
+        if (outBuffer)
+            av_freep(&outBuffer[0]);
+        av_freep(outBuffer);
     }
 
     void AudioReader::DrainDecoder(AVCodecContext *pCodecContext, AVFrame *pFrame) {
