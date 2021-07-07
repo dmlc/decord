@@ -226,7 +226,7 @@ vl = VideoLoader(['1.mp4', '2.avi', '3.mpeg'], ctx=[cpu(0)], shape=(2, 320, 240,
 print('Total batches:', len(vl))
 
 for batch in vl:
-    print(batch.shape)
+    print(batch[0].shape)
 ```
 
 Shuffling video can be tricky, thus we provide various modes:
