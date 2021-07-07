@@ -34,7 +34,7 @@ namespace decord {
     }
 
     AudioReader::~AudioReader() {
-        delete pCodecParameters;
+
     }
 
     NDArray AudioReader::GetNDArray() {
@@ -209,6 +209,7 @@ namespace decord {
         DrainDecoder(pCodecContext, pFrame);
         // clean up
         av_frame_free(&pFrame);
+        av_packet_free(&pPacket);
         avcodec_close(pCodecContext);
         swr_close(swr);
         swr_free(&swr);
@@ -251,7 +252,7 @@ namespace decord {
         }
         if (outBuffer)
             av_freep(&outBuffer[0]);
-        av_freep(outBuffer);
+        av_freep(&outBuffer);
     }
 
     void AudioReader::DrainDecoder(AVCodecContext *pCodecContext, AVFrame *pFrame) {
