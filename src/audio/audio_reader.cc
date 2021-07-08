@@ -250,8 +250,9 @@ namespace decord {
             totalConvertedSamplesPerChannel += gotSamples;
             SaveToVector(outBuffer, outNumChannels, gotSamples);
         }
-        if (outBuffer)
+        if (outBuffer) {
             av_freep(&outBuffer[0]);
+        }
         av_freep(&outBuffer);
     }
 
