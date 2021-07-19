@@ -42,7 +42,7 @@ class VideoLoader(object):
         self._handle = None
         assert isinstance(uris, (list, tuple))
         assert (len(uris) > 0)
-        uri = ','.join([x.strip() for x in uris])
+        uri = ','.join(x.strip() for x in uris)
         if isinstance(ctx, DECORDContext):
             ctx = [ctx]
         for _ctx in ctx:
