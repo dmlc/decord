@@ -86,8 +86,8 @@ you can specify `-DUSE_CUDA=ON` or `-DUSE_CUDA=/path/to/cuda` to enable NVDEC ha
 cmake .. -DUSE_CUDA=ON -DCMAKE_BUILD_TYPE=Release
 ```
 
-Note that if you encountered the issue(e.g., the offical nvidia docker, see #102) with `libnvcuvid.so`, it's probably due to the missing link for
-`libnvcuvid.so`, you can manually find(`ldconfig -p | grep libnvcuvid`) and link the library to `CUDA_TOOLKIT_ROOT_DIR\lib64` to allow `decord` smoothly detect and link the correct library.
+Note that if you encountered the an issue with `libnvcuvid.so` (e.g., see [#102](https://github.com/dmlc/decord/issues/102)), it's probably due to the missing link for
+`libnvcuvid.so`, you can manually find it (`ldconfig -p | grep libnvcuvid`) and link the library to `CUDA_TOOLKIT_ROOT_DIR\lib64` to allow `decord` smoothly detect and link the correct library.
 
 To specify a customized FFMPEG library path, use `-DFFMPEG_DIR=/path/to/ffmpeg".
 
