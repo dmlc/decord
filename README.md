@@ -58,7 +58,7 @@ Install the system packages for building the shared library, for Debian/Ubuntu u
 
 ```bash
 # official PPA comes with ffmpeg 2.8, which lacks tons of features, we use ffmpeg 4.0 here
-sudo add-apt-repository ppa:jonathonf/ffmpeg-4
+sudo add-apt-repository ppa:jonathonf/ffmpeg-4 # for ubuntu20.04 official PPA is already version 4.2, you may skip this step
 sudo apt-get update
 sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake
 sudo apt-get install -y ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev
@@ -80,7 +80,7 @@ cmake .. -DUSE_CUDA=0 -DCMAKE_BUILD_TYPE=Release
 make
 ```
 
-you can specify `-DUSE_CUDA=ON` or `-DUSE_CUDA=/path/to/cuda` to enable NVDEC hardware accelerated decoding:
+you can specify `-DUSE_CUDA=ON` or `-DUSE_CUDA=/path/to/cuda` or `-DUSE_CUDA=ON` `-DCMAKE_CUDA_COMPILER=/path/to/cuda/nvcc` to enable NVDEC hardware accelerated decoding:
 
 ```bash
 cmake .. -DUSE_CUDA=ON -DCMAKE_BUILD_TYPE=Release
