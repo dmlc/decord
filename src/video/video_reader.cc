@@ -601,10 +601,15 @@ bool VideoReader::CheckKeyFrame()
     decoder_->Start();
     bool ret = false;
     int64_t cf = curr_frame_;
+    int i = 0;
     while (!ret)
     {
         PushNext();
         ret = decoder_->Pop(&frame);
+        i++;
+        if(i > 60){ // This is going to loop indefinitely when parse some corrupted video
+            break;
+        }
     }
 
     if (eof_ && frame.pts == -1){
