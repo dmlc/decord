@@ -96,15 +96,20 @@ CUVideoDecoderImpl& CUVideoDecoderImpl::operator=(CUVideoDecoderImpl&& other) {
 
 int CUVideoDecoderImpl::Initialize(CUVIDEOFORMAT* format) {
     if (initialized_) {
-        if ((format->codec != decoder_info_.CodecType) ||
-            (format->coded_width != decoder_info_.ulWidth) ||
-            (format->coded_height != decoder_info_.ulHeight) ||
-            (format->chroma_format != decoder_info_.ChromaFormat)) {
-            std::cerr << "Encountered a dynamic video format change.\n";
-            return 0;
+        if ((format->codec == decoder_info_.CodecType) &&
+                (format->coded_width == decoder_info_.ulWidth) &&
+                (format->coded_height == decoder_info_.ulHeight) &&
+                (format->chroma_format == decoder_info_.ChromaFormat))
+            {
+                return 1;
+            }
+            else //When the video format changes, reinitialize the decoder and continue to decode
+            {
+                CHECK_CUDA_CALL(cuvidDestroyDecoder(decoder_));
+                std::cerr << "Encountered a dynamic video format change.\n";
+                std::cerr << "Reinitialize the decoder\n";
+            }
         }
-        return 1;
-    }
 
 
     // DLOG(INFO) << "Hardware Decoder Input Information" << std::endl
