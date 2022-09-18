@@ -263,10 +263,14 @@ int64_t VideoReader::GetFrameCount() const {
     int64_t cnt = fmt_ctx_->streams[actv_stm_idx_]->nb_frames;
     if (cnt < 1) {
         AVStream *stm = fmt_ctx_->streams[actv_stm_idx_];
-        // many formats do not provide accurate frame count, use duration and FPS to approximate
-        cnt = static_cast<double>(stm->avg_frame_rate.num) / stm->avg_frame_rate.den * fmt_ctx_->duration / AV_TIME_BASE;
+        if(stm->avg_frame_rate.den == 0) //Reset the total frame count to 0
+            cnt = 0;
+        else
+            // many formats do not provide accurate frame count, use duration and FPS to approximate
+            cnt = static_cast<double>(stm->avg_frame_rate.num) / stm->avg_frame_rate.den * fmt_ctx_->duration / AV_TIME_BASE;
     }
     if (cnt < 1) {
+        cnt = 0;
         LOG(FATAL) << "[" << filename_ << "] Failed to measure duration/frame-count due to broken metadata.";
     }
     return cnt;
@@ -597,10 +601,15 @@ bool VideoReader::CheckKeyFrame()
     decoder_->Start();
     bool ret = false;
     int64_t cf = curr_frame_;
+    int i = 0;
     while (!ret)
     {
         PushNext();
         ret = decoder_->Pop(&frame);
+        i++;
+        if(i > 60){ // This is going to loop indefinitely when parse some corrupted video
+            break;
+        }
     }
 
     if (eof_ && frame.pts == -1){

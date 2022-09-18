@@ -89,7 +89,7 @@ class VideoReaderInterface {
 
 DECORD_DLL VideoReaderPtr GetVideoReader(std::string fname, DLContext ctx,
                                          int width=-1, int height=-1, int nb_thread=0,
-                                         int io_type=kNormal);
+                                         int io_type=kNormal, std::string fault_tol="-1");
 
 /**
  * \brief Interface of VideoLoader, pure virtual class
