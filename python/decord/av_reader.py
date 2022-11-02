@@ -41,7 +41,7 @@ class AVReader(object):
 
     """
 
-    def __init__(self, uri, ctx=cpu(0), sample_rate=44100, mono=True, width=-1, height=-1, num_threads=0, fault_tol=-1):
+    def __init__(self, uri, ctx=cpu(0), sample_rate=-1, mono=True, width=-1, height=-1, num_threads=0, fault_tol=-1):
         self.__audio_reader = AudioReader(uri, ctx, sample_rate, mono)
         self.__audio_reader.add_padding()
         if hasattr(uri, 'read'):
