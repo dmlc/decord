@@ -21,6 +21,7 @@
 extern "C" {
 #endif
 #include <libavcodec/avcodec.h>
+#include <libavcodec/bsf.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 #include <libavfilter/avfilter.h>
