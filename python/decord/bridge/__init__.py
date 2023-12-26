@@ -6,6 +6,7 @@ from .mxnet import to_mxnet, from_mxnet
 from .torchdl import to_torch, from_torch
 from .tf import to_tensorflow, from_tensorflow
 from .tvm import to_tvm, from_tvm
+from .paddle import to_paddle, from_paddle
 
 _BRIDGE_TYPES = {
     'native': (lambda x: x, lambda x: x),
@@ -13,6 +14,7 @@ _BRIDGE_TYPES = {
     'torch': (to_torch, from_torch),
     'tensorflow': (to_tensorflow, from_tensorflow),
     'tvm': (to_tvm, from_tvm),
+    'paddle': (to_paddle, from_paddle),
 }
 
 _CURRENT_BRIDGE = threading.local()
@@ -74,3 +76,6 @@ def use_tensorflow():
 
 def use_tvm():
     return _BridgeScope('tvm')
+
+def use_paddle():
+    return _BridgeScope('paddle')

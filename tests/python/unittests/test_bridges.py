@@ -59,6 +59,19 @@ def test_tvm_bridge():
     except ImportError:
         print('Skip test tvm bridge as tvm is not found')
 
+def test_paddle_bridge():
+    try:
+        from decord.bridge.paddle import try_import_paddle
+        import paddle
+        vr = _get_default_test_video()
+        with use_paddle():
+            frame = vr[0]
+            assert isinstance(frame, paddle.Tensor), type(frame)
+            native_frame = bridge_in(frame)
+        assert isinstance(native_frame, decord.nd.NDArray), type(native_frame)
+    except ImportError:
+        print('Skip test paddle bridge as paddle is not found')
+
 def test_threaded_bridge():
     # issue #85
     from decord import cpu, gpu
