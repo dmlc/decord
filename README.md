@@ -285,6 +285,7 @@ It's important to have a bridge from decord to popular deep learning frameworks 
 -   Apache MXNet (Done)
 -   Pytorch (Done)
 -   TensorFlow (Done)
+-   Paddle (Done)
 
 Using bridges for deep learning frameworks are simple, for example, one can set the default tensor output to `mxnet.ndarray`:
 
@@ -297,9 +298,10 @@ print('native output:', type(vr[0]), vr[0].shape)
 decord.bridge.set_bridge('mxnet')
 print(type(vr[0], vr[0].shape))
 # <class 'mxnet.ndarray.ndarray.NDArray'> (240, 426, 3)
-# or pytorch and tensorflow(>=2.2.0)
+# or pytorch, tensorflow(>=2.2.0) and paddle
 decord.bridge.set_bridge('torch')
 decord.bridge.set_bridge('tensorflow')
+decord.bridge.set_bridge('paddle')
 # or back to decord native format
 decord.bridge.set_bridge('native')
 ```
