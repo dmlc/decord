@@ -118,8 +118,12 @@ To install other needed packages like cmake, we recommend first installing Homeb
 After installation of Homebrew, install cmake and ffmpeg by:
 
 ```bash
-brew install cmake ffmpeg
+brew install cmake ffmpeg@4
 # note: make sure you have cmake 3.8 or later, you can install from cmake official website if it's too old
+```
+Link to ffmpeg@4 if there are other versions installed
+```bash
+brew link ffmpeg@4
 ```
 
 Clone the repo recursively(important)
