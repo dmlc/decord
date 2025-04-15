@@ -37,7 +37,7 @@ namespace runtime {
 class NDArray {
  public:
   // pts of the frame
-  int pts=-1;
+  int64_t pts=-1;
   // internal container type
   struct Container;
   /*! \brief default constructor */
