@@ -644,10 +644,25 @@ void VideoReader::SkipFramesImpl(int64_t num)
     auto pts = FramesToPTS(frame_pos);
     decoder_->SuggestDiscardPTS(pts);
 
+
+    int64_t pop_retries = 0;
+    const int64_t MAX_POP_RETRIES_PER_FRAME = 10000;
+    int64_t initial_num = num;
+
     while (num > 0) {
         PushNext();
         ret = decoder_->Pop(&frame);
-        if (!ret) continue;
+        if (!ret) {
+            pop_retries++;
+            if (pop_retries > MAX_POP_RETRIES_PER_FRAME) {
+                LOG(INFO) << "[" << filename_ << "] Failed to skip frames effectively at frame " << curr_frame_
+                           << ". Decoder did not respond after " << MAX_POP_RETRIES_PER_FRAME
+                           << " attempts. Video might be corrupted or seeking failed. Aborting skip operation."
+                           << " Attempted to skip " << initial_num << " frames, skipped " << (initial_num - num) << ".";
+                break;
+            }
+            continue;
+        }
         ++curr_frame_;
         // LOG(INFO) << "skip: " << num;
         --num;
