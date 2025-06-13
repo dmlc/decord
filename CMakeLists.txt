@@ -5,7 +5,8 @@ project(decord2 LANGUAGES C CXX)               # add CUDA later if requested
 # User options
 # ---------------------------------------------------------------------------
 include(cmake/util/Util.cmake)
-
+include(cmake/util/FindFFmpeg.cmake)
+include(cmake/modules/FFmpeg.cmake)
 # NOTE: do *not* reorder these two options; other code relies on them.
 decord_option(USE_CUDA     "Build with CUDA" OFF)
 decord_option(USE_MSVC_MT  "Build with MT runtime on MSVC" OFF)
@@ -16,7 +17,6 @@ decord_option(USE_MSVC_MT  "Build with MT runtime on MSVC" OFF)
 if(USE_CUDA)
   # enable_language(CUDA)                     # add CUDA to this directory
   include(cmake/util/FindCUDA.cmake)
-  include(cmake/util/FindFFmpeg.cmake)
   include(cmake/util/FindCUDAArchFlags.cmake)
 endif()
 
