@@ -72,7 +72,7 @@ jobs:
           CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32 pp*"
           CIBW_BEFORE_BUILD_LINUX: |
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
-            yum install -y cmake make gcc gcc-c++ pkgconfig
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel
             mkdir build
             cd build
             cmake .. -DUSE_CUDA=0 -DCMAKE_BUILD_TYPE=Release
