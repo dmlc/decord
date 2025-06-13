@@ -116,18 +116,13 @@ jobs:
           - os: ubuntu-24.04-arm
             arch: aarch64
             pybuilds: "cp3{10,11,12}-manylinux_aarch64"
-            cuda_arch: "80;86;90a" # Includes Hopper and Ada for ARM
+            cuda_arch: "80;86;89;90"
             id: linux_aarch64_cuda
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install CUDA Toolkit 12.8
-        uses: Jimver/cuda-toolkit@v0.2.25
-        with:
-          cuda: '12.8.1'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -145,29 +140,52 @@ jobs:
           CIBW_BUILD: ${{ matrix.pybuilds }}
           CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32 pp*"
           CIBW_TEST_SKIP: "*"
-          CIBW_BEFORE_BUILD_LINUX: |
-            set -e
-            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
-            yum install -y epel-release
+          # BEFORE_ALL runs once per container, making it efficient for setting up the environment.
+          CIBW_BEFORE_ALL_LINUX: |
+            set -ex
+            # Detect architecture and add the correct NVIDIA CUDA repo for RHEL 8-based manylinux
+            ARCH=$(uname -m)
+            if [ "$ARCH" == "x86_64" ]; then
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+            elif [ "$ARCH" == "aarch64" ]; then
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/aarch64/cuda-rhel8.repo
+            else
+              echo "Unsupported architecture: $ARCH"
+              exit 1
+            fi
+            
+            echo "--- Adding CUDA repo for $ARCH ---"
+            yum-config-manager --add-repo ${REPO_URL}
+            yum clean all
+            
+            echo "--- Installing CUDA Toolkit and build dependencies ---"
+            # Install specific CUDA version and other build tools
+            yum install -y cuda-toolkit-12-8 epel-release
             yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
+            
+            echo "--- Verifying CUDA installation ---"
+            export PATH=/usr/local/cuda-12.8/bin:$PATH
+            nvcc --version
+          # BEFORE_BUILD runs for each python version, perfect for compiling your specific project
+          CIBW_BEFORE_BUILD_LINUX: |
+            set -ex
+            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
             rm -f /tmp/vendor/lib/libsoxr.so*
-            mkdir build
-            cd build
-            echo "--- Running CMake with explicit CUDA compiler path ---"
+            
+            mkdir -p build && cd build
+            echo "--- Running CMake with CUDA support ---"
             cmake .. \
               -DUSE_CUDA=ON \
               -DCMAKE_BUILD_TYPE=Release \
-              -DCUDA_TOOLKIT_ROOT_DIR=${{ env.CUDA_PATH }} \
-              -DCMAKE_CUDA_COMPILER=${{ env.CUDA_PATH }}/bin/nvcc \
               -DCMAKE_CUDA_ARCHITECTURES="${{ matrix.cuda_arch }}"
             echo "--- Building with make ---"
             make -j$(nproc)
             cp libdecord.so ..
+          # Set environment variables for the build process inside the container
           CIBW_ENVIRONMENT_LINUX: >
-            PATH=${{ env.CUDA_PATH }}/bin:$PATH
-            LD_LIBRARY_PATH=${{ env.CUDA_PATH }}/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
+            PATH=/usr/local/cuda-12.8/bin:$PATH
+            LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
             PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
-            CUDA_HOME=${{ env.CUDA_PATH }}
           CUDA_TAG: "cu128"
 
       - name: Rename wheels for CUDA version
