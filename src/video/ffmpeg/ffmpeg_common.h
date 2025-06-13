@@ -1,4 +1,3 @@
-
 /*!
  *  Copyright (c) 2019 by Contributors if not otherwise specified
  * \file ffmpeg_common-inl.h
