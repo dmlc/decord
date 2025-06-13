@@ -182,6 +182,7 @@ jobs:
             cmake .. \
               -DUSE_CUDA=ON \
               -DCMAKE_BUILD_TYPE=Release \
+              -DCUDAToolkit_ROOT=/usr/local/cuda-12.8 \
               -DCMAKE_CUDA_ARCHITECTURES="${{ matrix.cuda_arch }}"
             echo "--- Building with make ---"
             make -j$(nproc)
