@@ -36,6 +36,11 @@ file(GLOB_RECURSE DECORD_CORE_SRCS
         src/*.cc src/runtime/*.cc src/video/*.cc
         src/sampler/*.cc src/audio/*.cc src/av_wrapper/*.cc)
 
+if(NOT USE_CUDA)
+  message(STATUS "CUDA is OFF. Filtering out CUDA-specific source files.")
+  list(FILTER DECORD_CORE_SRCS EXCLUDE REGEX "/(cuda|nvcodec)/")
+endif()
+
 # Optionally add CUDA and NVDEC sources
 set(DECORD_CUDA_SRCS "")
 if(USE_CUDA)

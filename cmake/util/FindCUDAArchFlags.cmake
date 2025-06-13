@@ -10,18 +10,16 @@ set(CUDA_ARCH "" CACHE STRING
 # ---- IMPLEMENTATION ----------------------------------------------------
 function(decord_set_cuda_architectures)
     find_package(CUDAToolkit QUIET)
-    if(CUDA_ARCH)
-        message(STATUS "Using user-specified CUDA_ARCH=${CUDA_ARCH}")
-        string(REPLACE "," ";" _arch_list "${CUDA_ARCH}")
-    else()
-        set(_arch_list ${CUDAToolkit_DEFAULT_ARCHITECTURES})
-        message(STATUS "Auto-detected CUDA architectures: ${_arch_list}")
-    endif()
-    if(NOT _arch_list)
-        message(FATAL_ERROR "Could not auto-detect GPU architecture and CUDA_ARCH was not set. "
-                "Please ensure your NVIDIA driver and CUDA toolkit are installed correctly, "
-                "or manually set the architecture with -DCUDA_ARCH=XX.")
-    endif()
-    set(CMAKE_CUDA_ARCHITECTURES ${_arch_list} CACHE STRING
+    foreach(a IN LISTS _arch_list)
+        if(a STREQUAL "native")
+            list(APPEND _valid_list native)
+        elseif(a MATCHES "^[0-9]+$")
+            list(APPEND _valid_list ${a})
+        else()
+            message(FATAL_ERROR
+                    "CUDA_ARCH entry '${a}' is neither a number nor 'native'.")
+        endif()
+    endforeach()
+    set(CMAKE_CUDA_ARCHITECTURES ${_valid_list} CACHE STRING
             "GPU architectures passed to NVCC" FORCE)
 endfunction()
