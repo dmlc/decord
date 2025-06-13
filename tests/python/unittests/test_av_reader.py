@@ -1,4 +1,5 @@
 import os
+import pytest
 import numpy as np
 from decord import AVReader, cpu, gpu
 from decord.base import DECORDError
@@ -43,6 +44,7 @@ def test_get_batch():
     av = get_normal_av_reader()
     av.get_batch([-1,0,1,2,3])
 
+@pytest.mark.skip(reason="Cannot test audio playback in a headless CI environment")
 def test_sync():
     av = get_normal_av_reader()
     import simpleaudio
