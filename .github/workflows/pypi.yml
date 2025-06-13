@@ -49,6 +49,7 @@ jobs:
           pip install -U build cython setuptools
           python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
       - name: Upload source package
+        if: matrix.os == 'ubuntu-latest' # Only upload sdist once
         uses: actions/upload-artifact@v4
         with:
           name: dist-source
@@ -120,10 +121,12 @@ jobs:
           - os: ubuntu-latest
             arch: x86_64
             pybuilds: "cp3{10,11,12}-manylinux_x86_64"
+            cuda_arch: "70;75;80;86;90"
             id: linux_x86_64_cuda
           - os: ubuntu-24.04-arm
             arch: aarch64
             pybuilds: "cp3{10,11,12}-manylinux_aarch64"
+            cuda_arch: "80;86;90a" # Includes Hopper and Ada for ARM
             id: linux_aarch64_cuda
 
     steps:
@@ -134,7 +137,7 @@ jobs:
       - name: Install CUDA Toolkit 12.8
         uses: Jimver/cuda-toolkit@v0.2.25
         with:
-          cuda: 12.8.1 # Specify the CUDA version you want to build against
+          cuda: '12.8.1'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -153,39 +156,33 @@ jobs:
           CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32 pp*"
           CIBW_TEST_SKIP: "*" # Skip all tests, as there is no GPU on the runner
           CIBW_BEFORE_BUILD_LINUX: |
-            # CUDA is pre-installed by the 'Jimver/cuda-toolkit' step
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
             yum install -y epel-release
             yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
             rm -f /tmp/vendor/lib/libsoxr.so*
             mkdir build
             cd build
-            # CRITICAL: Enable CUDA, point CMake to the toolkit path, and specify target GPU architectures
             cmake .. \
               -DUSE_CUDA=1 \
               -DCMAKE_BUILD_TYPE=Release \
-              -DCUDA_TOOLKIT_ROOT_DIR=${CUDA_PATH} \
-              -DCMAKE_CUDA_ARCHITECTURES="86;89;90;100;101;120;121"
+              -DCUDA_TOOLKIT_ROOT_DIR=${{ env.CUDA_PATH }} \
+              -DCMAKE_CUDA_ARCHITECTURES="${{ matrix.cuda_arch }}"
             make -j$(nproc)
             cp libdecord.so ..
           CIBW_ENVIRONMENT_LINUX: >
-            PATH=${CUDA_PATH}/bin:$PATH
-            LD_LIBRARY_PATH=${CUDA_PATH}/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
+            PATH=${{ env.CUDA_PATH }}/bin:$PATH
+            LD_LIBRARY_PATH=${{ env.CUDA_PATH }}/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
             PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
-            CUDA_HOME=${CUDA_PATH}
-            NVCC_PATH=${CUDA_PATH}/bin/nvcc
-          # Define a var for the CUDA tag, using the major/minor version (11.8.0 -> cu128)
+            CUDA_HOME=${{ env.CUDA_PATH }}
+            NVCC_PATH=${{ env.CUDA_PATH }}/bin/nvcc
           CUDA_TAG: "cu128"
 
       - name: Rename wheels for CUDA version
         shell: bash
         run: |
-          # This step renames the wheel files to include a CUDA version tag.
-          # e.g., ...-manylinux_x86_64.whl -> ...-manylinux_x86_64_cu128.whl
-          # This creates a non-standard platform tag but is a common convention.
           cd ./wheelhouse
           for wheel in ./*-manylinux_${{ matrix.arch }}.whl; do
-            mv -- "$wheel" "${wheel//manylinux_${{ matrix.arch }}/manylinux_${{ matrix.arch }}_${CUDA_TAG}}"
+            mv -- "$wheel" "${wheel//manylinux_${{ matrix.arch }}/manylinux_${{ matrix.arch }}_${{ env.CUDA_TAG }}}"
           done
           echo "Renamed wheels:"
           ls -la .
@@ -212,7 +209,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./dist
-          merge-multiple: true # Combine artifacts from all build jobs
+          merge-multiple: true
 
       - name: List downloaded files
         run: ls -R ./dist
@@ -238,7 +235,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./dist
-          merge-multiple: true # Combine artifacts from all build jobs
+          merge-multiple: true
 
       - name: List downloaded files
         run: ls -R ./dist
