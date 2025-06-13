@@ -48,13 +48,11 @@ jobs:
         run: |
           pip install -U build cython setuptools
           python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
-          python -m build --sdist
       - name: Upload source package
-        if: matrix.os == 'ubuntu-latest' # Only upload sdist once
         uses: actions/upload-artifact@v4
         with:
           name: dist-source
-          path: dist/*.tar.gz
+          path: dist/
 
       - name: Install cibuildwheel and dependencies
         run: |
