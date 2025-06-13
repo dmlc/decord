@@ -98,7 +98,7 @@ else()
   target_link_options(decord PRIVATE -rdynamic)
 endif()
 
-
+target_link_libraries(decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS})
 if(USE_CUDA)
   set_property(TARGET decord PROPERTY CUDA_STANDARD 11)
 endif()
