@@ -5,7 +5,6 @@ project(decord2 LANGUAGES C CXX)
 # User options & Core Dependencies
 # ---------------------------------------------------------------------------
 include(cmake/util/Util.cmake)
-find_package(OpenSSL REQUIRED)
 # Find FFmpeg (required for all builds, regardless of CUDA)
 include(cmake/util/FindFFmpeg.cmake)
 include(cmake/modules/FFmpeg.cmake)
@@ -58,8 +57,6 @@ if(FFMPEG_LIBRARIES)
   target_link_libraries(decord
           PRIVATE
           ${FFMPEG_LIBRARIES}
-          OpenSSL::SSL
-          OpenSSL::Crypto
   )
 endif()
 
