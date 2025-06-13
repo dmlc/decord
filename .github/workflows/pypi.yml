@@ -73,6 +73,8 @@ jobs:
           CIBW_TEST_SKIP: "cp311-* cp312-* cp313-* pp*"
           CIBW_BEFORE_BUILD_LINUX: |
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
+            yum install -y epel-release
+            yum update
             yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel
             rm -f /tmp/vendor/lib/libsoxr.so*
             mkdir build
