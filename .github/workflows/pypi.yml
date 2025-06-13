@@ -171,6 +171,7 @@ jobs:
             cuda-libraries-devel-12-8-12.8.1-1 \
             cuda-toolkit-12-8-12.8.1-1 \
             cudnn
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
 
             echo "--- Verifying CUDA installation ---"
             # The 'export' is not needed here as the CIBW_ENVIRONMENT_LINUX var will set the path later.
