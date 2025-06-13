@@ -163,7 +163,11 @@ jobs:
 
             echo "--- Installing CUDA Toolkit and build dependencies ---"
             # Install specific CUDA version and other build tools
-            yum install -y cuda-toolkit-12-8 epel-release
+            yum install -y  cuda-compiler-12-8 \
+            cuda-libraries-12-8 \
+            cuda-libraries-devel-12-8 \
+            cuda-toolkit-12-8 \ 
+            epel-release
             yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
 
             echo "--- Verifying CUDA installation ---"
