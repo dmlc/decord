@@ -5,7 +5,7 @@ project(decord2 LANGUAGES C CXX)
 # User options & Core Dependencies
 # ---------------------------------------------------------------------------
 include(cmake/util/Util.cmake)
-
+find_package(OpenSSL REQUIRED)
 # Find FFmpeg (required for all builds, regardless of CUDA)
 include(cmake/util/FindFFmpeg.cmake)
 include(cmake/modules/FFmpeg.cmake)
@@ -55,7 +55,12 @@ target_include_directories(decord PRIVATE
 
 # Link against FFmpeg (always required)
 if(FFMPEG_LIBRARIES)
-  target_link_libraries(decord PRIVATE ${FFMPEG_LIBRARIES})
+  target_link_libraries(decord
+          PRIVATE
+          ${FFMPEG_LIBRARIES}
+          OpenSSL::SSL
+          OpenSSL::Crypto
+  )
 endif()
 
 # Set the C++ standard and compiler options
@@ -96,10 +101,12 @@ if(USE_CUDA)
             CUDAToolkit::cudart
             CUDAToolkit::nvrtc
             CUDAToolkit::cublas
-            CUDAToolkit::cudnn
             CUDAToolkit::nvml
     )
     find_library(CUDA_NVCUVID_LIBRARY nvcuvid
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
+    find_library(CUDA_CUDNN_LIBRARY cudnn
             ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
             ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
   else()
@@ -108,11 +115,16 @@ if(USE_CUDA)
     find_library(CUDA_NVCUVID_LIBRARY nvcuvid
             ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
             ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
+    find_library(CUDA_NVCUVID_LIBRARY nvcuvid
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
+    find_library(CUDA_CUDNN_LIBRARY cudnn
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
     target_link_libraries(decord PRIVATE
             CUDA::cudart
             CUDA::nvrtc
             CUDA::cublas
-            CUDA::cudnn
             CUDA::nvml
     )
   endif()

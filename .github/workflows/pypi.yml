@@ -76,7 +76,7 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: |
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
             yum install -y epel-release
-            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel openssl-devel
             rm -f /tmp/vendor/lib/libsoxr.so*
             mkdir build
             cd build
@@ -91,7 +91,7 @@ jobs:
             cmake .. -DUSE_CUDA=OFF -DCMAKE_BUILD_TYPE=Release
             make -j$(sysctl -n hw.ncpu)
             cp libdecord.dylib ..
-          CIBW_ENVIRONMENT_LINUX: LD_LIBRARY_PATH=/usr/lib64/compat-openssl10:/tmp/vendor/lib:$LD_LIBRARY_PATH PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
+          CIBW_ENVIRONMENT_LINUX: LD_LIBRARY_PATH=/tmp/vendor/lib:$LD_LIBRARY_PATH PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
           CIBW_ENVIRONMENT_MACOS: PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig LDFLAGS=-headerpad_max_install_names
           CIBW_TEST_COMMAND: python -m pytest {project}/tests/python/unittests -v
           CIBW_TEST_REQUIRES: pytest numpy nose simpleaudio
@@ -145,7 +145,7 @@ jobs:
             set -ex
             # First, install the tool needed to add repositories
             yum install -y dnf-utils
-            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel openssl-devel
 
             # Detect architecture and add the correct NVIDIA CUDA repo for RHEL 8-based manylinux
             ARCH=$(uname -m)
@@ -196,7 +196,7 @@ jobs:
           # Set environment variables for the build process inside the container
           CIBW_ENVIRONMENT_LINUX: >
             PATH=/usr/local/cuda-12.8/bin:$PATH
-            LD_LIBRARY_PATH=/usr/lib64/compat-openssl10:/usr/local/cuda-12.8/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
+            LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
             PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
           CUDA_TAG: "cu128"
 
