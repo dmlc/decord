@@ -73,6 +73,7 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: |
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
             yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel
+            rm -f /tmp/vendor/lib/libsoxr.so*
             mkdir build
             cd build
             cmake .. -DUSE_CUDA=0 -DCMAKE_BUILD_TYPE=Release
