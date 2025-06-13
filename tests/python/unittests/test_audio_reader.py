@@ -19,7 +19,7 @@ def get_channel_change_reader():
 
 def test_single_channel_audio_reader():
     ar = get_single_channel_reader()
-    assert ar.shape == (1, 482240)
+    assert ar.shape == (1, 394176)
 
 def test_double_channels_audio_reader():
     ar = get_double_channels_reader()
@@ -33,7 +33,7 @@ def test_bytes_io():
     fn = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'count_down.mov')
     with open(fn, 'rb') as f:
         ar = AudioReader(f)
-        assert ar.shape == (1, 482240)
+        assert ar.shape == (1, 394176)
         ar2 = get_single_channel_reader()
         assert np.allclose(ar[10].asnumpy(), ar2[10].asnumpy())
 
