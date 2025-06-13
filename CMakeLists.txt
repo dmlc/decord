@@ -91,14 +91,27 @@ if(USE_CUDA)
 
   # 4. Link against the modern CUDAToolkit imported targets
   # This is much more reliable than using old custom variables.
-  target_link_libraries(decord PRIVATE
-          CUDAToolkit::cudart
-          CUDAToolkit::nvrtc
-          CUDAToolkit::nvcuvid
-          CUDAToolkit::cublas
-          CUDAToolkit::cudnn
-          CUDAToolkit::nvml
-  )
+  if (TARGET CUDAToolkit::cudart)
+    target_link_libraries(decord PRIVATE
+            CUDAToolkit::cudart
+            CUDAToolkit::nvrtc
+            CUDAToolkit::nvcuvid
+            CUDAToolkit::cublas
+            CUDAToolkit::cudnn
+            CUDAToolkit::nvml
+    )
+  else()
+    # fallback to the classic FindCUDA
+    find_package(CUDA REQUIRED)
+    target_link_libraries(decord PRIVATE
+            CUDA::cudart
+            CUDA::nvrtc
+            CUDA::nvcuvid
+            CUDA::cublas
+            CUDA::cudnn
+            CUDA::nvml
+    )
+  endif()
 
   # 5. Set the CUDA standard
   set_property(TARGET decord PROPERTY CUDA_STANDARD 11)
