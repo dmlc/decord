@@ -149,9 +149,9 @@ jobs:
             # Detect architecture and add the correct NVIDIA CUDA repo for RHEL 8-based manylinux
             ARCH=$(uname -m)
             if [ "$ARCH" == "x86_64" ]; then
-              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel8.repo
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
             elif [ "$ARCH" == "aarch64" ]; then
-              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel9/sbsa/cuda-rhel8.repo
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel9/sbsa/cuda-rhel9.repo
             else
               echo "Unsupported architecture: $ARCH"
               exit 1
