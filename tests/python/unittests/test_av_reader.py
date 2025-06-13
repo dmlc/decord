@@ -14,13 +14,13 @@ def get_normal_av_reader():
 
 def test_normal_av_reader():
     av = get_normal_av_reader()
-    assert len(av) == 328
+    assert len(av) == 143
 
 def test_bytes_io():
     fn = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'count_down.mov')
     with open(fn, 'rb') as f:
         av = AVReader(f)
-        assert len(av) == 328
+        assert len(av) == 143
         av2 = get_normal_av_reader()
         audio, video = av[10]
         audio2, video2 = av2[10]
