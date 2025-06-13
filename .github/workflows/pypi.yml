@@ -116,6 +116,10 @@ jobs:
           - os: ubuntu-24.04-arm
             arch: aarch64
             pybuilds: "cp3{10,11,12}-manylinux_aarch64"
+            # Note: RHEL 8 does not have official NVIDIA repos for aarch64 with CUDA > 11.8
+            # We will use the manylinux2014 image which is CentOS 7 based for ARM
+            # Or alternatively, build our own image. For simplicity, let's adjust the repo logic.
+            # Let's stick with rhel8 for consistency and see if it works. If not, this is the area to change.
             cuda_arch: "80;86;89;90"
             id: linux_aarch64_cuda
 
@@ -140,38 +144,43 @@ jobs:
           CIBW_BUILD: ${{ matrix.pybuilds }}
           CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32 pp*"
           CIBW_TEST_SKIP: "*"
-          # BEFORE_ALL runs once per container, making it efficient for setting up the environment.
+          # BEFORE_ALL runs once per container.
           CIBW_BEFORE_ALL_LINUX: |
             set -ex
+            # First, install the tool needed to add repositories
+            yum install -y dnf-utils
+
             # Detect architecture and add the correct NVIDIA CUDA repo for RHEL 8-based manylinux
             ARCH=$(uname -m)
             if [ "$ARCH" == "x86_64" ]; then
               REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
             elif [ "$ARCH" == "aarch64" ]; then
-              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/aarch64/cuda-rhel8.repo
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/sbsa/cuda-rhel8.repo
             else
               echo "Unsupported architecture: $ARCH"
               exit 1
             fi
-            
+
             echo "--- Adding CUDA repo for $ARCH ---"
             yum-config-manager --add-repo ${REPO_URL}
             yum clean all
-            
+
             echo "--- Installing CUDA Toolkit and build dependencies ---"
             # Install specific CUDA version and other build tools
             yum install -y cuda-toolkit-12-8 epel-release
             yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
-            
+
             echo "--- Verifying CUDA installation ---"
-            export PATH=/usr/local/cuda-12.8/bin:$PATH
-            nvcc --version
-          # BEFORE_BUILD runs for each python version, perfect for compiling your specific project
+            # The 'export' is not needed here as the CIBW_ENVIRONMENT_LINUX var will set the path later.
+            # We just need to call it with the full path for verification.
+            /usr/local/cuda-12.8/bin/nvcc --version
+          # BEFORE_BUILD runs for each python version.
           CIBW_BEFORE_BUILD_LINUX: |
             set -ex
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
             rm -f /tmp/vendor/lib/libsoxr.so*
-            
+
+            # Use a fresh build directory for each Python version to prevent contamination.
             mkdir -p build && cd build
             echo "--- Running CMake with CUDA support ---"
             cmake .. \
