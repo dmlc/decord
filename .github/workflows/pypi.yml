@@ -100,7 +100,7 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig LDFLAGS=-headerpad_max_install_names
           CIBW_ENVIRONMENT_WINDOWS: INCLUDE=C:/cibw/vendor/include LIB=C:/cibw/vendor/lib PYAV_SKIP_TESTS=unicode_filename
           CIBW_TEST_COMMAND: python -m pytest {project}/tests/python/unittests -v
-          CIBW_TEST_REQUIRES: pytest numpy nose
+          CIBW_TEST_REQUIRES: pytest numpy nose simpleaudio
 
       - uses: actions/upload-artifact@v4
         with:
