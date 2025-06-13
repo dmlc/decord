@@ -76,9 +76,9 @@ endif()
 # ---------------------------------------------------------------------------
 if(USE_CUDA)
   message(STATUS "USE_CUDA is ON. Configuring CUDA support.")
-
   # 1. Enable the CUDA language. This finds the compiler automatically.
   enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
 
   # 2. Add CUDA-specific source files to our target
   file(GLOB_RECURSE CUDA_RUNTIME_SRCS "src/runtime/cuda/*.cc")
