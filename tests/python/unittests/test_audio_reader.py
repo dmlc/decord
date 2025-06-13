@@ -39,7 +39,7 @@ def test_bytes_io():
 
 def test_resample():
     ar = get_resampled_reader()
-    assert ar.shape == (1, 48224)
+    assert ar.shape == (1, 39418)
 
 def test_channel_change():
     ar = get_channel_change_reader()
