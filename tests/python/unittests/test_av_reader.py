@@ -5,15 +5,19 @@ from decord.base import DECORDError
 
 CTX = cpu(0)
 
+
+# Correctly constructs the path relative to the current file
 def get_normal_av_reader():
-    return AVReader('/Users/weisy/Developer/yinweisu/decord/tests/cpp/audio/count_down.mov', CTX)
+    # A common practice is to have a `tests/resources` directory.
+    video_path = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'count_down.mov')
+    return AVReader(video_path, CTX)
 
 def test_normal_av_reader():
     av = get_normal_av_reader()
     assert len(av) == 328
 
 def test_bytes_io():
-    fn = os.path.join(os.path.dirname(__file__), '..', '..', 'cpp', 'audio', 'count_down.mov')
+    fn = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'count_down.mov')
     with open(fn, 'rb') as f:
         av = AVReader(f)
         assert len(av) == 328

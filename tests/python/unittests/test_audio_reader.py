@@ -6,16 +6,16 @@ from decord.base import DECORDError
 CTX = cpu(0)
 
 def get_single_channel_reader():
-    return AudioReader(os.path.join(os.path.dirname(__file__), '..', '..', 'cpp', 'audio', 'count_down.mov'), CTX)
+    return AudioReader(os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'count_down.mov'), CTX)
 
 def get_double_channels_reader():
-    return AudioReader(os.path.join(os.path.dirname(__file__), '..', '..', 'cpp', 'audio', 'sample-mov-file.mov'), CTX, mono=False)
+    return AudioReader(os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'sample-mov-file.mov'), CTX, mono=False)
 
 def get_resampled_reader():
-    return AudioReader(os.path.join(os.path.dirname(__file__), '..', '..', 'cpp', 'audio', 'count_down.mov'), CTX, 4410)
+    return AudioReader(os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'count_down.mov'), CTX, 4410)
 
 def get_channel_change_reader():
-    return AudioReader(os.path.join(os.path.dirname(__file__), '..', '..', 'cpp', 'audio', 'sample-mov-file.mov'), CTX)
+    return AudioReader(os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'sample-mov-file.mov'), CTX)
 
 def test_single_channel_audio_reader():
     ar = get_single_channel_reader()
@@ -30,7 +30,7 @@ def test_no_audio_stream():
     assert_raises(DECORDError, AudioReader, os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', 'video_0.mov'), CTX)
 
 def test_bytes_io():
-    fn = os.path.join(os.path.dirname(__file__), '..', '..', 'cpp', 'audio', 'count_down.mov')
+    fn = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'count_down.mov')
     with open(fn, 'rb') as f:
         ar = AudioReader(f)
         assert ar.shape() == (1, 482240)
