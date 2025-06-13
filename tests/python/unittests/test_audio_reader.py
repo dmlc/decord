@@ -19,11 +19,11 @@ def get_channel_change_reader():
 
 def test_single_channel_audio_reader():
     ar = get_single_channel_reader()
-    assert ar.shape() == (1, 482240)
+    assert ar.shape == (1, 482240)
 
 def test_double_channels_audio_reader():
     ar = get_double_channels_reader()
-    assert ar.shape() == (2, 5555200)
+    assert ar.shape == (2, 5555200)
 
 def test_no_audio_stream():
     from nose.tools import assert_raises
@@ -33,17 +33,17 @@ def test_bytes_io():
     fn = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'audio', 'count_down.mov')
     with open(fn, 'rb') as f:
         ar = AudioReader(f)
-        assert ar.shape() == (1, 482240)
+        assert ar.shape == (1, 482240)
         ar2 = get_single_channel_reader()
         assert np.allclose(ar[10].asnumpy(), ar2[10].asnumpy())
 
 def test_resample():
     ar = get_resampled_reader()
-    assert ar.shape() == (1, 48224)
+    assert ar.shape == (1, 48224)
 
 def test_channel_change():
     ar = get_channel_change_reader()
-    assert ar.shape() == (1, 5555200)
+    assert ar.shape == (1, 5555200)
 
 def test_index():
     ar = get_double_channels_reader()
@@ -65,7 +65,7 @@ def test_get_info():
 
 def test_add_padding():
     ar = get_single_channel_reader()
-    num_channels = ar.shape()[0]
+    num_channels = ar.shape[0]
     num_padding = ar.add_padding()
     assert np.array_equal(ar[:num_padding].asnumpy(), np.zeros((num_channels, num_padding)))
 

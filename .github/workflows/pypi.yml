@@ -72,7 +72,7 @@ jobs:
           CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32 pp*"
           CIBW_BEFORE_BUILD_LINUX: |
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
-            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel
             rm -f /tmp/vendor/lib/libsoxr.so*
             mkdir build
             cd build

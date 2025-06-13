@@ -68,17 +68,17 @@ if include_libs:
     }
 
 setup(
-    name='eva-decord',
-    description='EVA\'s Decord Video Loader',
+    name='decord2',
+    description='Decord2',
     zip_safe=False,
     maintainer='Decord committers',
-    maintainer_email='georgia.tech.db@gmail.com',
+    maintainer_email='johnnynunez@ub.edu',
     packages=find_packages(),
     python_requires='>=3.9.0',
     install_requires=[
         'numpy>=1.26.4',
     ],
-    url='https://github.com/georgia-tech-db/eva-decord',
+    url='https://github.com/johnnynunez/decord2',
     distclass=BinaryDistribution,
     classifiers=[
         'Development Status :: 3 - Alpha',
