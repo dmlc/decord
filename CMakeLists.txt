@@ -95,23 +95,29 @@ if(USE_CUDA)
     target_link_libraries(decord PRIVATE
             CUDAToolkit::cudart
             CUDAToolkit::nvrtc
-            CUDAToolkit::nvcuvid
             CUDAToolkit::cublas
             CUDAToolkit::cudnn
             CUDAToolkit::nvml
     )
+    find_library(CUDA_NVCUVID_LIBRARY nvcuvid
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
   else()
     # fallback to the classic FindCUDA
     find_package(CUDA REQUIRED)
+    find_library(CUDA_NVCUVID_LIBRARY nvcuvid
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
+            ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
     target_link_libraries(decord PRIVATE
             CUDA::cudart
             CUDA::nvrtc
-            CUDA::nvcuvid
             CUDA::cublas
             CUDA::cudnn
             CUDA::nvml
     )
   endif()
+
+
 
   # 5. Set the CUDA standard
   set_property(TARGET decord PROPERTY CUDA_STANDARD 11)

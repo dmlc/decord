@@ -149,9 +149,9 @@ jobs:
             # Detect architecture and add the correct NVIDIA CUDA repo for RHEL 8-based manylinux
             ARCH=$(uname -m)
             if [ "$ARCH" == "x86_64" ]; then
-              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel8.repo
             elif [ "$ARCH" == "aarch64" ]; then
-              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/sbsa/cuda-rhel8.repo
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel9/sbsa/cuda-rhel8.repo
             else
               echo "Unsupported architecture: $ARCH"
               exit 1
@@ -163,11 +163,13 @@ jobs:
 
             echo "--- Installing CUDA Toolkit and build dependencies ---"
             # Install specific CUDA version and other build tools
-            yum install -y  cuda-compiler-12-8 \
-            cuda-libraries-12-8 \
-            cuda-libraries-devel-12-8 \
-            cuda-toolkit-12-8 \ 
-            epel-release
+            dnf -y module install nvidia-driver:open-dkms
+            yum install -y \
+            cuda-compiler-12-8-12.8.1-1 \
+            cuda-libraries-12-8-12.8.1-1 \
+            cuda-libraries-devel-12-8-12.8.1-1 \
+            cuda-toolkit-12-8-12.8.1-1 \
+            cudnn
             yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
 
             echo "--- Verifying CUDA installation ---"
