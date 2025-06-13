@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys, os, platform, sysconfig
 import shutil
+import subprocess
 import glob
 
 from setuptools import find_packages
@@ -63,25 +64,31 @@ if include_libs:
     rpath = [os.path.relpath(path, CURRENT_DIR) for path in LIBS]
     setup_kwargs = {
         "include_package_data": True,
-        "data_files": [('decord', rpath)]
+        "data_files": [('decord', ['libdecord.dylib'])]
     }
 
 setup(
-    name='decord',
+    name='decord2',
     version=VERSION,
-    description='Decord Video Loader',
+    description='Decord2',
     zip_safe=False,
     maintainer='Decord committers',
-    maintainer_email='cheungchih@gmail.com',
+    maintainer_email='johnnynunez@ub.edu',
     packages=find_packages(),
+    python_requires='>=3.9.0',
     install_requires=[
-        'numpy>=1.14.0',
+        'numpy>=1.26.4',
     ],
-    url='https://github.com/dmlc/decord',
+    url='https://github.com/johnnynunez/decord2',
     distclass=BinaryDistribution,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
         'License :: OSI Approved :: Apache Software License',
     ],
     license='APACHE',

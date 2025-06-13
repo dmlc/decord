@@ -8,20 +8,52 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev
-    - name: configure
-      run: mkdir build && cd build && cmake .. -DUSE_CUDA=0
-    - name: make
-      run: cd build && make -j$(nproc)
-    - name: python install
-      run: pip3 install -e ./python
-    - name: sanity test
-      run: python3 -c "import decord; print(decord.__version__)"
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            make cmake ffmpeg \
+            libavcodec-dev \
+            libavfilter-dev \
+            libavformat-dev \
+            libavutil-dev \
+            libswresample-dev \
+            libavdevice-dev
+
+      - name: Upgrade pip and install Python dependencies
+        run: |
+          pip3 install --upgrade pip setuptools wheel
+          pip3 install numpy cython
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DUSE_CUDA=0
+
+      - name: Build C++ core
+        run: |
+          cd build
+          make -j$(nproc)
+
+      - name: Install decord Python bindings
+        run: |
+          cd python
+          pip3 install .
+
+      - name: Sanity test
+        run: python3 -c "import decord; print(decord.__version__)"
