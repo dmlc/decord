@@ -111,12 +111,12 @@ jobs:
           - os: ubuntu-latest
             arch: x86_64
             pybuilds: "cp3{10,11,12}-manylinux_x86_64"
-            cuda_arch: "80;86;90"
+            cuda_arch: "80;86;89;90;100;120"
             id: linux_x86_64_cuda
           - os: ubuntu-24.04-arm
             arch: aarch64
             pybuilds: "cp3{10,11,12}-manylinux_aarch64"
-            cuda_arch: "80;86;89;90"
+            cuda_arch: "80;86;87;89;90;100;101;120"
             id: linux_aarch64_cuda
 
     steps:

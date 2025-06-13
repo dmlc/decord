@@ -101,7 +101,7 @@ if(USE_CUDA)
   )
 
   # 5. Set the CUDA standard
-  set_property(TARGET decord PROPERTY CUDA_STANDARD 12)
+  set_property(TARGET decord PROPERTY CUDA_STANDARD 11)
 endif()
 
 # ---------------------------------------------------------------------------
