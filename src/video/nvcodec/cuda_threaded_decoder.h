@@ -46,7 +46,7 @@ class CUThreadedDecoder final : public ThreadedDecoderInterface {
     using FrameOrderQueuePtr = std::unique_ptr<FrameOrderQueue>;
 
     public:
-        CUThreadedDecoder(int device_id, AVCodecParameters *codecpar, AVInputFormat *iformat);
+        CUThreadedDecoder(int device_id, AVCodecParameters *codecpar,  const AVInputFormat *iformat);
         void SetCodecContext(AVCodecContext *dec_ctx, int width = -1, int height = -1, int rotation = 0);
         bool Initialized() const;
         void Start();

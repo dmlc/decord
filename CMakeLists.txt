@@ -1,135 +1,135 @@
-cmake_minimum_required(VERSION 3.20)
-project(decord C CXX)
+cmake_minimum_required(VERSION 3.21)          # matches helper modules
+project(decord2 LANGUAGES C CXX)               # add CUDA later if requested
 
-# Utility functions
+# ---------------------------------------------------------------------------
+# User options
+# ---------------------------------------------------------------------------
 include(cmake/util/Util.cmake)
-include(cmake/util/FindFFmpeg.cmake)
-include(cmake/util/FindCUDA.cmake)
-# include(cmake/util/FindCUDAArchFlags.cmake)
 
-if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
-  include(${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
-else()
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
-  endif()
+# NOTE: do *not* reorder these two options; other code relies on them.
+decord_option(USE_CUDA     "Build with CUDA" OFF)
+decord_option(USE_MSVC_MT  "Build with MT runtime on MSVC" OFF)
+
+# ---------------------------------------------------------------------------
+# Optional CUDA support
+# ---------------------------------------------------------------------------
+if(USE_CUDA)
+  # enable_language(CUDA)                     # add CUDA to this directory
+  include(cmake/util/FindCUDA.cmake)
+  include(cmake/util/FindFFmpeg.cmake)
+  include(cmake/util/FindCUDAArchFlags.cmake)
 endif()
 
-# NOTE: do not modify this file to change option values.
-# You can create a config.cmake at build folder
-# and add set(OPTION VALUE) to override these build options.
-# Alernatively, use cmake -DOPTION=VALUE through command-line.
-decord_option(USE_CUDA "Build with CUDA" OFF)
-decord_option(USE_MSVC_MT "Build with MT" OFF)
+# ---------------------------------------------------------------------------
+# FFmpeg
+# ---------------------------------------------------------------------------
+# find_package(FFmpeg REQUIRED MODULE COMPONENTS avcodec avformat avutil)
 
-# Project
+# ---------------------------------------------------------------------------
+# Include paths *for this project only*
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Sources
+# ---------------------------------------------------------------------------
+file(GLOB_RECURSE DECORD_CORE_SRCS
+        src/*.cc src/runtime/*.cc src/video/*.cc
+        src/sampler/*.cc src/audio/*.cc src/av_wrapper/*.cc)
+
+# Optionally add CUDA and NVDEC sources
+set(DECORD_CUDA_SRCS "")
 if(USE_CUDA)
-project(decord C CXX CUDA)
-endif(USE_CUDA)
+  include(cmake/modules/CUDA.cmake)         # defines NVDEC_SRCS etc.
+  list(APPEND DECORD_CUDA_SRCS ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS} ${NVDEC_CUDA_SRCS})
+endif()
 
-# include directories
-include_directories("include")
-include_directories("3rdparty/dlpack/include")
-include_directories("3rdparty/dmlc-core/include")
+# ---------------------------------------------------------------------------
+# Library target
+# ---------------------------------------------------------------------------
+add_library(decord SHARED
+        ${DECORD_CORE_SRCS}
+        ${DECORD_CUDA_SRCS}
+        ${DECORD_FFMPEG_SRCS}       # defined by cmake/modules/FFmpeg.cmake
+)
 
-# initial variables
-set(DECORD_LINKER_LIBS "")
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-cmake_policy(SET CMP0042 NEW)
+target_include_directories(decord PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
 
-# Generic compilation options
+target_include_directories(decord
+        PUBLIC  $<BUILD_INTERFACE:${DECORD_PUBLIC_INCLUDES}>
+)
+
+# ---- compile features / options -------------------------------------------
+target_compile_features(decord PUBLIC cxx_std_11)  # guarantees ‑std=c++11
+
 if(MSVC)
-  add_definitions(-DWIN32_LEAN_AND_MEAN)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-  add_definitions(-D_SCL_SECURE_NO_WARNINGS)
-  add_definitions(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
-  add_definitions(-DHalide_SHARED)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /bigobj")
+  target_compile_definitions(decord PRIVATE
+          -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS
+          -D_SCL_SECURE_NO_WARNINGS -D_ENABLE_EXTENDED_ALIGNED_STORAGE
+          -DHalide_SHARED -DDECORD_EXPORTS
+  )
+  target_compile_options(decord PRIVATE /EHsc /MP /bigobj)
   if(USE_MSVC_MT)
     foreach(flag_var
-        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-        CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-      if(${flag_var} MATCHES "/MD")
-        string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-      endif(${flag_var} MATCHES "/MD")
-    endforeach(flag_var)
+            CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG
+            CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_MINSIZEREL
+            CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+      string(REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+    endforeach()
   endif()
-else(MSVC)
-  include(CheckCXXCompilerFlag)
-  check_cxx_compiler_flag("-std=c++11"    SUPPORT_CXX11)
-  #set(CMAKE_CUDA_FLAGS "-std=c++11 ${CMAKE_CUDA_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
-  if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    message(STATUS "Build in Debug mode")
-    set(CMAKE_C_FLAGS "-O0 -g -Wall -fPIC ${CMAKE_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "-O0 -g -Wall -fPIC -std=c++11 ${CMAKE_CXX_FLAGS}")
-  else()
-    set(CMAKE_C_FLAGS "-O2 -Wall -fPIC -fvisibility=hidden ${CMAKE_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "-O0 -g -Wall -fPIC -std=c++11 ${CMAKE_CXX_FLAGS}")
-  endif ()
-  if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set(CMAKE_CXX_FLAGS "-Wno-unknown-pragmas ${CMAKE_CXX_FLAGS}")
-  endif()
-  if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND
-      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
-    set(CMAKE_CXX_FLAGS "-faligned-new ${CMAKE_CXX_FLAGS}")
-  endif()
-endif(MSVC)
-
-# add source group
-FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "src/*.cu")
-FILE(GLOB_RECURSE GROUP_INCLUDE "src/*.h" "include/*.h")
-assign_source_group("Source" ${GROUP_SOURCE})
-assign_source_group("Include" ${GROUP_INCLUDE})
-
-# Source file lists
-file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc src/sampler/*.cc src/audio/*.cc src/av_wrapper/*.cc)
-
-# Module rules
-include(cmake/modules/FFmpeg.cmake)
-include(cmake/modules/CUDA.cmake)
-
-# Targets
-
-add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS} ${NVDEC_CUDA_SRCS})
-
-# target_compile_features(decord PUBLIC cxx_std_11)
-
-target_link_libraries(decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS})
-set_property(TARGET decord PROPERTY CUDA_STANDARD 11)
-
-# More target definitions
-if(MSVC)
-  target_compile_definitions(decord PRIVATE -DDECORD_EXPORTS)
+else()
+  target_compile_options(decord PRIVATE
+          $<$<CONFIG:Debug>:-O0;-g>
+          $<$<NOT:$<CONFIG:Debug>>:-O2;-fvisibility=hidden>
+          -Wall -fPIC
+          $<$<CXX_COMPILER_ID:GNU>:-Wno-unknown-pragmas>
+          $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_GREATER:$<CXX_COMPILER_VERSION>,7.0>>:-faligned-new>
+  )
+  # Linker flags
+  target_link_options(decord PRIVATE -rdynamic)
 endif()
 
+
+if(USE_CUDA)
+  set_property(TARGET decord PROPERTY CUDA_STANDARD 11)
+endif()
+
+# ---------------------------------------------------------------------------
 # Tests
-set(TEST_EXECS "")
+# ---------------------------------------------------------------------------
 file(GLOB_RECURSE TEST_SRCS tests/cpp/*.cc)
-find_library(GTEST_LIB gtest "$ENV{GTEST_LIB}")
+find_package(GTest QUIET)
 
-if(GTEST_LIB)
-  foreach(__srcpath ${TEST_SRCS})
-    get_filename_component(__srcname ${__srcpath} NAME)
-    string(REPLACE ".cc" "" __execname ${__srcname})
-    add_executable(${__execname} ${__srcpath})
-    list(APPEND TEST_EXECS ${__execname})
-    if (MSVC)
-      set(GTEST_ADD_LIBS "")
-    else(MSVC)
-      set(GTEST_ADD_LIBS pthread dl)
-    endif(MSVC)
-    target_link_libraries(${__execname}
-        decord ${GTEST_LIB} ${GTEST_ADD_LIBS})
-    set_target_properties(${__execname} PROPERTIES EXCLUDE_FROM_ALL 1)
-    set_target_properties(${__execname} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD 1)
+if(GTest_FOUND AND TEST_SRCS)
+  foreach(test_src IN LISTS TEST_SRCS)
+    get_filename_component(test_name "${test_src}" NAME_WLE)
+    add_executable(${test_name} ${test_src})
+    target_link_libraries(${test_name}
+            PRIVATE decord GTest::gtest
+            $<$<NOT:$<PLATFORM_ID:Windows>>:pthread;dl>
+    )
+    set_target_properties(${test_name} PROPERTIES
+            EXCLUDE_FROM_ALL TRUE
+            EXCLUDE_FROM_DEFAULT_BUILD TRUE
+    )
   endforeach()
-  add_custom_target(cpptest DEPENDS ${TEST_EXECS})
-  list(LENGTH TEST_EXECS NUM_TESTS)
-  message(STATUS "Build with: " ${NUM_TESTS}  " tests")
+  add_custom_target(cpptest DEPENDS ${test_name})
+  list(LENGTH TEST_SRCS NUM_TESTS)
+  message(STATUS "Configured ${NUM_TESTS} C++ unit tests")
 endif()
 
-# Installation rules
-install(TARGETS decord DESTINATION lib${LIB_SUFFIX})
+# ---------------------------------------------------------------------------
+# Installation
+# ---------------------------------------------------------------------------
+include(GNUInstallDirs)
+install(TARGETS decord
+        EXPORT decordTargets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+export(EXPORT decordTargets FILE decordTargets.cmake)
