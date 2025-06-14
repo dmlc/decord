@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "decord2"
 dynamic = ["version"]
-description = "An efficient video loader for deep learning with smart shuffling that seeks smartly"
+description = "Decord2 is a high-performance, efficient video decoding and loading library for deep learning research, featuring smart shuffling, random frame access, GPU acceleration, and seamless integration with popular frameworks."
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "Apache-2.0"}
@@ -13,10 +13,10 @@ keywords = ["python", "video", "loader", "deep learning"]
 dependencies = [
     "numpy>=1.26.4",
 ]
-authors=[
+authors = [
     {name = "Johnny Núñez", email = "johnnynunez@ub.edu"},
 ]
-maintainers=[
+maintainers = [
     {name = "Johnny Núñez", email = "johnnynunez@ub.edu"},
 ]
 

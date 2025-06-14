@@ -16,6 +16,11 @@ else:
     from setuptools import setup
     from setuptools.extension import Extension
 
+description = (
+    "Decord2 is a high-performance, efficient video decoding and loading library for deep learning research, "
+    "featuring smart shuffling, random frame access, GPU acceleration, and seamless integration with popular frameworks."
+)
+
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return platform.system() in ('Darwin', 'Linux')
@@ -70,7 +75,7 @@ if include_libs:
 setup(
     name='decord2',
     version=VERSION,
-    description='Decord2',
+    description=description,
     zip_safe=False,
     maintainer='Decord committers',
     maintainer_email='johnnynunez@ub.edu',
