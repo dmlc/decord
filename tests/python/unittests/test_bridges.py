@@ -63,10 +63,10 @@ def test_threaded_bridge():
     # issue #85
     from decord import cpu, gpu
     from multiprocessing.dummy import Pool as ThreadPool
-
+    video_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'examples', 'flipping_a_pancake.mkv'))
     video_paths = [
-      os.path.expanduser('~/Dev/decord/examples/flipping_a_pancake.mkv'), #list of paths to video
-      ]
+        os.path.expanduser(video_path), #list of paths to video
+    ]
 
     def process_path(path):
         vr = VideoReader(path, ctx=cpu(0))

@@ -250,7 +250,7 @@ from decord import cpu, gpu
 # You can specify the desired sample rate and channel layout
 # For channels there are two options: default to the original layout or mono
 ar = AudioReader('example.mp3', ctx=cpu(0), sample_rate=44100, mono=False)
-print('Shape of audio samples: ', ar.shape())
+print('Shape of audio samples: ', ar.shape)
 # To access the audio samples
 print('The first sample: ', ar[0])
 print('The first five samples: ', ar[0:5])

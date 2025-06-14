@@ -6,14 +6,18 @@
 #define DECORD_AUDIO_READER_H_
 
 #include <vector>
+extern "C"
+{
+#include <libavutil/channel_layout.h>  // Necesario para AVChannelLayout
+}
 
 #include "../../include/decord/audio_interface.h"
 
 namespace decord {
 
-    class AudioReader: public AudioReaderInterface {
+    class AudioReader : public AudioReaderInterface {
     public:
-        AudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type=kNormal, bool mono=true);
+        AudioReader(std::string fn, int sampleRate, DLContext ctx, int io_type = kNormal, bool mono = true);
         ~AudioReader();
         NDArray GetNDArray();
         int GetNumPaddingSamples();
@@ -21,6 +25,7 @@ namespace decord {
         int64_t GetNumSamplesPerChannel();
         int GetNumChannels();
         void GetInfo();
+
     private:
         int Decode(std::string fn, int io_type);
         void DecodePacket(AVPacket *pPacket, AVCodecContext *pCodecContext, AVFrame *pFrame, int streamIndex);
@@ -31,18 +36,15 @@ namespace decord {
         void SaveToVector(float** buffer, int numChannels, int numSamples);
 
         DLContext ctx;
-        std::unique_ptr<ffmpeg::AVIOBytesContext> io_ctx_;  // avio context for raw memory access
+        std::unique_ptr<ffmpeg::AVIOBytesContext> io_ctx_;  // AVIO context para acceso a memoria raw
         AVFormatContext *pFormatContext;
         struct SwrContext* swr;
-        // AVCodec* pCodec;
         AVCodecParameters* pCodecParameters;
-        AVCodecContext * pCodecContext;
+        AVCodecContext *pCodecContext;
         int audioStreamIndex;
-//        std::vector<std::unique_ptr<AudioStream>> audios;
         std::vector<std::vector<float>> outputVector;
         NDArray output;
-        // padding is the start time in seconds of the first audio sample
-        double padding;
+        double padding;  // Tiempo de inicio en segundos de la primera muestra de audio
         std::string filename;
         int originalSampleRate;
         int targetSampleRate;
@@ -54,6 +56,6 @@ namespace decord {
         double duration;
     };
 
-}
+}  // namespace decord
 
-#endif //DECORD_AUDIO_INTERFACE_H
+#endif  // DECORD_AUDIO_READER_H_
