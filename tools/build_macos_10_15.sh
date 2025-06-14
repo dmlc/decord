@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# this file is actually for building decord for macos >=10.9 on github action
+# this file is actually for building decord for macos >=10.12 on github action
 
 set -e
 
@@ -21,7 +21,7 @@ mkdir ~/ffmpeg_sources
 cd ~/ffmpeg_sources
 git clone --depth 1 https://code.videolan.org/videolan/x264.git
 cd x264
-./configure --prefix="$HOME/ffmpeg_build" --bindir="$HOME/bin" --enable-shared --extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9
+./configure --prefix="$HOME/ffmpeg_build" --bindir="$HOME/bin" --enable-shared --extra-cflags=-mmacosx-version-min=10.12 --extra-ldflags=-mmacosx-version-min=10.12
 make -j$(nproc)
 make install
 
@@ -29,21 +29,21 @@ make install
 cd ~/ffmpeg_sources
 git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git
 cd libvpx
-./configure --prefix="$HOME/ffmpeg_build" --disable-examples --disable-unit-tests --enable-vp9-highbitdepth --as=yasm --enable-shared --extra-cflags=-mmacosx-version-min=10.9 --extra-cxxflags=-mmacosx-version-min=10.9
+./configure --prefix="$HOME/ffmpeg_build" --disable-examples --disable-unit-tests --enable-vp9-highbitdepth --as=yasm --enable-shared --extra-cflags=-mmacosx-version-min=10.12 --extra-cxxflags=-mmacosx-version-min=10.12
 make -j$(nproc)
 make install
 
 # ffmpeg
 cd ~/ffmpeg_sources
-curl -O -L https://ffmpeg.org/releases/ffmpeg-4.1.6.tar.bz2
-tar xjf ffmpeg-4.1.6.tar.bz2
-cd ffmpeg-4.1.6
+curl -O -L https://ffmpeg.org/releases/ffmpeg-7.1.1.tar.bz2
+tar xjf ffmpeg-7.1.1.tar.bz2
+cd ffmpeg-7.1.1
 ./configure \
   --prefix="$HOME/ffmpeg_build" \
   --enable-shared \
-  --extra-cflags="-mmacosx-version-min=10.9 -I$HOME/ffmpeg_build/include" \
-  --extra-cxxflags="-mmacosx-version-min=10.9 -I$HOME/ffmpeg_build/include" \
-  --extra-ldflags="-mmacosx-version-min=10.9 -L$HOME/ffmpeg_build/lib" \
+  --extra-cflags="-mmacosx-version-min=10.12 -I$HOME/ffmpeg_build/include" \
+  --extra-cxxflags="-mmacosx-version-min=10.12 -I$HOME/ffmpeg_build/include" \
+  --extra-ldflags="-mmacosx-version-min=10.12 -L$HOME/ffmpeg_build/lib" \
   --bindir="$HOME/bin" \
   --enable-gpl \
   --enable-nonfree \
