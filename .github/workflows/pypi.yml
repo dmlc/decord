@@ -76,7 +76,7 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: |
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
             yum install -y epel-release
-            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel openssl-devel
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel openssl-devel compat-openssl10
             rm -f /tmp/vendor/lib/libsoxr.so*
             mkdir build
             cd build
@@ -245,7 +245,7 @@ jobs:
 
   testpypi:
     name: Publish to TestPyPI
-    needs: [build_wheels, build_cuda_wheels]
+    needs: [build_wheels] #, build_cuda_wheels]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     environment:
