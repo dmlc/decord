@@ -17,7 +17,7 @@ namespace decord {
 namespace cuda {
 using namespace runtime;
 
-CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar, AVInputFormat *iformat)
+CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar, const AVInputFormat *iformat)
     : device_id_(device_id), stream_({device_id, false}), device_{}, ctx_{}, parser_{}, decoder_{},
     pkt_queue_{}, frame_queue_{},
     run_(false), frame_count_(0), draining_(false),
@@ -70,7 +70,7 @@ CUThreadedDecoder::CUThreadedDecoder(int device_id, AVCodecParameters *codecpar,
     }
 }
 
-void CUThreadedDecoder::InitBitStreamFilter(AVCodecParameters *codecpar, AVInputFormat *iformat) {
+void CUThreadedDecoder::InitBitStreamFilter(AVCodecParameters *codecpar, const AVInputFormat *iformat) {
     const char* bsf_name = nullptr;
     if (AV_CODEC_ID_H264 == codecpar->codec_id) {
         // H.264

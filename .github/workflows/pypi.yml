@@ -1,4 +1,4 @@
-name: Publish to PYPI
+name: Build and Publish to PyPI
 
 on:
   push:
@@ -9,229 +9,235 @@ on:
     branches: [ master ]
 
 jobs:
-  manylinux:
-    runs-on: ubuntu-18.04
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.6
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install twine nose
-    - name: Setup.py hack
-      run: |
-        echo "[install]" > python/setup.cfg
-        echo "install_lib=" >> python/setup.cfg
-    - name: Build manylinux Python wheels
-      uses: zhreshold/python-wheels-manylinux-build@v0.0.1
-      with:
-        python-versions: 'cp36-cp36m'
-        build-requirements: 'numpy'
-        pre-build-command: 'sh ../tools/build_manylinux2010.sh'
-        package-path: 'python'
-        pip-wheel-args: '-w ./dist --no-deps'
-    - name: Sanity test
-      run: |
-        pwd
-        ls ./python/dist/
-        sudo rm ./python/dist/decord-*-linux_x86_64.whl
-        which python
-        which pip
-        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'numpy/*' | true" \;
-        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'pip/*' | true" \;
-        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "unzip '{}' -d ./decord-cwd" \;
-        ls
-        cd ./decord-cwd
-        ls -la
-        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "echo decord > '{}'/top_level.txt" \;
-        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^numpy/d' '{}'/RECORD" \;
-        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^pip/d' '{}'/RECORD" \;
-        cd ..
-        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "rm '{}' && cd decord-cwd && zip -r ../'{}' ./*" \;
-        find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "which python && python -m pip install '{}' --force-reinstall" \;
-        python -c "import decord; print(decord.__version__)"
-        python -m nose -v ./tests/python/unittests/test_video_reader.py
-    - name: Rename wheel
-      run: |
-        cd ./python
-        ls -la ./dist
-        sudo chmod 755 -R ./dist
-        ls -la ./dist/
-        cd dist
-        sudo find . -type f -iname "decord*.whl" -exec bash -c 'mv $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
-        ls -lh .
-    - name: Store the source distribution
-      uses: actions/upload-artifact@v2
-      with:
-        name: python-package-distributions
-        path: python/dist/*.whl
-        retention-days: 14
-        if-no-files-found: error
-  macos:
-    runs-on: macos-latest
+  build_wheels:
+    name: Build CPU wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8]
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install twine nose wheel
-    - name: Setup cmake
-      uses: jwlawson/actions-setup-cmake@v1.4
-      with:
-        cmake-version: '3.16.x'
-    - name: Setup.py hack
-      run: |
-        echo "[install]" > python/setup.cfg
-        echo "install_lib=" >> python/setup.cfg
-    - name: Build deps and library
-      run: |
-        sudo chmod +x tools/build_macos_10_9.sh
-        tools/build_macos_10_9.sh || { echo "Build command failed."; exit 1; }
-    - name: Build wheel
-      run: |
-        cd python
-        python setup.py bdist_wheel
-        find ./dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\10_14/10_9}' {} \;
-    - name: Fix wheel by delocate
-      run: |
-        FFMPEG_DIR="$HOME"/ffmpeg_build
-        python -m pip install delocate
-        ls -lh ./python/dist/*.whl
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps '{}'" \;
-        mkdir -p ./python/dist/fixed_wheel
-        cd ./python/dist/
-        cp "$FFMPEG_DIR"/lib/libvpx*.dylib .
-        find . -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -w fixed_wheel -v '{}'" \;
-        ls -lh ./fixed_wheel
-    - name: Sanity Test
-      run: |
-        ls ./python/dist/fixed_wheel
-        find ./python/dist/fixed_wheel -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
-        python -m nose -v ./tests/python/unittests/test_video_reader.py
-    - name: Store the source distribution
-      uses: actions/upload-artifact@v2
-      with:
-        name: python-package-distributions
-        path: python/dist/fixed_wheel/*.whl
-        retention-days: 14
-        if-no-files-found: error
-  windows:
-    runs-on: windows-2016
+        include:
+          - os: ubuntu-latest
+            pybuilds: cp3{10,11,12,13}-manylinux_x86_64
+            arch: x86_64
+            id: linux_x86_64
+          - os: ubuntu-24.04-arm
+            pybuilds: cp3{10,11,12,13}-manylinux_aarch64
+            arch: aarch64
+            id: linux_aarch64
+          - os: macos-13
+            pybuilds: cp3{10,11,12,13}-macosx_x86_64
+            arch: x86_64
+            id: macos_x86
+          - os: macos-latest
+            pybuilds: cp3{10,11,12,13}-macosx_arm64
+            arch: arm64
+            id: macos_arm64
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - uses: actions/setup-python@v2
-      with:
-        python-version: '3.6'
-        architecture: 'x64'
-    - name: Download ffmpeg libs
-      run: |
-        curl -O -L https://github.com/zhreshold/decord-distro/files/5314603/ffmpeg-4.2.1-win64-dev.zip
-        curl -O -L https://github.com/vmlankub/CloudFiles/raw/5ec06ef8b7568cc3b84d310ef146c63c5e693b54/ffmpeg/ffmpeg-4.2.1-win64-shared.zip
-    - name: Extract ffmpeg libs
-      shell: powershell
-      run: Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath d:\ ; Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath d:\
-    - name: Configure
-      run: |
-        dir d:/ffmpeg-4.2.1-win64-dev/lib
-        dir d:/ffmpeg-4.2.1-win64-dev/include
-        cmake --version
-        mkdir build && cd build
-        cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR="d:/ffmpeg-4.2.1-win64-dev/include" -DFFMPEG_LIBRARIES="d:/ffmpeg-4.2.1-win64-dev/lib/*.lib" ..
-    - name: Build
-      run: |
-        cmake --build build --config Release
-    - name: Build wheel
-      run: |
-        python -m pip install pip --upgrade
-        python -m pip install wheel nose twine
-        cd python && python setup.py bdist_wheel
-        dir ./dist/
-    - name: Fix wheel deps
-      shell: cmd
-      run: |
-        FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\decord*`) DO (SET wheel_name=%%F)
-        echo wheel_name=%wheel_name%
-        cd python\dist
-        7z x "%wheel_name%" -ofixed_wheel
-        dir fixed_wheel
-        xcopy /Y d:\ffmpeg-4.2.1-win64-shared\bin\*.dll fixed_wheel\decord
-        copy c:\windows\system32\MSVCP140.dll fixed_wheel\decord
-        copy c:\windows\system32\VCRUNTIME140.dll fixed_wheel\decord
-        dir fixed_wheel\decord
-    - name: Recreate wheel
-      shell: powershell
-      run: |
-        cd python\dist
-        mkdir output
-        $wheel_path = Get-ChildItem *.whl
-        $wheel_name = $wheel_path.BaseName
-        7z a -tzip "output/${wheel_name}.whl" .\fixed_wheel\*
-        cd output
-        Get-ChildItem *.whl  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
-        dir .
-    - name: Sanity test
-      shell: cmd
-      run: |
-        FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\output\decord*`) DO (SET wheel_name=%%F)
-        echo wheel_name=%wheel_name%
-        cd python\dist\output
-        python -m pip install --force-reinstall --no-cache-dir %wheel_name%
-        python -m nose -v ../../../tests/python/unittests/test_video_reader.py
-    - name: Store the source distribution
-      uses: actions/upload-artifact@v2
-      with:
-        name: python-package-distributions
-        path: python/dist/output/*.whl
-        retention-days: 14
-        if-no-files-found: error
-  deploy:
-    name: Publish to (Test)PyPI
-    needs:
-    - manylinux
-    - macos
-    - windows
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build source package
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          pip install -U build cython setuptools
+          python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
+      - name: Upload source package
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-source
+          path: dist/*.tar.gz
+
+      - name: Install cibuildwheel and dependencies
+        run: |
+          python -m pip install --upgrade pip pytest cibuildwheel==v3.0.0
+
+      - name: Set Minimum MacOS Target
+        if: runner.os == 'macOS'
+        run: |
+          echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> $GITHUB_ENV
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.0.0
+        with:
+          package-dir: python
+        env:
+          CIBW_ARCHS_MACOS: ${{ matrix.arch }}
+          OMPL_BUILD_ARCH: ${{ matrix.arch }}
+          CIBW_BUILD: ${{ matrix.pybuilds }}
+          CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32 pp*"
+          CIBW_TEST_SKIP: "cp311-* cp312-* cp313-* pp*"
+          CIBW_BEFORE_BUILD_LINUX: |
+            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
+            yum install -y epel-release
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel openssl-devel compat-openssl10
+            rm -f /tmp/vendor/lib/libsoxr.so*
+            mkdir build
+            cd build
+            cmake .. -DUSE_CUDA=OFF -DCMAKE_BUILD_TYPE=Release
+            make -j$(nproc)
+            cp libdecord.so ..
+          CIBW_BEFORE_BUILD_MACOS: |
+            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
+            brew install cmake
+            mkdir build
+            cd build
+            cmake .. -DUSE_CUDA=OFF -DCMAKE_BUILD_TYPE=Release
+            make -j$(sysctl -n hw.ncpu)
+            cp libdecord.dylib ..
+          CIBW_ENVIRONMENT_LINUX: LD_LIBRARY_PATH=/tmp/vendor/lib:$LD_LIBRARY_PATH PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
+          CIBW_ENVIRONMENT_MACOS: PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig LDFLAGS=-headerpad_max_install_names
+          CIBW_TEST_COMMAND: python -m pytest {project}/tests/python/unittests -v
+          CIBW_TEST_REQUIRES: pytest numpy nose simpleaudio
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.id }}
+          path: ./wheelhouse/*.whl
+
+  build_cuda_wheels:
+    name: Build CUDA wheels on ${{ matrix.os }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            pybuilds: "cp3{10,11,12}-manylinux_x86_64"
+            cuda_arch: "80;86;89;90;100;120"
+            id: linux_x86_64_cuda
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            pybuilds: "cp3{10,11,12}-manylinux_aarch64"
+            cuda_arch: "80;86;87;89;90;100;101;120"
+            id: linux_aarch64_cuda
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==v3.0.0
+
+      - name: Build wheels with CUDA
+        uses: pypa/cibuildwheel@v3.0.0
+        with:
+          package-dir: python
+        env:
+          CIBW_BUILD: ${{ matrix.pybuilds }}
+          CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32 pp*"
+          CIBW_TEST_SKIP: "*"
+          # BEFORE_ALL runs once per container.
+          CIBW_BEFORE_ALL_LINUX: |
+            set -ex
+            # First, install the tool needed to add repositories
+            yum install -y dnf-utils
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
+
+            # Detect architecture and add the correct NVIDIA CUDA repo for RHEL 8-based manylinux
+            ARCH=$(uname -m)
+            if [ "$ARCH" == "x86_64" ]; then
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+            elif [ "$ARCH" == "aarch64" ]; then
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/sbsa/cuda-rhel8.repo
+            else
+              echo "Unsupported architecture: $ARCH"
+              exit 1
+            fi
+
+            echo "--- Adding CUDA repo for $ARCH ---"
+            yum-config-manager --add-repo ${REPO_URL}
+            yum clean all
+
+            echo "--- Installing CUDA Toolkit and build dependencies ---"
+            # Install specific CUDA version and other build tools
+            dnf -y module install nvidia-driver:open-dkms
+            yum install -y \
+            cuda-compiler-12-8-12.8.1-1 \
+            cuda-libraries-12-8-12.8.1-1 \
+            cuda-libraries-devel-12-8-12.8.1-1 \
+            cuda-toolkit-12-8-12.8.1-1 \
+            cudnn
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
+
+            echo "--- Verifying CUDA installation ---"
+            # The 'export' is not needed here as the CIBW_ENVIRONMENT_LINUX var will set the path later.
+            # We just need to call it with the full path for verification.
+            /usr/local/cuda-12.8/bin/nvcc --version
+          # BEFORE_BUILD runs for each python version.
+          CIBW_BEFORE_BUILD_LINUX: |
+            set -ex
+            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-7.1.json /tmp/vendor
+            rm -f /tmp/vendor/lib/libsoxr.so*
+
+            # Use a fresh build directory for each Python version to prevent contamination.
+            mkdir -p build && cd build
+            echo "--- Running CMake with CUDA support ---"
+            cmake .. \
+              -DUSE_CUDA=ON \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCUDAToolkit_ROOT=/usr/local/cuda-12.8 \
+              -DCMAKE_CUDA_ARCHITECTURES="${{ matrix.cuda_arch }}"
+            echo "--- Building with make ---"
+            make -j$(nproc)
+            cp libdecord.so ..
+          # Set environment variables for the build process inside the container
+          CIBW_ENVIRONMENT_LINUX: >
+            PATH=/usr/local/cuda-12.8/bin:$PATH
+            LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
+            PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
+          CUDA_TAG: "cu128"
+
+      - name: Rename wheels for CUDA version
+        shell: bash
+        run: |
+          cd ./wheelhouse
+          for wheel in ./*-manylinux_${{ matrix.arch }}.whl; do
+            mv -- "$wheel" "${wheel//manylinux_${{ matrix.arch }}/manylinux_${{ matrix.arch }}_${{ env.CUDA_TAG }}}"
+          done
+          echo "Renamed wheels:"
+          ls -la .
+          cd ..
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.id }}
+          path: ./wheelhouse/*.whl
+
+  publish:
+    name: Publish to PyPI
+    needs: [build_wheels]
     runs-on: ubuntu-latest
-
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    environment:
+      name: release
+      url: https://pypi.org/p/decord2
+    permissions:
+      id-token: write
     steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v2
-      with:
-        name: python-package-distributions
-        path: dist/
-    - name: List artifects
-      run: |
-        ls -lh dist/
-    - name: Publish package to TestPyPI
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        user: __token__
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        repository_url: https://test.pypi.org/legacy/
-        packages_dir: dist/
-        skip_existing: true
-    - name: Publish package to PyPI
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        packages_dir: dist/
-        skip_existing: true
+      - name: Download all wheels and sdist
+        uses: actions/download-artifact@v4
+        with:
+          path: ./dist
+          merge-multiple: true
+
+      - name: List downloaded files
+        run: ls -R ./dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip_existing: true

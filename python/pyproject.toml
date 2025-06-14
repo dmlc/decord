@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools", "wheel", "cmake>=3.20", "ninja", "numpy>=1.26.4"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "decord2"
+dynamic = ["version"]
+description = "Decord2 is a high-performance, efficient video decoding and loading library for deep learning research, featuring smart shuffling, random frame access, GPU acceleration, and seamless integration with popular frameworks."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "Apache-2.0"}
+keywords = ["python", "video", "loader", "deep learning"]
+dependencies = [
+    "numpy>=1.26.4",
+]
+authors = [
+    {name = "Johnny Núñez", email = "johnnynunez@ub.edu"},
+]
+maintainers = [
+    {name = "Johnny Núñez", email = "johnnynunez@ub.edu"},
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "decord.__version__"}
+
+[tool.cibuildwheel]
+archs = "auto64"
+build-verbosity = 1
+skip = ""
+
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64"
+manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64"
+
+# Needed for full C++17 support
+[tool.cibuildwheel.macos.environment]
+MACOSX_DEPLOYMENT_TARGET = "10.11"
