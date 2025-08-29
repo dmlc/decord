@@ -1,11 +1,15 @@
-//
-// Created by Yin, Weisu on 1/6/21.
-//
+/*!
+ *  Copyright (c) 2019 by Contributors if not otherwise specified
+ * \file audio_reader.h
+ * \brief FFmpeg audio reader
+ */
 
-#ifndef DECORD_AUDIO_READER_H_
-#define DECORD_AUDIO_READER_H_
+#ifndef DECORD_AUDIO_AUDIO_READER_H_
+#define DECORD_AUDIO_AUDIO_READER_H_
 
 #include <vector>
+#include <memory>
+#include <string>
 
 #include "../../include/decord/audio_interface.h"
 

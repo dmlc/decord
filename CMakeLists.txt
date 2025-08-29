@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8.2)
 project(decord C CXX)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Utility functions
 include(cmake/util/Util.cmake)
 include(cmake/util/FindFFmpeg.cmake)
@@ -18,9 +21,10 @@ endif()
 # NOTE: do not modify this file to change option values.
 # You can create a config.cmake at build folder
 # and add set(OPTION VALUE) to override these build options.
-# Alernatively, use cmake -DOPTION=VALUE through command-line.
-decord_option(USE_CUDA "Build with CUDA" OFF)
-decord_option(USE_MSVC_MT "Build with MT" OFF)
+# Alternatively, use cmake -DOPTION=VALUE through command-line.
+option(USE_CUDA "Build with CUDA" OFF)
+option(USE_MSVC_MT "Build with MT" OFF)
+option(USE_AUDIO "Build with audio support" OFF)  # Disable audio support due to FFmpeg compatibility issues
 
 # Project
 if(USE_CUDA)
@@ -32,13 +36,12 @@ include_directories("include")
 include_directories("3rdparty/dlpack/include")
 include_directories("3rdparty/dmlc-core/include")
 
+# Generic compilation options
+if(MSVC)
 # initial variables
 set(DECORD_LINKER_LIBS "")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 cmake_policy(SET CMP0042 NEW)
-
-# Generic compilation options
-if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
@@ -59,15 +62,19 @@ if(MSVC)
 else(MSVC)
   include(CheckCXXCompilerFlag)
   check_cxx_compiler_flag("-std=c++11"    SUPPORT_CXX11)
-  #set(CMAKE_CUDA_FLAGS "-std=c++11 ${CMAKE_CUDA_FLAGS}")
+  //set(CMAKE_CUDA_FLAGS "-std=c++11 ${CMAKE_CUDA_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     message(STATUS "Build in Debug mode")
     set(CMAKE_C_FLAGS "-O0 -g -Wall -fPIC ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-O0 -g -Wall -fPIC -std=c++11 ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
   else()
     set(CMAKE_C_FLAGS "-O2 -Wall -fPIC -fvisibility=hidden ${CMAKE_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "-O0 -g -Wall -fPIC -std=c++11 ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-O2 -Wall -fPIC -std=c++11 ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
   endif ()
   if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CMAKE_CXX_FLAGS "-Wno-unknown-pragmas ${CMAKE_CXX_FLAGS}")
@@ -78,6 +85,13 @@ else(MSVC)
   endif()
 endif(MSVC)
 
+# 添加以下内容以支持 macOS 的特定编译选项
+if(APPLE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=10.15")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.15")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.15")
+endif()
+
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "src/*.cu")
 FILE(GLOB_RECURSE GROUP_INCLUDE "src/*.h" "include/*.h")
@@ -85,17 +99,25 @@ assign_source_group("Source" ${GROUP_SOURCE})
 assign_source_group("Include" ${GROUP_INCLUDE})
 
 # Source file lists
-file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc src/sampler/*.cc src/audio/*.cc src/av_wrapper/*.cc)
+file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc src/sampler/*.cc src/av_wrapper/*.cc)
+
+# Add audio sources only if audio support is enabled
+if(USE_AUDIO)
+file(GLOB DECORD_AUDIO_SRCS src/audio/*.cc)
+endif()
 
 # Module rules
 include(cmake/modules/FFmpeg.cmake)
 include(cmake/modules/CUDA.cmake)
 
+# Set CUDA compiler flags to support C++11
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++11")
+
 # Targets
 
-add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS} ${NVDEC_CUDA_SRCS})
+add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS} ${NVDEC_CUDA_SRCS} ${DECORD_AUDIO_SRCS})
 
-# target_compile_features(decord PUBLIC cxx_std_11)
+target_compile_features(decord PUBLIC cxx_std_11)
 
 target_link_libraries(decord ${DECORD_LINKER_LIBS} ${DECORD_RUNTIME_LINKER_LIBS})
 set_property(TARGET decord PROPERTY CUDA_STANDARD 11)

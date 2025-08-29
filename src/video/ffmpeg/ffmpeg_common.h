@@ -62,18 +62,26 @@ template<typename T, typename R, R(*Fn)(T*)> struct Deleter {
     }
 };
 
-/**
- * \brief Deleter adaptor for functions like av_freep that take a pointer to a pointer.
- *
- * \tparam T Pointer type
- * \tparam R Deleter return type
- * \tparam R(*Fn)(T*) Real deteter function
- */
+// Template for custom deleter with single pointer function signature
+// template<typename T, typename R, R(*Fn)(T*)> struct Deleter {
+//     void operator()(T* p) {
+//         Fn(p);
+//     }
+// };
+
+// Template for custom deleter with double pointer function signature
 template<typename T, typename R, R(*Fn)(T**)> struct Deleterp {
-    inline void operator() (T* p) const {
-        if (p) Fn(&p);
+    void operator()(T* p) {
+        Fn(&p);
     }
 };
+
+/**
+ * \brief Deleter for AVDictionary, non copyable
+ *
+ */
+using AVDictionaryPtr = std::unique_ptr<
+    AVDictionary, Deleterp<AVDictionary, void, av_dict_free> >;
 
 /**
  * \brief AutoReleasePool for AVFrame
@@ -183,8 +191,7 @@ using AVFilterContextPtr = std::unique_ptr<
     AVFilterContext, Deleter<AVFilterContext, void, avfilter_free> >;
 
 
-using AVBSFContextPtr = std::unique_ptr<
-    AVBSFContext, Deleterp<AVBSFContext, void, av_bsf_free> >;
+// Check FFmpeg version and define AVBSFContextPtr accordingly
 
 using AVCodecParametersPtr = std::unique_ptr<
     AVCodecParameters, Deleterp<AVCodecParameters, void, avcodec_parameters_free> >;
