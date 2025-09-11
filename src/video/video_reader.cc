@@ -10,6 +10,9 @@
 #if DECORD_USE_CUDA
 #include "nvcodec/cuda_threaded_decoder.h"
 #endif
+#ifdef __APPLE__
+#include "videotoolbox/videotoolbox_threaded_decoder.h"
+#endif
 #include <algorithm>
 #include <decord/runtime/ndarray.h>
 #include <decord/runtime/c_runtime_api.h>
@@ -145,7 +148,7 @@ VideoReader::~VideoReader(){
 
 void VideoReader::SetVideoStream(int stream_nb) {
     if (!fmt_ctx_) return;
-    AVCodec *dec;
+    const AVCodec *dec;
     int st_nb = av_find_best_stream(fmt_ctx_.get(), AVMEDIA_TYPE_VIDEO, stream_nb, -1, &dec, 0);
     // LOG(INFO) << "find best stream: " << st_nb;
     CHECK_GE(st_nb, 0) << "ERROR cannot find video stream with wanted index: " << stream_nb;
@@ -159,12 +162,24 @@ void VideoReader::SetVideoStream(int stream_nb) {
     if (kDLCPU == ctx_.device_type) {
         decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new FFMPEGThreadedDecoder());
     } else if (kDLGPU == ctx_.device_type) {
-#ifdef DECORD_USE_CUDA
+#ifdef __APPLE__
+        // Use VideoToolbox for GPU acceleration on macOS
+        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new videotoolbox::VideoToolboxThreadedDecoder(
+            ctx_.device_id, codecpar.get(), fmt_ctx_->iformat));
+#elif DECORD_USE_CUDA
         // note: cuda threaded decoder will modify codecpar
         decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new cuda::CUThreadedDecoder(
             ctx_.device_id, codecpar.get(), fmt_ctx_->iformat));
 #else
-        LOG(FATAL) << "CUDA not enabled. Requested context GPU(" << ctx_.device_id << ").";
+        LOG(FATAL) << "GPU acceleration not available on this platform.";
+#endif
+    } else if (kDLMetal == ctx_.device_type) {
+#ifdef __APPLE__
+        // Use VideoToolbox for Metal device type on macOS
+        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new videotoolbox::VideoToolboxThreadedDecoder(
+            ctx_.device_id, codecpar.get(), fmt_ctx_->iformat));
+#else
+        LOG(FATAL) << "Metal device type not supported on this platform.";
 #endif
     } else {
         LOG(FATAL) << "Unknown device type: " << ctx_.device_type;
@@ -554,9 +569,10 @@ double VideoReader::GetRotation() const {
     if (rotate && *rotate->value && strcmp(rotate->value, "0"))
         theta = atof(rotate->value);
 
-    uint8_t* displaymatrix = av_stream_get_side_data(active_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
-    if (displaymatrix && !theta)
-        theta = -av_display_rotation_get((int32_t*) displaymatrix);
+    // Note: av_stream_get_side_data is not available in FFmpeg 6.0+
+    // uint8_t* displaymatrix = av_stream_get_side_data(active_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
+    // if (displaymatrix && !theta)
+    //     theta = -av_display_rotation_get((int32_t*) displaymatrix);
 
     theta = std::fmod(theta, 360);
     if(theta < 0) theta += 360;

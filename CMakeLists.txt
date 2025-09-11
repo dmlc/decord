@@ -90,10 +90,11 @@ file(GLOB DECORD_CORE_SRCS src/*.cc src/runtime/*.cc src/video/*.cc src/sampler/
 # Module rules
 include(cmake/modules/FFmpeg.cmake)
 include(cmake/modules/CUDA.cmake)
+include(cmake/modules/VideoToolbox.cmake)
 
 # Targets
 
-add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS} ${NVDEC_CUDA_SRCS})
+add_library(decord SHARED ${DECORD_CORE_SRCS} ${DECORD_FFMPEG_SRCS} ${NVDEC_SRCS} ${RUNTIME_CUDA_SRCS} ${NVDEC_CUDA_SRCS} ${VIDEOTOOLBOX_SRCS})
 
 # target_compile_features(decord PUBLIC cxx_std_11)
 
