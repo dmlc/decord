@@ -74,6 +74,7 @@ class VideoToolboxThreadedDecoder final : public ThreadedDecoderInterface {
         void CleanupVideoToolboxDecoder();
 #ifdef __APPLE__
         void DecodePacket(AVPacket *pkt);
+        CMVideoCodecType DetectProResVariant(AVCodecParameters *codecpar);
 #endif
 
         int device_id_;

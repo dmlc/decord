@@ -116,6 +116,26 @@ bool VideoToolboxThreadedDecoder::SetupVideoToolboxDecoder(AVCodecParameters *co
                                                    extensions,
                                                    &format_desc);
             break;
+        case AV_CODEC_ID_PRORES:
+            // ProRes codec - detect the specific variant from codec parameters
+            {
+                CMVideoCodecType prores_type = DetectProResVariant(codecpar);
+                status = CMVideoFormatDescriptionCreate(kCFAllocatorDefault,
+                                                       prores_type,
+                                                       codecpar->width,
+                                                       codecpar->height,
+                                                       extensions,
+                                                       &format_desc);
+            }
+            break;
+        case AV_CODEC_ID_PRORES_RAW:
+            status = CMVideoFormatDescriptionCreate(kCFAllocatorDefault,
+                                                   kCMVideoCodecType_AppleProResRAW,
+                                                   codecpar->width,
+                                                   codecpar->height,
+                                                   extensions,
+                                                   &format_desc);
+            break;
         default:
             LOG(ERROR) << "Unsupported codec for VideoToolbox: " << codecpar->codec_id;
             CFRelease(extensions);
@@ -484,6 +504,52 @@ void VideoToolboxThreadedDecoder::CheckErrorStatus() {
         LOG(FATAL) << error_message_;
     }
 }
+
+#ifdef __APPLE__
+CMVideoCodecType VideoToolboxThreadedDecoder::DetectProResVariant(AVCodecParameters *codecpar) {
+    // Default to ProRes 422
+    CMVideoCodecType prores_type = kCMVideoCodecType_AppleProRes422;
+    
+    // Try to detect ProRes variant from codec name or profile
+    if (codecpar->profile != AV_PROFILE_UNKNOWN) {
+        switch (codecpar->profile) {
+            case AV_PROFILE_PRORES_4444:
+                prores_type = kCMVideoCodecType_AppleProRes4444;
+                break;
+            case AV_PROFILE_PRORES_XQ:
+                prores_type = kCMVideoCodecType_AppleProRes4444XQ;
+                break;
+            case AV_PROFILE_PRORES_HQ:
+                prores_type = kCMVideoCodecType_AppleProRes422HQ;
+                break;
+            case AV_PROFILE_PRORES_STANDARD:
+                prores_type = kCMVideoCodecType_AppleProRes422;
+                break;
+            case AV_PROFILE_PRORES_LT:
+                prores_type = kCMVideoCodecType_AppleProRes422LT;
+                break;
+            case AV_PROFILE_PRORES_PROXY:
+                prores_type = kCMVideoCodecType_AppleProRes422Proxy;
+                break;
+            default:
+                // Unknown profile, use default
+                LOG(INFO) << "Unknown ProRes profile: " << codecpar->profile << ", using default ProRes 422";
+                break;
+        }
+    }
+    
+    // Additional detection based on bit depth and chroma format
+    if (codecpar->bits_per_coded_sample > 8) {
+        // High bit depth suggests 4444 variant
+        if (prores_type == kCMVideoCodecType_AppleProRes422) {
+            prores_type = kCMVideoCodecType_AppleProRes422HQ;
+        }
+    }
+    
+    LOG(INFO) << "Detected ProRes variant: " << prores_type;
+    return prores_type;
+}
+#endif
 
 }  // namespace videotoolbox
 }  // namespace decord

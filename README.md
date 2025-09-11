@@ -50,6 +50,8 @@ Decord provides hardware-accelerated video decoding for improved performance:
 
 - **CUDA (Linux/Windows)**: NVIDIA GPU acceleration using NVDEC
 - **VideoToolbox (macOS)**: Apple Silicon/Intel Quick Sync acceleration
+  - H.264, HEVC, and ProRes hardware decoding
+  - Automatic ProRes variant detection (422, 422HQ, 422LT, 422Proxy, 4444, 4444XQ, RAW)
 - **Automatic fallback**: Falls back to CPU decoding if GPU is unavailable
 
 GPU acceleration typically provides 2-5x performance improvement for video decoding compared to CPU-only processing.
@@ -163,6 +165,14 @@ make
 **VideoToolbox GPU Acceleration on macOS:**
 
 Decord automatically enables VideoToolbox hardware acceleration on macOS, providing GPU-accelerated video decoding using Apple Silicon or Intel Quick Sync. This gives performance similar to CUDA on NVIDIA systems.
+
+**Supported Codecs:**
+- H.264 (AVC) - Hardware accelerated
+- HEVC (H.265) - Hardware accelerated  
+- ProRes - Hardware accelerated with automatic variant detection
+  - ProRes 422, 422HQ, 422LT, 422Proxy
+  - ProRes 4444, 4444XQ
+  - ProRes RAW, RAW HQ
 
 The VideoToolbox support is automatically enabled when building on macOS and will be used when you specify `ctx=gpu()` or `ctx=gpu(0)` in your Python code.
 
