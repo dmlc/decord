@@ -61,6 +61,21 @@ void VideoToolboxThreadedDecoder::InitBitStreamFilter(AVCodecParameters *codecpa
         case AV_CODEC_ID_HEVC:
             bsf = av_bsf_get_by_name("hevc_mp4toannexb");
             break;
+        case AV_CODEC_ID_AV1:
+            // AV1 doesn't typically need bitstream filtering for VideoToolbox
+            // The raw AV1 stream should work directly
+            LOG(INFO) << "AV1 codec detected, using raw stream (no bitstream filter needed)";
+            return;
+        case AV_CODEC_ID_VP9:
+            // VP9 doesn't typically need bitstream filtering for VideoToolbox
+            // The raw VP9 stream should work directly
+            LOG(INFO) << "VP9 codec detected, using raw stream (no bitstream filter needed)";
+            return;
+        case AV_CODEC_ID_PRORES:
+        case AV_CODEC_ID_PRORES_RAW:
+            // ProRes doesn't need bitstream filtering
+            LOG(INFO) << "ProRes codec detected, using raw stream (no bitstream filter needed)";
+            return;
         default:
             LOG(WARNING) << "No bitstream filter available for codec: " << codecpar->codec_id;
             return;
@@ -131,6 +146,22 @@ bool VideoToolboxThreadedDecoder::SetupVideoToolboxDecoder(AVCodecParameters *co
         case AV_CODEC_ID_PRORES_RAW:
             status = CMVideoFormatDescriptionCreate(kCFAllocatorDefault,
                                                    kCMVideoCodecType_AppleProResRAW,
+                                                   codecpar->width,
+                                                   codecpar->height,
+                                                   extensions,
+                                                   &format_desc);
+            break;
+        case AV_CODEC_ID_AV1:
+            status = CMVideoFormatDescriptionCreate(kCFAllocatorDefault,
+                                                   kCMVideoCodecType_AV1,
+                                                   codecpar->width,
+                                                   codecpar->height,
+                                                   extensions,
+                                                   &format_desc);
+            break;
+        case AV_CODEC_ID_VP9:
+            status = CMVideoFormatDescriptionCreate(kCFAllocatorDefault,
+                                                   kCMVideoCodecType_VP9,
                                                    codecpar->width,
                                                    codecpar->height,
                                                    extensions,
