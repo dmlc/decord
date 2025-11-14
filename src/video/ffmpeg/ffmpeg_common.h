@@ -21,6 +21,7 @@
 extern "C" {
 #endif
 #include <libavcodec/avcodec.h>
+#include <libavcodec/bsf.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 #include <libavfilter/avfilter.h>
@@ -33,6 +34,7 @@ extern "C" {
 #include <libavutil/dict.h>
 #include <libavutil/display.h>
 #include <libavutil/file.h>
+#include <libavutil/channel_layout.h>
 #include <libswresample/swresample.h>
 #ifdef DECORD_USE_LIBAVDEVICE
 #include <libavdevice/avdevice.h>
