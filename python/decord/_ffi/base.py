@@ -36,7 +36,7 @@ def _load_lib():
     """Load libary by searching possible path."""
     lib_path = libinfo.find_lib_path()
     os.environ['PATH'] += os.pathsep + os.path.dirname(lib_path[0])
-    lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_GLOBAL)
+    lib = ctypes.CDLL(lib_path[0])
     # DMatrix functions
     lib.DECORDGetLastError.restype = ctypes.c_char_p
     return lib, os.path.basename(lib_path[0])
