@@ -301,6 +301,8 @@ def _init_api_prefix(module_name, prefix):
         setattr(target_module, ff.__name__, ff)
 
 def _init_internal_api():
+    # Ensure this module has been loaded ahead of accessing it below
+    import decord._api_internal
     for name in list_global_func_names():
         if not name.startswith("_"):
             continue
