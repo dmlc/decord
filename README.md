@@ -20,10 +20,23 @@
 Table of contents
 =================
 
+- [FFmpeg Compatibility](#ffmpeg-compatibility)
 - [Benchmark](#preliminary-benchmark)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Bridge for Deep Learning frameworks](#bridges-for-deep-learning-frameworks)
+
+## FFmpeg Compatibility
+
+Decord was originally written against FFmpeg 4.x APIs. This fork includes patches to support newer FFmpeg versions with version-gated preprocessor guards:
+
+| FFmpeg Version | Status | Notes |
+|---|---|---|
+| 4.x | Supported | Original target API |
+| 5.x | Supported | `const AVCodec*`/`const AVInputFormat*` signatures, `bsf.h` include |
+| 6.x | Supported | `ch_layout` API replaces `channels`/`channel_layout` |
+| 7.x | Supported | `av_packet_side_data_get`, gated `avcodec_close`, pixel format string changes in filter graph, SAR sanitization |
+| 8.x | Supported | Tested on 8.0.1 |
 
 ## Preliminary benchmark
 
@@ -57,8 +70,7 @@ Supported platforms:
 Install the system packages for building the shared library, for Debian/Ubuntu users, run:
 
 ```bash
-# official PPA comes with ffmpeg 2.8, which lacks tons of features, we use ffmpeg 4.0 here
-sudo add-apt-repository ppa:jonathonf/ffmpeg-4 # for ubuntu20.04 official PPA is already version 4.2, you may skip this step
+# FFmpeg 4.x through 8.x are supported (see FFmpeg Compatibility above)
 sudo apt-get update
 sudo apt-get install -y build-essential python3-dev python3-setuptools make cmake
 sudo apt-get install -y ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev

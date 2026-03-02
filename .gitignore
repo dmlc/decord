@@ -1,5 +1,11 @@
 # Custom ignored
 .vscode
+*.mp4
+*.mov
+# But keep test media fixtures in git
+!test-media/*.mp4
+!test-media/*.mp3
+!test-media/*.mov
 build/*
 docs/_build
 .DS_Store

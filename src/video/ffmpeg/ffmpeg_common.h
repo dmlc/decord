@@ -21,6 +21,9 @@
 extern "C" {
 #endif
 #include <libavcodec/avcodec.h>
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+#include <libavcodec/bsf.h>
+#endif
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 #include <libavfilter/avfilter.h>

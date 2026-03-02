@@ -7,6 +7,9 @@
 #include "filter_graph.h"
 
 #include <dmlc/logging.h>
+extern "C" {
+#include <libavutil/pixdesc.h>
+}
 
 namespace decord {
 namespace ffmpeg {
@@ -36,7 +39,6 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
     CHECK(buffersink) << "Error: no buffersink";
     AVFilterInOut *outputs = avfilter_inout_alloc();
 	AVFilterInOut *inputs  = avfilter_inout_alloc();
-	enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_RGB24 , AV_PIX_FMT_NONE };
 	// AVBufferSinkParams *buffersink_params;
 
 	filter_graph_.reset(avfilter_graph_alloc());
@@ -44,33 +46,44 @@ void FFMPEGFilterGraph::Init(std::string filters_descr, AVCodecContext *dec_ctx)
 	//LOG(INFO) << "Original GraphFilter nb_threads: " << filter_graph_->nb_threads;
 	filter_graph_->nb_threads = 1;
     /* buffer video source: the decoded frames from the decoder will be inserted here. */
-	std::snprintf(args, sizeof(args),
+    // Sanitize sample_aspect_ratio: a zero denominator causes inf which FFmpeg 7+ rejects
+    int sar_num = dec_ctx->sample_aspect_ratio.num;
+    int sar_den = dec_ctx->sample_aspect_ratio.den;
+    if (sar_den == 0) {
+        sar_num = 1;
+        sar_den = 1;
+    }
+#if LIBAVFILTER_VERSION_MAJOR >= 10
+    // FFmpeg 7+: pix_fmt option uses AV_OPT_TYPE_PIXEL_FMT, requiring a format name string
+    const char *pix_fmt_name = av_get_pix_fmt_name(dec_ctx->pix_fmt);
+    if (!pix_fmt_name) pix_fmt_name = "yuv420p";
+    std::snprintf(args, sizeof(args),
+            "video_size=%dx%d:pix_fmt=%s:time_base=%d/%d:pixel_aspect=%d/%d",
+            dec_ctx->width, dec_ctx->height, pix_fmt_name,
+            dec_ctx->time_base.num, dec_ctx->time_base.den,
+            sar_num, sar_den);
+#else
+    std::snprintf(args, sizeof(args),
             "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
             dec_ctx->width, dec_ctx->height, dec_ctx->pix_fmt,
             dec_ctx->time_base.num, dec_ctx->time_base.den,
-            dec_ctx->sample_aspect_ratio.num, dec_ctx->sample_aspect_ratio.den);
-    // std::snprintf(args, sizeof(args),
-    //         "video_size=%dx%d:pix_fmt=%d",
-    //         dec_ctx->width, dec_ctx->height, dec_ctx->pix_fmt);
+            sar_num, sar_den);
+#endif
 
-    // LOG(INFO) << "filter args: " << args;
-
-    // AVFilterContext *buffersrc_ctx;
-    // AVFilterContext *buffersink_ctx;
     CHECK_GE(avfilter_graph_create_filter(&buffersrc_ctx_, buffersrc, "in",
 		args, NULL, filter_graph_.get()), 0) << "Cannot create buffer source";
 
-    // LOG(INFO) << "create filter src";
-
     /* buffer video sink: to terminate the filter chain. */
-	// buffersink_params = av_buffersink_params_alloc();
-	// buffersink_params->pixel_fmts = pix_fmts;
 	CHECK_GE(avfilter_graph_create_filter(&buffersink_ctx_, buffersink, "out",
 		NULL, NULL, filter_graph_.get()), 0) << "Cannot create buffer sink";
-	// av_free(buffersink_params);
-    // LOG(INFO) << "create filter sink";
-    // CHECK_GE(av_opt_set_bin(buffersink_ctx_, "pix_fmts", (uint8_t *)&pix_fmts, sizeof(AV_PIX_FMT_RGB24), AV_OPT_SEARCH_CHILDREN), 0) << "Set bin error";
+#if LIBAVFILTER_VERSION_MAJOR < 10
+    enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_RGB24 , AV_PIX_FMT_NONE };
     CHECK_GE(av_opt_set_int_list(buffersink_ctx_, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN), 0) << "Set output pixel format error.";
+#else
+    // FFmpeg 7+: pix_fmts is no longer a runtime option on buffersink,
+    // so enforce output format via the filter chain instead.
+    filters_descr += ",format=rgb24";
+#endif
 
     // LOG(INFO) << "create filter set opt";
     /* Endpoints for the filter graph. */
