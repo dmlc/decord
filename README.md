@@ -13,7 +13,7 @@
 -   Nvidia Codecs(Done)
 -   Intel Codecs
 
-## Compatible with FFMPEG8 and CUDA 13.0.1
+## Compatible with FFMPEG8 and CUDA 13.2
 `Decord2` was designed to handle awkward video shuffling experience in order to provide smooth experiences similar to random image loader for deep learning.
 
 `Decord2` is also able to decode audio from both video and audio files. One can slice video and audio together to get a synchronized result; hence providing a one-stop solution for both video and audio decoding.

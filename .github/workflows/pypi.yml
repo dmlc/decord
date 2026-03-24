@@ -30,7 +30,7 @@ jobs:
             id: macos_arm64
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           
@@ -62,14 +62,14 @@ jobs:
 
       - name: Install cibuildwheel and dependencies
         run: |
-          python -m pip install --upgrade pip pytest cibuildwheel==v3.3.0
+          python -m pip install --upgrade pip pytest cibuildwheel==v3.4.0
 
       - name: Set Minimum MacOS Target
         if: runner.os == 'macOS'
         run: |
           echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.0
+        uses: pypa/cibuildwheel@v3.4.0
         with:
           package-dir: python
         env:
@@ -125,7 +125,7 @@ jobs:
             id: linux_aarch64_cuda
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -135,14 +135,14 @@ jobs:
           python-version: '3.12'
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==v3.3.0
+        run: python -m pip install cibuildwheel==v3.4.0
 
       - name: Build wheels with CUDA
-        uses: pypa/cibuildwheel@v3.3.0
+        uses: pypa/cibuildwheel@v3.4.0
         with:
           package-dir: python
         env:
-          DECORD_LOCAL_VERSION_SUFFIX: +cu131
+          DECORD_LOCAL_VERSION_SUFFIX: +cu132
           CIBW_BUILD: ${{ matrix.pybuilds }}
           CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32 pp*"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
@@ -174,10 +174,10 @@ jobs:
             # Install specific CUDA version and other build tools
             dnf -y module install nvidia-driver:open-dkms
             yum install -y \
-            cuda-compiler-13-1-13.1.0-1 \
-            cuda-libraries-13-1-13.1.0-1 \
-            cuda-libraries-devel-13-1-13.1.0-1 \
-            cuda-toolkit-13.1.0-1 \
+            cuda-compiler-13-2-13.2.0-1 \
+            cuda-libraries-13-2-13.2.0-1 \
+            cuda-libraries-devel-13-2-13.2.0-1 \
+            cuda-toolkit-13.2.0-1 \
             cudnn
             yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
             echo "--- Installing GCC Toolset 11 ---"
@@ -191,7 +191,7 @@ jobs:
             # We just need to call it with the full path for verification.
             echo "--- Verifying GCC and CUDA installation ---"
             gcc --version
-            /usr/local/cuda-13.1/bin/nvcc --version
+            /usr/local/cuda-13.2/bin/nvcc --version
           # BEFORE_BUILD runs for each python version.
           CIBW_BEFORE_BUILD_LINUX: |
             set -ex
@@ -207,23 +207,23 @@ jobs:
             cmake .. \
               -DUSE_CUDA=ON \
               -DCMAKE_BUILD_TYPE=Release \
-              -DCUDAToolkit_ROOT=/usr/local/cuda-13.1 \
+              -DCUDAToolkit_ROOT=/usr/local/cuda-13.2 \
               -DCMAKE_CUDA_ARCHITECTURES="${{ matrix.cuda_arch }}"
             echo "--- Building with make ---"
             make -j$(nproc)
             cp libdecord.so ..
           # Set environment variables for the build process inside the container
           CIBW_ENVIRONMENT_LINUX: >
-            DECORD_LOCAL_VERSION_SUFFIX=+cu131
-            PATH=/usr/local/cuda-13.1/bin:$PATH
-            LD_LIBRARY_PATH=/usr/local/cuda-13.1/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
+            DECORD_LOCAL_VERSION_SUFFIX=+cu132
+            PATH=/usr/local/cuda-13.2/bin:$PATH
+            LD_LIBRARY_PATH=/usr/local/cuda-13.2/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
             PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
-          CUDA_TAG: "cu131"
+          CUDA_TAG: "cu132"
 
       - name: Rename wheels for CUDA version
         shell: bash
         env:
-          CUDA_TAG: "cu131"
+          CUDA_TAG: "cu132"
           ARCH: ${{ matrix.arch }}
         run: |
           set -e
@@ -269,6 +269,9 @@ jobs:
           path: ./dist
           merge-multiple: true
 
+      - name: Remove CUDA wheels (not published to PyPI)
+        run: rm -f ./dist/*+cu*.whl
+
       - name: List downloaded files
         run: ls -R ./dist
 
@@ -276,3 +279,28 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           skip_existing: true
+
+  release:
+    name: Create GitHub Release
+    needs: [build_wheels, build_cuda_wheels]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          merge-multiple: true
+
+      - name: List release assets
+        run: ls -lh ./artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/*.whl
+            artifacts/*.tar.gz

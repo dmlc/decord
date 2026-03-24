@@ -3,7 +3,7 @@ import os
 # Base package version
 _BASE_VERSION = "3.0.0"
 
-# Optional PEP 440 local version segment, e.g. "+cu130" for CUDA wheels.
+# Optional PEP 440 local version segment, e.g. "+cu132" for CUDA wheels.
 # This is read at build time by setuptools (via pyproject dynamic version)
 # and at runtime when importing decord.version. CPU wheels should leave this
 # unset so versions remain plain (e.g., "3.0.0").

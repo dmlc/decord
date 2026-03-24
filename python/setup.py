@@ -43,7 +43,7 @@ def get_lib_path():
 
 LIBS, VERSION = get_lib_path()
 
-# Allow injecting a PEP 440 local version (e.g., "+cu130") at build time.
+# Allow injecting a PEP 440 local version (e.g., "+cu132") at build time.
 # This ensures the wheel filename and internal dist-info directory match,
 # avoiding PyPI upload errors when post-rename is attempted.
 local_suffix = os.environ.get("DECORD_LOCAL_VERSION_SUFFIX", "") or \
