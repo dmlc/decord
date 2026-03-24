@@ -1,13 +1,13 @@
 name: Auto-tag on version bump
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Build and Publish to PyPI", "C/C++ CI"]
+    types: [completed]
     branches: [master]
-    paths:
-      - "python/decord/_ffi/libinfo.py"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: true
 
 permissions:
@@ -16,12 +16,42 @@ permissions:
 jobs:
   tag:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
     steps:
-      - uses: actions/checkout@v6
+      - name: Check all required workflows passed
+        id: check
+        uses: actions/github-script@v7
         with:
+          script: |
+            const sha = context.payload.workflow_run.head_sha;
+            const required = ['Build and Publish to PyPI', 'C/C++ CI'];
+
+            const { data: { workflow_runs } } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head_sha: sha,
+              status: 'success',
+            });
+
+            const succeeded = new Set(workflow_runs.map(r => r.name));
+            const missing = required.filter(name => !succeeded.has(name));
+
+            if (missing.length > 0) {
+              core.info(`Still waiting on: ${missing.join(', ')}`);
+              return;
+            }
+
+            core.info('All required workflows passed');
+            core.setOutput('ready', 'true');
+
+      - uses: actions/checkout@v6
+        if: steps.check.outputs.ready == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2
 
       - name: Detect version change
+        if: steps.check.outputs.ready == 'true'
         id: version
         run: |
           CURRENT=$(grep -oP '(?<=__version__ = ")[^"]+' python/decord/_ffi/libinfo.py)
@@ -36,7 +66,7 @@ jobs:
           fi
 
       - name: Create tag
-        if: steps.version.outputs.changed == 'true'
+        if: steps.check.outputs.ready == 'true' && steps.version.outputs.changed == 'true'
         run: |
           TAG="v${{ steps.version.outputs.current }}"
           git tag "$TAG"
