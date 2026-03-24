@@ -8,24 +8,24 @@ import subprocess
 
 
 def get_platform():
+    """Return platform string matching PyAV-Org/pyav-ffmpeg release file naming."""
     system = platform.system()
     machine = platform.machine()
     if system == "Linux":
         if platform.libc_ver()[0] == "glibc":
-            return f"manylinux_{machine}"
+            return f"manylinux-{machine}"
         else:
-            return f"musllinux_{machine}"
+            return f"musllinux-{machine}"
     elif system == "Darwin":
         # cibuildwheel sets ARCHFLAGS:
         # https://github.com/pypa/cibuildwheel/blob/5255155bc57eb6224354356df648dc42e31a0028/cibuildwheel/macos.py#L207-L220
         if "ARCHFLAGS" in os.environ:
             machine = os.environ["ARCHFLAGS"].split()[1]
-        return f"macosx_{machine}"
+        return f"macos-{machine}"
     elif system == "Windows":
-        if struct.calcsize("P") * 8 == 64:
-            return "win_amd64"
-        else:
-            return "win32"
+        machine_map = {"AMD64": "x86_64", "ARM64": "aarch64"}
+        machine = machine_map.get(machine, machine)
+        return f"windows-{machine}"
     else:
         raise Exception(f"Unsupported system {system}")
 
@@ -55,7 +55,7 @@ if not os.path.exists(tarball_file):
     if not os.path.exists(args.cache_dir):
         os.mkdir(args.cache_dir)
     subprocess.check_call(
-        ["curl", "--location", "--output", tarball_file, "--silent", tarball_url]
+        ["curl", "--location", "--fail", "--output", tarball_file, "--silent", tarball_url]
     )
 
 # extract tarball
