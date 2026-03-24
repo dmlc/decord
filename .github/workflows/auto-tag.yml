@@ -6,6 +6,10 @@ on:
     paths:
       - "python/decord/_ffi/libinfo.py"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
