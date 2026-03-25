@@ -2,7 +2,7 @@ name: Auto-tag on version bump
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["CI", "Build and Publish to PyPI"]
     types: [completed]
     branches: [master]
 
@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   tag:
@@ -24,7 +25,7 @@ jobs:
         with:
           script: |
             const sha = context.payload.workflow_run.head_sha;
-            const required = ['CI'];
+            const required = ['CI', 'Build and Publish to PyPI'];
 
             const { data: { workflow_runs } } = await github.rest.actions.listWorkflowRunsForRepo({
               owner: context.repo.owner,
@@ -71,3 +72,15 @@ jobs:
           TAG="v${{ steps.version.outputs.current }}"
           git tag "$TAG"
           git push origin "$TAG"
+
+      - name: Trigger publish workflow
+        if: steps.check.outputs.ready == 'true' && steps.version.outputs.changed == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'pypi.yml',
+              ref: `v${{ steps.version.outputs.current }}`,
+            });
