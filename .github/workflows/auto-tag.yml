@@ -2,7 +2,7 @@ name: Auto-tag on version bump
 
 on:
   workflow_run:
-    workflows: ["Build and Publish to PyPI", "C/C++ CI"]
+    workflows: ["C/C++ CI"]
     types: [completed]
     branches: [master]
 
@@ -20,11 +20,11 @@ jobs:
     steps:
       - name: Check all required workflows passed
         id: check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const sha = context.payload.workflow_run.head_sha;
-            const required = ['Build and Publish to PyPI', 'C/C++ CI'];
+            const required = ['C/C++ CI'];
 
             const { data: { workflow_runs } } = await github.rest.actions.listWorkflowRunsForRepo({
               owner: context.repo.owner,

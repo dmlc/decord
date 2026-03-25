@@ -2,7 +2,6 @@ name: Build and Publish to PyPI
 
 on:
   push:
-    branches: [ master ]
     tags:
       - "v*"
   pull_request:
@@ -59,7 +58,7 @@ jobs:
           python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.0.json /tmp/vendor
       - name: Upload source package
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-source
           path: dist/*.tar.gz
@@ -105,7 +104,7 @@ jobs:
           CIBW_TEST_COMMAND: python -m pytest {project}/tests/python/unittests -v
           CIBW_TEST_REQUIRES: pytest numpy nose simpleaudio
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.id }}
           path: ./wheelhouse/*.whl
@@ -251,7 +250,7 @@ jobs:
           done
           echo "--- Renamed wheels ---"
           ls -1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.id }}
           path: ./wheelhouse/*.whl
@@ -268,7 +267,7 @@ jobs:
       id-token: write
     steps:
       - name: Download all wheels and sdist
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ./dist
           merge-multiple: true
@@ -286,14 +285,14 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [build_wheels, build_cuda_wheels]
+    needs: [publish, build_cuda_wheels]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ./artifacts
           merge-multiple: true
