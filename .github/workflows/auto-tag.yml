@@ -2,7 +2,7 @@ name: Auto-tag on version bump
 
 on:
   workflow_run:
-    workflows: ["C/C++ CI"]
+    workflows: ["CI"]
     types: [completed]
     branches: [master]
 
@@ -24,7 +24,7 @@ jobs:
         with:
           script: |
             const sha = context.payload.workflow_run.head_sha;
-            const required = ['C/C++ CI'];
+            const required = ['CI'];
 
             const { data: { workflow_runs } } = await github.rest.actions.listWorkflowRunsForRepo({
               owner: context.repo.owner,
