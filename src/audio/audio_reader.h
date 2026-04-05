@@ -32,6 +32,7 @@ namespace decord {
         void HandleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame);
         void DrainDecoder(AVCodecContext *pCodecContext, AVFrame *pFrame);
         void InitSWR(AVCodecContext *pCodecContext);
+        void FlushSWR();
         void ToNDArray();
         void SaveToVector(float** buffer, int numChannels, int numSamples);
 
