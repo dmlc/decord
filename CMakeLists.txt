@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.8.2)
+cmake_minimum_required(VERSION 3.8.2...3.30)
+cmake_policy(SET CMP0146 NEW)
+cmake_policy(SET CMP0104 NEW)
+
 project(decord C CXX)
 
 # Utility functions

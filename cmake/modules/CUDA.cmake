@@ -15,37 +15,94 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# CUDA Module
-find_cuda(${USE_CUDA})
+# Modern CUDA module for Decord (CMake >= 3.10)
 
-if(CUDA_FOUND)
-  # always set the includedir when cuda is available
-  # avoid global retrigger of cmake
-  include_directories(${CUDA_INCLUDE_DIRS})
-  add_definitions(-DDECORD_USE_CUDA)
-endif(CUDA_FOUND)
-
+# =========================
+# CUDA ENABLE
+# =========================
 if(USE_CUDA)
-  if(NOT CUDA_FOUND)
-    message(FATAL_ERROR "Cannot find CUDA, USE_CUDA=" ${USE_CUDA})
-  endif()
+
+  enable_language(CUDA)
+
+  # Usa il nuovo sistema CMake
+  find_package(CUDAToolkit REQUIRED)
+
+  set(CUDA_FOUND TRUE)
+
+  # Include dirs
+  set(CUDA_INCLUDE_DIRS ${CUDAToolkit_INCLUDE_DIRS})
+  include_directories(${CUDA_INCLUDE_DIRS})
+
+  # Definizione macro
+  add_definitions(-DDECORD_USE_CUDA)
+
+  # =========================
+  # LIBRERIE CUDA
+  # =========================
+
+  # Librerie moderne (target CMake)
+  set(CUDA_CUDART_LIBRARY CUDA::cudart)
+  set(CUDA_CUDA_LIBRARY CUDA::cuda_driver)
+  set(CUDA_NVRTC_LIBRARY CUDA::nvrtc)
+
+  # NVML (non sempre presente come target)
+  find_library(
+    CUDA_NVIDIA_ML_LIBRARY
+    NAMES nvidia-ml
+    PATHS
+      /usr/lib/x86_64-linux-gnu
+      /usr/local/cuda/lib64
+      /usr/local/cuda/targets/x86_64-linux/lib/stubs
+  )
+
+  # NVDEC (fondamentale per Decord)
+  find_library(
+    CUDA_NVCUVID_LIBRARY
+    NAMES nvcuvid
+    PATHS
+      /usr/lib/x86_64-linux-gnu
+      /usr/local/cuda/lib64
+      /usr/local/cuda/targets/x86_64-linux/lib
+  )
+
   if(NOT CUDA_NVCUVID_LIBRARY)
-    message(FATAL_ERROR "Cannot find libnvcuvid, you may need to manually register and download at https://developer.nvidia.com/nvidia-video-codec-sdk. Then copy libnvcuvid to cuda_toolkit_root/lib64/" )
+    message(FATAL_ERROR
+      "Cannot find libnvcuvid. Installa il Video Codec SDK oppure verifica:\n"
+      "/usr/lib/x86_64-linux-gnu/libnvcuvid.so"
+    )
   endif()
+
   message(STATUS "Build with CUDA support")
+
+  # =========================
+  # SORGENTI CUDA
+  # =========================
+
   file(GLOB RUNTIME_CUDA_SRCS src/runtime/cuda/*.cc)
   file(GLOB NVDEC_SRCS src/video/nvcodec/*.cc)
   file(GLOB NVDEC_CUDA_SRCS src/improc/*.cu)
 
-  list(APPEND DECORD_LINKER_LIBS ${CUDA_NVRTC_LIBRARY})
-  list(APPEND DECORD_RUNTIME_LINKER_LIBS ${CUDA_CUDART_LIBRARY})
-  list(APPEND DECORD_RUNTIME_LINKER_LIBS ${CUDA_CUDA_LIBRARY})
-  list(APPEND DECORD_RUNTIME_LINKER_LIBS ${CUDA_NVRTC_LIBRARY})
-  list(APPEND DECORD_RUNTIME_LINKER_LIBS ${CUDA_NVIDIA_ML_LIBRARY})
-  list(APPEND DECORD_RUNTIME_LINKER_LIBS ${CUDA_NVCUVID_LIBRARY})
+  # =========================
+  # LINKER
+  # =========================
 
-else(USE_CUDA)
+  list(APPEND DECORD_LINKER_LIBS ${CUDA_NVRTC_LIBRARY})
+
+  list(APPEND DECORD_RUNTIME_LINKER_LIBS
+    ${CUDA_CUDART_LIBRARY}
+    ${CUDA_CUDA_LIBRARY}
+    ${CUDA_NVRTC_LIBRARY}
+    ${CUDA_NVIDIA_ML_LIBRARY}
+    ${CUDA_NVCUVID_LIBRARY}
+  )
+
+else()
+
   message(STATUS "CUDA disabled, no nvdec capabilities will be enabled...")
+
+  set(CUDA_FOUND FALSE)
   set(NVDEC_SRCS "")
   set(RUNTIME_CUDA_SRCS "")
-endif(USE_CUDA)
+  set(NVDEC_CUDA_SRCS "")
+
+endif()

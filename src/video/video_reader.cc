@@ -145,7 +145,7 @@ VideoReader::~VideoReader(){
 
 void VideoReader::SetVideoStream(int stream_nb) {
     if (!fmt_ctx_) return;
-    AVCodec *dec;
+    const AVCodec *dec = nullptr;
     int st_nb = av_find_best_stream(fmt_ctx_.get(), AVMEDIA_TYPE_VIDEO, stream_nb, -1, &dec, 0);
     // LOG(INFO) << "find best stream: " << st_nb;
     CHECK_GE(st_nb, 0) << "ERROR cannot find video stream with wanted index: " << stream_nb;
@@ -547,19 +547,40 @@ double VideoReader::GetRotation() const {
     if (!fmt_ctx_) return 0.0;
     CHECK(actv_stm_idx_ >= 0);
     CHECK(static_cast<unsigned int>(actv_stm_idx_) < fmt_ctx_->nb_streams);
+
     AVStream *active_st = fmt_ctx_->streams[actv_stm_idx_];
     AVDictionaryEntry *rotate = av_dict_get(active_st->metadata, "rotate", NULL, 0);
 
     double theta = 0;
-    if (rotate && *rotate->value && strcmp(rotate->value, "0"))
-        theta = atof(rotate->value);
 
-    uint8_t* displaymatrix = av_stream_get_side_data(active_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
-    if (displaymatrix && !theta)
-        theta = -av_display_rotation_get((int32_t*) displaymatrix);
+    if (rotate && *rotate->value && strcmp(rotate->value, "0")) {
+        theta = atof(rotate->value);
+    }
+
+#if LIBAVFORMAT_VERSION_MAJOR >= 60
+    // NUOVA API FFmpeg (no deprecated)
+    const AVPacketSideData* sd = av_packet_side_data_get(
+        active_st->codecpar->coded_side_data,
+        active_st->codecpar->nb_coded_side_data,
+        AV_PKT_DATA_DISPLAYMATRIX);
+
+    if (sd && sd->data && sd->size >= 9 * sizeof(int32_t) && !theta) {
+        theta = -av_display_rotation_get(reinterpret_cast<int32_t*>(sd->data));
+    }
+
+#else
+    // Vecchia API (fallback)
+    size_t displaymatrix_size = 0;
+    uint8_t* displaymatrix = av_stream_get_side_data(
+        active_st, AV_PKT_DATA_DISPLAYMATRIX, &displaymatrix_size);
+
+    if (displaymatrix && displaymatrix_size >= 9 * sizeof(int32_t) && !theta) {
+        theta = -av_display_rotation_get(reinterpret_cast<int32_t*>(displaymatrix));
+    }
+#endif
 
     theta = std::fmod(theta, 360);
-    if(theta < 0) theta += 360;
+    if (theta < 0) theta += 360;
 
     return theta;
 }
