@@ -37,12 +37,20 @@ const char * GetVideoCodecString(cudaVideoCodec eCodec) {
     };
 
     if (eCodec >= 0 && eCodec <= cudaVideoCodec_NumCodecs) {
-        return aCodecName[eCodec].name;
+        if (static_cast<int>(eCodec) >= 0 &&
+            static_cast<size_t>(eCodec) < sizeof(aCodecName) / sizeof(aCodecName[0])) {
+            return aCodecName[eCodec].name;
+        }
+        return "Unknown";
     }
     for (size_t i = cudaVideoCodec_NumCodecs + 1; i < sizeof(aCodecName) / sizeof(aCodecName[0]); i++) {
         if (eCodec == aCodecName[i].eCodec) {
-            return aCodecName[eCodec].name;
-        }
+            if (static_cast<int>(eCodec) >= 0 &&
+                static_cast<size_t>(eCodec) < sizeof(aCodecName) / sizeof(aCodecName[0])) {
+                return aCodecName[eCodec].name;
+            }
+            return "Unknown";
+            }
     }
     return "Unknown";
 }
