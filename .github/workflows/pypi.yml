@@ -112,9 +112,13 @@ jobs:
           # FFmpeg ships MSVC import libs in C:/vendor/lib and DLLs in
           # C:/vendor/bin; -DFFMPEG_DIR points CMake at both. The built
           # decord.dll lands in build/Release where libinfo.find_lib_path looks.
+          # The os.utime call re-stamps the vendored FFmpeg DLLs: pyav-ffmpeg
+          # ships them with a 1970 mtime, and delvewheel's re-zip rejects
+          # timestamps before 1980 ("ZIP does not support timestamps before 1980").
           CIBW_BEFORE_BUILD_WINDOWS: >
             pip install delvewheel &&
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.1.json C:/vendor &&
+            python -c "import os,glob;[os.utime(f) for f in glob.glob('C:/vendor/bin/*.dll')]" &&
             cmake -S . -B build -G "Visual Studio 17 2022" -A x64
             -DUSE_CUDA=OFF -DCMAKE_BUILD_TYPE=Release -DFFMPEG_DIR=C:/vendor &&
             cmake --build build --config Release --parallel
@@ -382,6 +386,7 @@ jobs:
           CIBW_BEFORE_BUILD_WINDOWS: >
             pip install delvewheel &&
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.1.json C:/vendor &&
+            python -c "import os,glob;[os.utime(f) for f in glob.glob('C:/vendor/bin/*.dll')]" &&
             cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -T "cuda=%CUDA_PATH%"
             -DUSE_CUDA=ON -DCMAKE_BUILD_TYPE=Release -DFFMPEG_DIR=C:/vendor
             -DCMAKE_CUDA_ARCHITECTURES="${{ matrix.cuda_arch }}"
