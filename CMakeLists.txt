@@ -38,6 +38,14 @@ if(NOT USE_CUDA)
   list(FILTER DECORD_CORE_SRCS EXCLUDE REGEX "/runtime/cuda/")
 endif()
 
+# The VideoToolbox device API is macOS-only (it pulls in CoreFoundation and
+# uses C11 aligned_alloc, which MSVC does not provide). On Apple it is wired
+# up explicitly by VideoToolbox.cmake; keep its stub out of the core glob on
+# every other platform so Windows/Linux builds don't try to compile it.
+if(NOT APPLE)
+  list(FILTER DECORD_CORE_SRCS EXCLUDE REGEX "videotoolbox_device_api")
+endif()
+
 
 # ---------------------------------------------------------------------------
 # Library Target Definition

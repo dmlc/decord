@@ -35,9 +35,9 @@ make install
 
 # ffmpeg
 cd ~/ffmpeg_sources
-curl -O -L https://ffmpeg.org/releases/ffmpeg-8.0.tar.bz2
-tar xjf ffmpeg-8.0.tar.bz2
-cd ffmpeg-8.0
+curl -O -L https://ffmpeg.org/releases/ffmpeg-8.1.1.tar.bz2
+tar xjf ffmpeg-8.1.1.tar.bz2
+cd ffmpeg-8.1.1
 ./configure \
   --prefix="$HOME/ffmpeg_build" \
   --enable-shared \

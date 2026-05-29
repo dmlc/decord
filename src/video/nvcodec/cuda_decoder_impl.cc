@@ -36,7 +36,8 @@ const char * GetVideoCodecString(cudaVideoCodec eCodec) {
         { cudaVideoCodec_UYVY,     "UYVY 4:2:2"   },
     };
 
-    if (eCodec >= 0 && eCodec <= cudaVideoCodec_NumCodecs) {
+    if (static_cast<int>(eCodec) >= 0 &&
+        static_cast<size_t>(eCodec) < sizeof(aCodecName) / sizeof(aCodecName[0])) {
         return aCodecName[eCodec].name;
     }
     for (size_t i = cudaVideoCodec_NumCodecs + 1; i < sizeof(aCodecName) / sizeof(aCodecName[0]); i++) {
