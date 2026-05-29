@@ -122,8 +122,12 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig LDFLAGS=-headerpad_max_install_names
           # Bundle the FFmpeg DLLs (from C:/vendor/bin) into the wheel so it is
           # self-contained, just like auditwheel/delocate do on Linux/macOS.
+          # --analyze-existing is REQUIRED: decord ships its native library as a
+          # plain decord.dll loaded via ctypes (there is no .pyd extension), so
+          # without it delvewheel never walks decord.dll's imports and vendors
+          # nothing ("no external dependencies are needed").
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair --add-path C:/vendor/bin -w {dest_dir} {wheel}
+            delvewheel repair --analyze-existing --add-path C:/vendor/bin -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -m pytest {project}/tests/python/unittests -v
           CIBW_TEST_REQUIRES: pytest numpy nose simpleaudio
 
@@ -351,6 +355,11 @@ jobs:
             exit 1
           }
           Add-Content $env:GITHUB_ENV "CUDA_PATH=${cudaPath}"
+          # The MSBuild CUDA integration used by CMake's Visual Studio generator
+          # resolves the toolkit from the versioned CUDA_PATH_V<MAJ>_<MIN> env var
+          # (e.g. CUDA_PATH_V13_3), NOT from -DCUDAToolkit_ROOT. Export it too.
+          $cudaPathVar = "CUDA_PATH_V" + ($cudaMajMin -replace '\.', '_')
+          Add-Content $env:GITHUB_ENV "${cudaPathVar}=${cudaPath}"
           Add-Content $env:GITHUB_PATH "${cudaPath}\bin"
           & "${cudaPath}\bin\nvcc.exe" --version
 
@@ -373,7 +382,7 @@ jobs:
           CIBW_BEFORE_BUILD_WINDOWS: >
             pip install delvewheel &&
             python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.1.json C:/vendor &&
-            cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+            cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -T "cuda=%CUDA_PATH%"
             -DUSE_CUDA=ON -DCMAKE_BUILD_TYPE=Release -DFFMPEG_DIR=C:/vendor
             -DCMAKE_CUDA_ARCHITECTURES="${{ matrix.cuda_arch }}"
             -DCUDAToolkit_ROOT="%CUDA_PATH%" &&
@@ -382,7 +391,7 @@ jobs:
           # rely on the user's CUDA install/driver. CUDA bin is added to the
           # search path only so delvewheel can resolve (and then exclude) them.
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair --add-path "C:/vendor/bin;%CUDA_PATH%/bin"
+            delvewheel repair --analyze-existing --add-path "C:/vendor/bin;%CUDA_PATH%/bin"
             --exclude "cudart64_13.dll;nvrtc64_130_0.dll;nvrtc-builtins64_133.dll;cublas64_13.dll;cublasLt64_13.dll;nvml.dll;nvcuvid.dll;nvencodeapi64.dll"
             -w {dest_dir} {wheel}
 
