@@ -23,7 +23,7 @@ description = (
 
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
-        return platform.system() in ('Darwin', 'Linux')
+        return platform.system() in ('Darwin', 'Linux', 'Windows')
 
 CURRENT_DIR = os.path.dirname(__file__)
 

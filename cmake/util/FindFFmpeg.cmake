@@ -41,14 +41,17 @@ if (FFMPEG_DIR)
             ${FFMPEG_DIR}/lib/libswresample.so
     )
   else()
+    # Windows (MSVC). The PyAV-Org/pyav-ffmpeg Windows tarballs ship MSVC
+    # import libraries WITHOUT the "lib" prefix (e.g. avcodec.lib), with the
+    # matching DLLs under ${FFMPEG_DIR}/bin.
     set(FFMPEG_LIBRARIES
-            ${FFMPEG_DIR}/lib/libavformat.lib
-            ${FFMPEG_DIR}/lib/libavfilter.lib
-            ${FFMPEG_DIR}/lib/libavcodec.lib
-            ${FFMPEG_DIR}/lib/libavutil.lib
-            ${FFMPEG_DIR}/lib/libavdevice.lib
-            ${FFMPEG_DIR}/lib/libswscale.lib
-            ${FFMPEG_DIR}/lib/libswresample.lib
+            ${FFMPEG_DIR}/lib/avformat.lib
+            ${FFMPEG_DIR}/lib/avfilter.lib
+            ${FFMPEG_DIR}/lib/avcodec.lib
+            ${FFMPEG_DIR}/lib/avutil.lib
+            ${FFMPEG_DIR}/lib/avdevice.lib
+            ${FFMPEG_DIR}/lib/swscale.lib
+            ${FFMPEG_DIR}/lib/swresample.lib
     )
   endif()
 endif (FFMPEG_DIR)
