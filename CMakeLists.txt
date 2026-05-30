@@ -108,39 +108,34 @@ if(USE_CUDA)
   # 3. Add the CUDA compile definition
   target_compile_definitions(decord PRIVATE DECORD_USE_CUDA)
 
-  # 4. Link against the modern CUDAToolkit imported targets
-  # This is much more reliable than using old custom variables.
-  if (TARGET CUDAToolkit::cudart)
-    target_link_libraries(decord PRIVATE
-            CUDAToolkit::cudart
-            CUDAToolkit::nvrtc
-            CUDAToolkit::cublas
-            CUDAToolkit::nvml
-    )
+  # 4. Link against the modern CUDAToolkit imported targets.
+  target_link_libraries(decord PRIVATE
+          CUDA::cudart
+          CUDA::nvrtc
+          CUDA::cublas
+          CUDA::nvml
+  )
+
+  if(WIN32)
+    # The MSVC linker rejects unresolved symbols in a DLL, so the CUDA Driver
+    # API (cuInit / cuCtx* / cuModule* / cuLaunchKernel / cuMemset*) and NVDEC
+    # (cuvid*) import libraries must be linked explicitly. On Linux these stay
+    # undefined and resolve from the driver at load time (the long-standing
+    # behaviour) - linking the libcuda stub there would make auditwheel bundle
+    # it, so we deliberately add them only on Windows.
+    target_link_libraries(decord PRIVATE CUDA::cuda_driver)
+
     find_library(CUDA_NVCUVID_LIBRARY nvcuvid
+            HINTS
+            ${CUDAToolkit_LIBRARY_DIR}
             ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
             ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
-    find_library(CUDA_CUDNN_LIBRARY cudnn
-            ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
-            ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
-  else()
-    # fallback to the classic FindCUDA
-    find_package(CUDA REQUIRED)
-    find_library(CUDA_NVCUVID_LIBRARY nvcuvid
-            ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
-            ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
-    find_library(CUDA_NVCUVID_LIBRARY nvcuvid
-            ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
-            ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
-    find_library(CUDA_CUDNN_LIBRARY cudnn
-            ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
-            ${CUDA_TOOLKIT_ROOT_DIR}/lib/Win32)
-    target_link_libraries(decord PRIVATE
-            CUDA::cudart
-            CUDA::nvrtc
-            CUDA::cublas
-            CUDA::nvml
-    )
+    if(CUDA_NVCUVID_LIBRARY)
+      message(STATUS "Found nvcuvid: ${CUDA_NVCUVID_LIBRARY}")
+      target_link_libraries(decord PRIVATE ${CUDA_NVCUVID_LIBRARY})
+    else()
+      message(FATAL_ERROR "nvcuvid.lib not found; it is required to link NVDEC on Windows")
+    endif()
   endif()
 
 
