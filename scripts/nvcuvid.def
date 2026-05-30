@@ -1,0 +1,36 @@
+; Module-definition file for the NVDEC (nvcuvid) API.
+;
+; nvcuvid.lib is NOT shipped with the CUDA Toolkit on Windows (only with the
+; license-gated NVIDIA Video Codec SDK). The actual nvcuvid.dll is installed
+; with the NVIDIA display driver on end-user machines. To link decord's NVDEC
+; code on Windows we generate an *import* library from this .def at build time:
+;
+;     lib /def:scripts/nvcuvid.def /machine:x64 /out:nvcuvid.lib
+;
+; Only the symbols decord actually references need to be listed; they are all
+; genuine exports of nvcuvid.dll, so the load-time binding resolves against the
+; driver-provided DLL at runtime.
+LIBRARY nvcuvid
+EXPORTS
+cuvidCreateDecoder
+cuvidCreateVideoParser
+cuvidCreateVideoSource
+cuvidCreateVideoSourceW
+cuvidCtxLock
+cuvidCtxLockCreate
+cuvidCtxLockDestroy
+cuvidCtxUnlock
+cuvidDecodePicture
+cuvidDestroyDecoder
+cuvidDestroyVideoParser
+cuvidDestroyVideoSource
+cuvidGetDecoderCaps
+cuvidGetSourceAudioFormat
+cuvidGetSourceVideoFormat
+cuvidGetVideoSourceState
+cuvidMapVideoFrame
+cuvidMapVideoFrame64
+cuvidParseVideoData
+cuvidSetVideoSourceState
+cuvidUnmapVideoFrame
+cuvidUnmapVideoFrame64

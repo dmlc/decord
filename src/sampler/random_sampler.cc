@@ -7,6 +7,7 @@
 #include "random_sampler.h"
 
 #include <algorithm>
+#include <random>
 
 #include <dmlc/logging.h>
 
@@ -48,7 +49,8 @@ RandomSampler::RandomSampler(std::vector<int64_t> lens, std::vector<int64_t> ran
 
 void RandomSampler::Reset() {
     // shuffle orders
-    std::random_shuffle(visit_order_.begin(), visit_order_.end());
+    std::mt19937 rng(std::random_device{}());
+    std::shuffle(visit_order_.begin(), visit_order_.end(), rng);
     // reset visit idx
     curr_ = 0;
 }

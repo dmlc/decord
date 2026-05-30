@@ -1,4 +1,4 @@
-name: Publish to PYPI
+name: Build and Publish to PyPI
 
 on:
   push:
@@ -7,231 +7,484 @@ on:
       - "v*"
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  manylinux:
-    runs-on: ubuntu-18.04
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.6
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install twine nose
-    - name: Setup.py hack
-      run: |
-        echo "[install]" > python/setup.cfg
-        echo "install_lib=" >> python/setup.cfg
-    - name: Build manylinux Python wheels
-      uses: zhreshold/python-wheels-manylinux-build@v0.0.1
-      with:
-        python-versions: 'cp36-cp36m'
-        build-requirements: 'numpy'
-        pre-build-command: 'sh ../tools/build_manylinux2010.sh'
-        package-path: 'python'
-        pip-wheel-args: '-w ./dist --no-deps'
-    - name: Sanity test
-      run: |
-        pwd
-        ls ./python/dist/
-        sudo rm ./python/dist/decord-*-linux_x86_64.whl
-        which python
-        which pip
-        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'numpy/*' | true" \;
-        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "zip --delete '{}' 'pip/*' | true" \;
-        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "unzip '{}' -d ./decord-cwd" \;
-        ls
-        cd ./decord-cwd
-        ls -la
-        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "echo decord > '{}'/top_level.txt" \;
-        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^numpy/d' '{}'/RECORD" \;
-        sudo -H find . -type d -iname "decord-*.dist-info" -exec sh -c "sed -i '/^pip/d' '{}'/RECORD" \;
-        cd ..
-        sudo -H find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "rm '{}' && cd decord-cwd && zip -r ../'{}' ./*" \;
-        find ./python/dist/ -type f -iname "decord*manylinux2010_x86_64.whl" -exec sh -c "which python && python -m pip install '{}' --force-reinstall" \;
-        python -c "import decord; print(decord.__version__)"
-        python -m nose -v ./tests/python/unittests/test_video_reader.py
-    - name: Rename wheel
-      run: |
-        cd ./python
-        ls -la ./dist
-        sudo chmod 755 -R ./dist
-        ls -la ./dist/
-        cd dist
-        sudo find . -type f -iname "decord*.whl" -exec bash -c 'mv $1 ${1/\cp36-cp36m/py3-none}' -- {} \;
-        ls -lh .
-    - name: Store the source distribution
-      uses: actions/upload-artifact@v2
-      with:
-        name: python-package-distributions
-        path: python/dist/*.whl
-        retention-days: 14
-        if-no-files-found: error
-  macos:
-    runs-on: macos-latest
+  build_wheels:
+    name: Build CPU wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8]
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install twine nose wheel
-    - name: Setup cmake
-      uses: jwlawson/actions-setup-cmake@v1.4
-      with:
-        cmake-version: '3.16.x'
-    - name: Setup.py hack
-      run: |
-        echo "[install]" > python/setup.cfg
-        echo "install_lib=" >> python/setup.cfg
-    - name: Build deps and library
-      run: |
-        sudo chmod +x tools/build_macos_10_9.sh
-        tools/build_macos_10_9.sh || { echo "Build command failed."; exit 1; }
-    - name: Build wheel
-      run: |
-        cd python
-        python setup.py bdist_wheel
-        find ./dist/ -type f -iname "decord*.whl" -exec sh -c 'mv $0 ${0/\10_14/10_9}' {} \;
-    - name: Fix wheel by delocate
-      run: |
-        FFMPEG_DIR="$HOME"/ffmpeg_build
-        python -m pip install delocate
-        ls -lh ./python/dist/*.whl
-        find ./python/dist/ -type f -iname "decord*.whl" -exec sh -c "delocate-listdeps '{}'" \;
-        mkdir -p ./python/dist/fixed_wheel
-        cd ./python/dist/
-        cp "$FFMPEG_DIR"/lib/libvpx*.dylib .
-        find . -type f -iname "decord*.whl" -exec sh -c "delocate-wheel -w fixed_wheel -v '{}'" \;
-        ls -lh ./fixed_wheel
-    - name: Sanity Test
-      run: |
-        ls ./python/dist/fixed_wheel
-        find ./python/dist/fixed_wheel -type f -iname "decord*.whl" -exec sh -c "python -m pip install '{}'" \;
-        python -m nose -v ./tests/python/unittests/test_video_reader.py
-    - name: Store the source distribution
-      uses: actions/upload-artifact@v2
-      with:
-        name: python-package-distributions
-        path: python/dist/fixed_wheel/*.whl
-        retention-days: 14
-        if-no-files-found: error
-  windows:
-    runs-on: windows-2016
+        include:
+          - os: ubuntu-latest
+            pybuilds: cp3{10,11,12,13,14,14t}-manylinux_x86_64
+            arch: x86_64
+            id: linux_x86_64
+          - os: ubuntu-24.04-arm
+            pybuilds: cp3{10,11,12,13,14,14t}-manylinux_aarch64
+            arch: aarch64
+            id: linux_aarch64
+          - os: macos-latest
+            pybuilds: cp3{10,11,12,13,14,14t}-macosx_arm64
+            arch: arm64
+            id: macos_arm64
+          - os: windows-2022
+            pybuilds: cp3{10,11,12,13,14,14t}-win_amd64
+            arch: AMD64
+            id: windows_x86_64
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - uses: actions/setup-python@v2
-      with:
-        python-version: '3.6'
-        architecture: 'x64'
-    - name: Download ffmpeg libs
-      run: |
-        curl -O -L https://github.com/zhreshold/decord-distro/files/5314603/ffmpeg-4.2.1-win64-dev.zip
-        curl -O -L https://github.com/vmlankub/CloudFiles/raw/5ec06ef8b7568cc3b84d310ef146c63c5e693b54/ffmpeg/ffmpeg-4.2.1-win64-shared.zip
-    - name: Extract ffmpeg libs
-      shell: powershell
-      run: Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-dev.zip -DestinationPath d:\ ; Expand-Archive -LiteralPath ffmpeg-4.2.1-win64-shared.zip -DestinationPath d:\
-    - name: Configure
-      run: |
-        dir d:/ffmpeg-4.2.1-win64-dev/lib
-        dir d:/ffmpeg-4.2.1-win64-dev/include
-        cmake --version
-        mkdir build && cd build
-        cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_CXX_FLAGS="/DDECORD_EXPORTS" -DCMAKE_CONFIGURATION_TYPES="Release" -DFFMPEG_INCLUDE_DIR="d:/ffmpeg-4.2.1-win64-dev/include" -DFFMPEG_LIBRARIES="d:/ffmpeg-4.2.1-win64-dev/lib/*.lib" ..
-    - name: Build
-      run: |
-        cmake --build build --config Release
-    - name: Build wheel
-      run: |
-        python -m pip install pip --upgrade
-        python -m pip install wheel nose twine
-        cd python && python setup.py bdist_wheel
-        dir ./dist/
-    - name: Fix wheel deps
-      shell: cmd
-      run: |
-        FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\decord*`) DO (SET wheel_name=%%F)
-        echo wheel_name=%wheel_name%
-        cd python\dist
-        7z x "%wheel_name%" -ofixed_wheel
-        dir fixed_wheel
-        xcopy /Y d:\ffmpeg-4.2.1-win64-shared\bin\*.dll fixed_wheel\decord
-        copy c:\windows\system32\MSVCP140.dll fixed_wheel\decord
-        copy c:\windows\system32\VCRUNTIME140.dll fixed_wheel\decord
-        dir fixed_wheel\decord
-    - name: Recreate wheel
-      shell: powershell
-      run: |
-        cd python\dist
-        mkdir output
-        $wheel_path = Get-ChildItem *.whl
-        $wheel_name = $wheel_path.BaseName
-        7z a -tzip "output/${wheel_name}.whl" .\fixed_wheel\*
-        cd output
-        Get-ChildItem *.whl  |Rename-Item -NewName {$_.name -replace 'py3-none-any','py3-none-win_amd64'}
-        dir .
-    - name: Sanity test
-      shell: cmd
-      run: |
-        FOR /F "tokens=* USEBACKQ" %%F IN (`dir /b /a-d python\dist\output\decord*`) DO (SET wheel_name=%%F)
-        echo wheel_name=%wheel_name%
-        cd python\dist\output
-        python -m pip install --force-reinstall --no-cache-dir %wheel_name%
-        python -m nose -v ../../../tests/python/unittests/test_video_reader.py
-    - name: Store the source distribution
-      uses: actions/upload-artifact@v2
-      with:
-        name: python-package-distributions
-        path: python/dist/output/*.whl
-        retention-days: 14
-        if-no-files-found: error
-  deploy:
-    name: Publish to (Test)PyPI
-    needs:
-    - manylinux
-    - macos
-    - windows
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          
+      - name: Free up disk space
+        if: ${{ runner.os == 'Linux' }}
+        # https://github.com/easimon/maximize-build-space/blob/master/action.yml
+        # https://github.com/easimon/maximize-build-space/tree/test-report
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Build source package
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          pip install -U build cython setuptools
+          python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.1.json /tmp/vendor
+      - name: Upload source package
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-source
+          path: dist/*.tar.gz
+
+      - name: Install cibuildwheel and dependencies
+        run: |
+          python -m pip install --upgrade pip pytest cibuildwheel==v3.4.1
+
+      - name: Set Minimum MacOS Target
+        if: runner.os == 'macOS'
+        run: |
+          echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.4.1
+        with:
+          package-dir: python
+        env:
+          CIBW_ARCHS_MACOS: ${{ matrix.arch }}
+          CIBW_ARCHS_WINDOWS: AMD64
+          OMPL_BUILD_ARCH: ${{ matrix.arch }}
+          CIBW_BUILD: ${{ matrix.pybuilds }}
+          CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32"
+          # GH runners have no audio/display; simpleaudio + ALSA tests don't run on Windows.
+          CIBW_TEST_SKIP: "cp311-* cp312-* cp313-* *-win_amd64"
+          CIBW_BEFORE_BUILD_LINUX: |
+            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.1.json /tmp/vendor
+            yum install -y epel-release
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel openssl-devel compat-openssl10
+            rm -f /tmp/vendor/lib/libsoxr.so*
+            mkdir build
+            cd build
+            cmake .. -DUSE_CUDA=OFF -DCMAKE_BUILD_TYPE=Release
+            make -j$(nproc)
+            cp libdecord.so ..
+          CIBW_BEFORE_BUILD_MACOS: |
+            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.1.json /tmp/vendor
+            brew install cmake
+            mkdir build
+            cd build
+            cmake .. -DUSE_CUDA=OFF -DCMAKE_BUILD_TYPE=Release
+            make -j$(sysctl -n hw.ncpu)
+            cp libdecord.dylib ..
+          # Windows runs BEFORE_BUILD in cmd.exe: every command must be one
+          # logical line joined with `&&` (newlines are dropped). The vendored
+          # FFmpeg ships MSVC import libs in C:/vendor/lib and DLLs in
+          # C:/vendor/bin; -DFFMPEG_DIR points CMake at both. The built
+          # decord.dll lands in build/Release where libinfo.find_lib_path looks.
+          # The os.utime call re-stamps the vendored FFmpeg DLLs: pyav-ffmpeg
+          # ships them with a 1970 mtime, and delvewheel's re-zip rejects
+          # timestamps before 1980 ("ZIP does not support timestamps before 1980").
+          CIBW_BEFORE_BUILD_WINDOWS: >
+            pip install delvewheel &&
+            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.1.json C:/vendor &&
+            python -c "import os,glob;[os.utime(f) for f in glob.glob('C:/vendor/bin/*.dll')]" &&
+            cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+            -DUSE_CUDA=OFF -DCMAKE_BUILD_TYPE=Release -DFFMPEG_DIR=C:/vendor &&
+            cmake --build build --config Release --parallel
+          CIBW_ENVIRONMENT_LINUX: LD_LIBRARY_PATH=/tmp/vendor/lib:$LD_LIBRARY_PATH PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
+          CIBW_ENVIRONMENT_MACOS: PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig LDFLAGS=-headerpad_max_install_names
+          # Bundle the FFmpeg DLLs (from C:/vendor/bin) into the wheel so it is
+          # self-contained, just like auditwheel/delocate do on Linux/macOS.
+          # --analyze-existing is REQUIRED: decord ships its native library as a
+          # plain decord.dll loaded via ctypes (there is no .pyd extension), so
+          # without it delvewheel never walks decord.dll's imports and vendors
+          # nothing ("no external dependencies are needed").
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
+            delvewheel repair --analyze-existing --add-path C:/vendor/bin -w {dest_dir} {wheel}
+          CIBW_TEST_COMMAND: python -m pytest {project}/tests/python/unittests -v
+          CIBW_TEST_REQUIRES: pytest numpy nose simpleaudio
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.id }}
+          path: ./wheelhouse/*.whl
+
+  build_cuda_wheels:
+    name: Build CUDA wheels on ${{ matrix.os }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            pybuilds: "cp3{10,11,12,13,14,14t}-manylinux_x86_64"
+            cuda_arch: "80;90;100;110;120"
+            id: linux_x86_64_cuda
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            pybuilds: "cp3{10,11,12,13,14,14t}-manylinux_aarch64"
+            cuda_arch: "80;90;100;110;120"
+            id: linux_aarch64_cuda
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==v3.4.1
+
+      - name: Build wheels with CUDA
+        uses: pypa/cibuildwheel@v3.4.1
+        with:
+          package-dir: python
+        env:
+          DECORD_LOCAL_VERSION_SUFFIX: +cu133
+          CIBW_BUILD: ${{ matrix.pybuilds }}
+          CIBW_SKIP: "cp*-manylinux_i686 cp*-musllinux* cp*-win32"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_TEST_SKIP: "*"
+          # Keep the CUDA wheels compact WITHOUT losing GPU acceleration:
+          # bundle FFmpeg (like the CPU wheels) but leave the CUDA runtime +
+          # driver libraries EXTERNAL, mirroring the Windows policy. By default
+          # auditwheel vendors libcudart/libnvrtc/libcublas(Lt)/cuDNN into every
+          # wheel (~500 MB); excluding them drops the wheel to ~30 MB. NVDEC
+          # still works because GPU users already provide CUDA at runtime (a
+          # system CUDA install, the nvidia-*-cu13 pip packages, or a framework
+          # such as PyTorch). The driver libs (libcuda/libnvcuvid/libnvidia-ml)
+          # are never bundleable anyway. auditwheel still retags to manylinux.
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            auditwheel repair
+            --exclude 'libcuda.so*' --exclude 'libcudart.so*'
+            --exclude 'libnvrtc.so*' --exclude 'libnvrtc-builtins.so*'
+            --exclude 'libnvJitLink.so*'
+            --exclude 'libcublas.so*' --exclude 'libcublasLt.so*'
+            --exclude 'libnvcuvid.so*' --exclude 'libnvidia-ml.so*'
+            --exclude 'libcudnn*.so*'
+            -w {dest_dir} {wheel}
+          # BEFORE_ALL runs once per container.
+          CIBW_BEFORE_ALL_LINUX: |
+            set -ex
+            # First, install the tool needed to add repositories
+            yum install -y dnf-utils
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
+
+            # Detect architecture and add the correct NVIDIA CUDA repo for RHEL 8-based manylinux
+            ARCH=$(uname -m)
+            if [ "$ARCH" == "x86_64" ]; then
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+            elif [ "$ARCH" == "aarch64" ]; then
+              REPO_URL=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/sbsa/cuda-rhel8.repo
+            else
+              echo "Unsupported architecture: $ARCH"
+              exit 1
+            fi
+
+            echo "--- Adding CUDA repo for $ARCH ---"
+            yum-config-manager --add-repo ${REPO_URL}
+            yum clean all
+
+            echo "--- Installing CUDA Toolkit and build dependencies ---"
+            # Install specific CUDA version and other build tools
+            dnf -y module install nvidia-driver:open-dkms
+            yum install -y \
+            cuda-compiler-13-3-13.3.0-1 \
+            cuda-libraries-13-3-13.3.0-1 \
+            cuda-libraries-devel-13-3-13.3.0-1 \
+            cuda-toolkit-13.3.0-1 \
+            cudnn
+            yum install -y cmake make gcc gcc-c++ pkgconfig libbsd-devel soxr-devel alsa-lib-devel compat-openssl10
+            echo "--- Installing GCC Toolset 11 ---"
+            yum install -y gcc-toolset-11
+
+            # Enable the GCC 11 toolset for the rest of this script
+            source /opt/rh/gcc-toolset-11/enable
+
+            echo "--- Verifying CUDA installation ---"
+            # The 'export' is not needed here as the CIBW_ENVIRONMENT_LINUX var will set the path later.
+            # We just need to call it with the full path for verification.
+            echo "--- Verifying GCC and CUDA installation ---"
+            gcc --version
+            /usr/local/cuda-13.3/bin/nvcc --version
+          # BEFORE_BUILD runs for each python version.
+          CIBW_BEFORE_BUILD_LINUX: |
+            set -ex
+            echo "--- Installing GCC Toolset 11 ---"
+            yum install -y gcc-toolset-11
+            source /opt/rh/gcc-toolset-11/enable
+            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.1.json /tmp/vendor
+            rm -f /tmp/vendor/lib/libsoxr.so*
+
+            # Use a fresh build directory for each Python version to prevent contamination.
+            mkdir -p build && cd build
+            echo "--- Running CMake with CUDA support ---"
+            cmake .. \
+              -DUSE_CUDA=ON \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCUDAToolkit_ROOT=/usr/local/cuda-13.3 \
+              -DCMAKE_CUDA_ARCHITECTURES="${{ matrix.cuda_arch }}"
+            echo "--- Building with make ---"
+            make -j$(nproc)
+            cp libdecord.so ..
+          # Set environment variables for the build process inside the container
+          CIBW_ENVIRONMENT_LINUX: >
+            DECORD_LOCAL_VERSION_SUFFIX=+cu133
+            PATH=/usr/local/cuda-13.3/bin:$PATH
+            LD_LIBRARY_PATH=/usr/local/cuda-13.3/lib64:/tmp/vendor/lib:$LD_LIBRARY_PATH
+            PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
+          CUDA_TAG: "cu133"
+
+      - name: Rename wheels for CUDA version
+        shell: bash
+        env:
+          CUDA_TAG: "cu133"
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -e
+          cd ./wheelhouse
+          echo "--- Original wheels ---"
+          ls -1
+          echo "--- Renaming wheels for CUDA version ${CUDA_TAG} ---"
+          for wheel in ./*.whl; do
+              [[ -e "$wheel" ]] || continue
+              base=$(basename "$wheel")
+              if [[ "$base" == *"+${CUDA_TAG}"* ]]; then
+                  echo "Wheel '$base' already tagged with '+${CUDA_TAG}', skipping rename."
+                  continue
+              fi
+              version=$(echo "$base" | grep -oP '(?<=decord2-)[^-]+')
+              pyver=$(echo "$base" | grep -oP 'cp3[0-9]+-cp3[0-9]+')
+              platform_tag="manylinux_2_28_${ARCH}"
+              new_name="decord2-${version}+${CUDA_TAG}-${pyver}-${platform_tag}.whl"
+              echo "Renaming '$base' → '$new_name'"
+              mv "$wheel" "$new_name"
+          done
+          echo "--- Renamed wheels ---"
+          ls -1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.id }}
+          path: ./wheelhouse/*.whl
+
+  build_cuda_wheels_windows:
+    name: Build CUDA wheels on ${{ matrix.os }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            arch: x86_64
+            pybuilds: "cp3{10,11,12,13,14,14t}-win_amd64"
+            cuda: "13.3.0"
+            cuda_arch: "80;90;100;110;120"
+            id: windows_x86_64_cuda
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      # Install the CUDA Toolkit on the host with NVIDIA's LOCAL installer
+      # (mirrors PyTorch's own Windows CI): download the self-extracting .exe,
+      # unpack it with the preinstalled 7-Zip, then run setup.exe -s. The
+      # network installer is brittle with custom component lists, and the
+      # Jimver action hard-codes a version list that lags new CUDA releases.
+      # CUDA 13.x default install (no component list) brings nvcc, cudart,
+      # cublas, nvrtc, nvml and the nvcuvid/nvenc stubs; it no longer bundles
+      # the GPU driver.
+      - name: Install CUDA on host (Windows)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $cudaVer = "${{ matrix.cuda }}"
+          $cudaMajMin = ($cudaVer.Split('.')[0..1] -join '.')
+          $installerName = "cuda_${cudaVer}_windows.exe"
+          $url = "https://developer.download.nvidia.com/compute/cuda/${cudaVer}/local_installers/${installerName}"
+          $installer = "$env:RUNNER_TEMP\$installerName"
+          Write-Host "Downloading $url"
+          Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+
+          $extractDir = "$env:RUNNER_TEMP\cuda_extract"
+          Write-Host "Extracting $installer -> $extractDir"
+          & "C:\Program Files\7-Zip\7z.exe" x $installer "-o$extractDir" -y | Out-Null
+          $setupExe = Join-Path $extractDir "setup.exe"
+          if (-not (Test-Path $setupExe)) {
+            Write-Host "ERROR: setup.exe not found after 7z extract"
+            Get-ChildItem $extractDir | Select-Object -First 30
+            exit 1
+          }
+
+          $logDir = Join-Path $extractDir "cuda_install_logs"
+          Write-Host "Running: setup.exe -s"
+          $proc = Start-Process -FilePath $setupExe -ArgumentList @("-s", "-loglevel:6", "-log:$logDir") -Wait -PassThru -NoNewWindow
+          if ($proc.ExitCode -ne 0) {
+            Write-Host "setup.exe exit code: $($proc.ExitCode)"
+            Get-ChildItem $logDir -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Host "=== $($_.FullName) ==="
+              Get-Content $_.FullName -Tail 200 -ErrorAction SilentlyContinue
+            }
+            exit 1
+          }
+
+          $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${cudaMajMin}"
+          if (-not (Test-Path "${cudaPath}\bin\nvcc.exe")) {
+            Write-Host "ERROR: nvcc.exe missing at ${cudaPath}\bin"
+            Get-ChildItem "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\" -ErrorAction SilentlyContinue
+            exit 1
+          }
+          Add-Content $env:GITHUB_ENV "CUDA_PATH=${cudaPath}"
+          # The MSBuild CUDA integration used by CMake's Visual Studio generator
+          # resolves the toolkit from the versioned CUDA_PATH_V<MAJ>_<MIN> env var
+          # (e.g. CUDA_PATH_V13_3), NOT from -DCUDAToolkit_ROOT. Export it too.
+          $cudaPathVar = "CUDA_PATH_V" + ($cudaMajMin -replace '\.', '_')
+          Add-Content $env:GITHUB_ENV "${cudaPathVar}=${cudaPath}"
+          Add-Content $env:GITHUB_PATH "${cudaPath}\bin"
+          & "${cudaPath}\bin\nvcc.exe" --version
+
+      # Put the MSVC toolchain (notably lib.exe) on PATH so BEFORE_BUILD can
+      # synthesize the nvcuvid import library from scripts/nvcuvid.def.
+      - name: Set up MSVC dev environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==v3.4.1
+
+      - name: Build wheels with CUDA
+        uses: pypa/cibuildwheel@v3.4.1
+        with:
+          package-dir: python
+        env:
+          CIBW_BUILD: ${{ matrix.pybuilds }}
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_SKIP: "cp*-win32"
+          CIBW_TEST_SKIP: "*"
+          # Bake +cu133 into the wheel version so the filename/metadata match.
+          CIBW_ENVIRONMENT_WINDOWS: DECORD_LOCAL_VERSION_SUFFIX=+cu133
+          # Windows BEFORE_BUILD runs in cmd.exe: one logical line joined by
+          # `&&` (%CUDA_PATH% is set on the host by the install step above).
+          # nvcuvid.lib is not in the CUDA toolkit, so we synthesize an import
+          # library from scripts/nvcuvid.def with lib.exe (the matching
+          # nvcuvid.dll is provided by the driver at runtime) and point CMake at
+          # it via -DCUDA_NVCUVID_LIBRARY.
+          CIBW_BEFORE_BUILD_WINDOWS: >
+            pip install delvewheel &&
+            python scripts/fetch-vendor.py --config-file scripts/ffmpeg-8.1.json C:/vendor &&
+            python -c "import os,glob;[os.utime(f) for f in glob.glob('C:/vendor/bin/*.dll')]" &&
+            lib /def:scripts\nvcuvid.def /machine:x64 /out:C:\vendor\lib\nvcuvid.lib &&
+            cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -T "cuda=%CUDA_PATH%"
+            -DUSE_CUDA=ON -DCMAKE_BUILD_TYPE=Release -DFFMPEG_DIR=C:/vendor
+            -DCMAKE_CUDA_ARCHITECTURES="${{ matrix.cuda_arch }}"
+            -DCUDAToolkit_ROOT="%CUDA_PATH%"
+            -DCUDA_NVCUVID_LIBRARY=C:/vendor/lib/nvcuvid.lib &&
+            cmake --build build --config Release --parallel
+          # Bundle the FFmpeg DLLs but keep the CUDA runtime EXTERNAL: GPU wheels
+          # rely on the user's CUDA install/driver. CUDA bin is added to the
+          # search path only so delvewheel can resolve (and then exclude) them.
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
+            delvewheel repair --analyze-existing --add-path "C:/vendor/bin;%CUDA_PATH%/bin"
+            --exclude "nvcuda.dll;cudart64_13.dll;nvrtc64_130_0.dll;nvrtc-builtins64_133.dll;cublas64_13.dll;cublasLt64_13.dll;nvml.dll;nvcuvid.dll;nvencodeapi64.dll"
+            -w {dest_dir} {wheel}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.id }}
+          path: ./wheelhouse/*.whl
+
+  publish:
+    name: Publish to PyPI
+    needs: [build_wheels]
     runs-on: ubuntu-latest
-
+    if: startsWith(github.ref, 'refs/tags/')
+    environment:
+      name: release
+      url: https://pypi.org/p/decord2
+    permissions:
+      id-token: write
     steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v2
-      with:
-        name: python-package-distributions
-        path: dist/
-    - name: List artifects
-      run: |
-        ls -lh dist/
-    - name: Publish package to TestPyPI
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        user: __token__
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        repository_url: https://test.pypi.org/legacy/
-        packages_dir: dist/
-        skip_existing: true
-    - name: Publish package to PyPI
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        packages_dir: dist/
-        skip_existing: true
+      - name: Download all wheels and sdist
+        uses: actions/download-artifact@v7
+        with:
+          path: ./dist
+          merge-multiple: true
+
+      - name: Remove CUDA wheels (not published to PyPI)
+        run: rm -f ./dist/*+cu*.whl
+
+      - name: List downloaded files
+        run: ls -R ./dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip_existing: true
+
+  release:
+    name: Create GitHub Release
+    needs: [publish, build_cuda_wheels, build_cuda_wheels_windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: ./artifacts
+          merge-multiple: true
+
+      - name: List release assets
+        run: ls -lh ./artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/*.whl
+            artifacts/*.tar.gz

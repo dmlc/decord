@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys, os, platform, sysconfig
 import shutil
+import subprocess
 import glob
 
 from setuptools import find_packages
@@ -15,15 +16,20 @@ else:
     from setuptools import setup
     from setuptools.extension import Extension
 
+description = (
+    "Decord2 is a high-performance, efficient video decoding and loading library for deep learning research, "
+    "featuring smart shuffling, random frame access, GPU acceleration, and seamless integration with popular frameworks."
+)
+
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
-        return platform.system() in ('Darwin', 'Linux')
+        return platform.system() in ('Darwin', 'Linux', 'Windows')
 
 CURRENT_DIR = os.path.dirname(__file__)
 
 def get_lib_path():
     """Get library path, name and version"""
-     # We can not import `libinfo.py` in setup.py directly since __init__.py
+    # We can not import `libinfo.py` in setup.py directly since __init__.py
     # Will be invoked which introduces dependencies
     libinfo_py = os.path.join(CURRENT_DIR, './decord/_ffi/libinfo.py')
     libinfo = {'__file__': libinfo_py}
@@ -36,6 +42,17 @@ def get_lib_path():
     return libs, version
 
 LIBS, VERSION = get_lib_path()
+
+# Allow injecting a PEP 440 local version (e.g., "+cu132") at build time.
+# This ensures the wheel filename and internal dist-info directory match,
+# avoiding PyPI upload errors when post-rename is attempted.
+local_suffix = os.environ.get("DECORD_LOCAL_VERSION_SUFFIX", "") or \
+               os.environ.get("LOCAL_VERSION_SUFFIX", "")
+if local_suffix:
+    normalized = local_suffix.strip().lstrip("+").lower()
+    # PEP 440: local version segments are lowercase, '.'-separated
+    normalized = normalized.replace("-", ".").replace("_", ".")
+    VERSION = f"{VERSION}+{normalized}"
 
 include_libs = False
 wheel_include_libs = False
@@ -63,25 +80,31 @@ if include_libs:
     rpath = [os.path.relpath(path, CURRENT_DIR) for path in LIBS]
     setup_kwargs = {
         "include_package_data": True,
-        "data_files": [('decord', rpath)]
+        "data_files": [('decord', ['libdecord.dylib'])]
     }
 
 setup(
-    name='decord',
+    name='decord2',
     version=VERSION,
-    description='Decord Video Loader',
+    description=description,
     zip_safe=False,
     maintainer='Decord committers',
-    maintainer_email='cheungchih@gmail.com',
+    maintainer_email='johnnynunez@ub.edu',
     packages=find_packages(),
+    python_requires='>=3.9.0',
     install_requires=[
-        'numpy>=1.14.0',
+        'numpy>=1.26.4',
     ],
-    url='https://github.com/dmlc/decord',
+    url='https://github.com/johnnynunez/decord2',
     distclass=BinaryDistribution,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
         'License :: OSI Approved :: Apache Software License',
     ],
     license='APACHE',

@@ -10,6 +10,9 @@
 #if DECORD_USE_CUDA
 #include "nvcodec/cuda_threaded_decoder.h"
 #endif
+#if defined(__APPLE__) && defined(DECORD_USE_VIDEOTOOLBOX)
+#include "videotoolbox/videotoolbox_threaded_decoder.h"
+#endif
 #include <algorithm>
 #include <decord/runtime/ndarray.h>
 #include <decord/runtime/c_runtime_api.h>
@@ -145,7 +148,7 @@ VideoReader::~VideoReader(){
 
 void VideoReader::SetVideoStream(int stream_nb) {
     if (!fmt_ctx_) return;
-    AVCodec *dec;
+    const AVCodec *dec;
     int st_nb = av_find_best_stream(fmt_ctx_.get(), AVMEDIA_TYPE_VIDEO, stream_nb, -1, &dec, 0);
     // LOG(INFO) << "find best stream: " << st_nb;
     CHECK_GE(st_nb, 0) << "ERROR cannot find video stream with wanted index: " << stream_nb;
@@ -159,12 +162,24 @@ void VideoReader::SetVideoStream(int stream_nb) {
     if (kDLCPU == ctx_.device_type) {
         decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new FFMPEGThreadedDecoder());
     } else if (kDLGPU == ctx_.device_type) {
-#ifdef DECORD_USE_CUDA
+#if defined(__APPLE__) && defined(DECORD_USE_VIDEOTOOLBOX)
+        // Use VideoToolbox for GPU acceleration on macOS
+        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new videotoolbox::VideoToolboxThreadedDecoder(
+            ctx_.device_id, codecpar.get(), fmt_ctx_->iformat));
+#elif DECORD_USE_CUDA
         // note: cuda threaded decoder will modify codecpar
         decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new cuda::CUThreadedDecoder(
             ctx_.device_id, codecpar.get(), fmt_ctx_->iformat));
 #else
-        LOG(FATAL) << "CUDA not enabled. Requested context GPU(" << ctx_.device_id << ").";
+        LOG(FATAL) << "GPU acceleration not available on this platform.";
+#endif
+    } else if (kDLMetal == ctx_.device_type) {
+#if defined(__APPLE__) && defined(DECORD_USE_VIDEOTOOLBOX)
+        // Use VideoToolbox for Metal device type on macOS
+        decoder_ = std::unique_ptr<ThreadedDecoderInterface>(new videotoolbox::VideoToolboxThreadedDecoder(
+            ctx_.device_id, codecpar.get(), fmt_ctx_->iformat));
+#else
+        LOG(FATAL) << "Metal device type not supported on this platform.";
 #endif
     } else {
         LOG(FATAL) << "Unknown device type: " << ctx_.device_type;
@@ -427,7 +442,7 @@ NDArray VideoReader::NextFrameImpl() {
                 break;
               } else {
                 if (rewind_offset > REWIND_RETRY_MAX) {
-                  LOG(FATAL) << "[" << filename_ << "]Unable to handle EOF because the video might have corrupted frames" 
+                  LOG(FATAL) << "[" << filename_ << "]Unable to handle EOF because the video might have corrupted frames"
                   << "and `DECORD_REWIND_RETRY_MAX=" << REWIND_RETRY_MAX << "`. You may override the limit by `export DECORD_REWIND_RETRY_MAX=32`"
                   << " for example to allow more auto-substituded frames, exit...";
                 }
@@ -554,12 +569,51 @@ double VideoReader::GetRotation() const {
     if (rotate && *rotate->value && strcmp(rotate->value, "0"))
         theta = atof(rotate->value);
 
-    uint8_t* displaymatrix = av_stream_get_side_data(active_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
-    if (displaymatrix && !theta)
-        theta = -av_display_rotation_get((int32_t*) displaymatrix);
+    if (!theta) {
+        double theta_from_matrix = 0.0;
+        bool found_matrix = false;
+#if LIBAVFORMAT_VERSION_MAJOR >= 60
+        if (active_st->codecpar && active_st->codecpar->coded_side_data) {
+            for (int i = 0; i < active_st->codecpar->nb_coded_side_data; ++i) {
+                const AVPacketSideData *sd = &active_st->codecpar->coded_side_data[i];
+                if (sd && sd->type == AV_PKT_DATA_DISPLAYMATRIX && sd->data && sd->size >= (int)sizeof(int32_t) * 9) {
+                    theta_from_matrix = -av_display_rotation_get(reinterpret_cast<const int32_t*>(sd->data));
+                    found_matrix = true;
+                    break;
+                }
+            }
+        }
+#else
+        if (active_st->side_data) {
+            for (int i = 0; i < active_st->nb_side_data; ++i) {
+                const AVPacketSideData *sd = &active_st->side_data[i];
+                if (sd && sd->type == AV_PKT_DATA_DISPLAYMATRIX && sd->data && sd->size >= (int)sizeof(int32_t) * 9) {
+                    theta_from_matrix = -av_display_rotation_get(reinterpret_cast<const int32_t*>(sd->data));
+                    found_matrix = true;
+                    break;
+                }
+            }
+        }
+#endif
+        if (found_matrix) {
+            theta = theta_from_matrix;
+        }
+    }
 
-    theta = std::fmod(theta, 360);
-    if(theta < 0) theta += 360;
+    theta = std::fmod(theta, 360.0);
+    if (theta < 0) theta += 360.0;
+    // Snap to the nearest canonical right-angle to avoid float rounding issues
+    const double kAngles[4] = {0.0, 90.0, 180.0, 270.0};
+    double best = kAngles[0];
+    double best_diff = 1e9;
+    for (double a : kAngles) {
+        double diff = std::fabs(theta - a);
+        if (diff < best_diff) {
+            best_diff = diff;
+            best = a;
+        }
+    }
+    theta = best;
 
     return theta;
 }
@@ -644,10 +698,24 @@ void VideoReader::SkipFramesImpl(int64_t num)
     auto pts = FramesToPTS(frame_pos);
     decoder_->SuggestDiscardPTS(pts);
 
+    int64_t pop_retries = 0;
+    const int64_t MAX_POP_RETRIES_PER_FRAME = 10000;
+    int64_t initial_num = num;
+
     while (num > 0) {
         PushNext();
         ret = decoder_->Pop(&frame);
-        if (!ret) continue;
+        if (!ret) {
+            pop_retries++;
+            if (pop_retries > MAX_POP_RETRIES_PER_FRAME) {
+                LOG(INFO) << "[" << filename_ << "] Failed to skip frames effectively at frame " << curr_frame_
+                           << ". Decoder did not respond after " << MAX_POP_RETRIES_PER_FRAME
+                           << " attempts. Video might be corrupted or seeking failed. Aborting skip operation."
+                           << " Attempted to skip " << initial_num << " frames, skipped " << (initial_num - num) << ".";
+                break;
+            }
+            continue;
+        }
         ++curr_frame_;
         // LOG(INFO) << "skip: " << num;
         --num;

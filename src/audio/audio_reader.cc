@@ -128,7 +128,7 @@ namespace decord {
                 pCodecParameters = tempCodecParameters;
                 originalSampleRate = tempCodecParameters->sample_rate;
                 if (targetSampleRate == -1) targetSampleRate = originalSampleRate;
-                numChannels = tempCodecParameters->channels;
+                numChannels = tempCodecParameters->ch_layout.nb_channels;
                 break;
             }
         }
@@ -148,7 +148,6 @@ namespace decord {
         if (codecOpenRet < 0) {
             char errstr[200];
             av_strerror(codecOpenRet, errstr, 200);
-            avcodec_close(pCodecContext);
             avcodec_free_context(&pCodecContext);
             avformat_close_input(&pFormatContext);
             LOG(FATAL) << "ERROR open codec through avcodec_open2: " << errstr;
@@ -165,38 +164,29 @@ namespace decord {
     }
 
     void AudioReader::DecodePacket(AVPacket *pPacket, AVCodecContext *pCodecContext, AVFrame *pFrame, int streamIndex) {
-        // initialize resample context
         InitSWR(pCodecContext);
 
-        // Get the packet
         int pktRet = -1;
         while ((pktRet = av_read_frame(pFormatContext, pPacket)) != AVERROR_EOF) {
             if (pktRet != 0) {
                 LOG(WARNING) << "ERROR Fail to get packet.";
                 break;
             }
-            // Check if the packet belongs to the stream we want
             if (pPacket->stream_index != streamIndex) {
                 av_packet_unref(pPacket);
                 continue;
             }
-            // Send packet to the decoder
-            int sendRet = -1;
-            sendRet = avcodec_send_packet(pCodecContext, pPacket);
+            int sendRet = avcodec_send_packet(pCodecContext, pPacket);
             if (sendRet != 0) {
-                // EAGAIN shouldn't be treat as an error
                 if (sendRet != AVERROR(EAGAIN)) {
                     LOG(WARNING) << "ERROR Fail to send packet.";
                     av_packet_unref(pPacket);
                     break;
                 }
             }
-            // Packet sent successfully, dont need it anymore
             av_packet_unref(pPacket);
-            // Receive the decoded frames
             int receiveRet = -1;
             while ((receiveRet = avcodec_receive_frame(pCodecContext, pFrame)) == 0) {
-                // Handle received frames
                 totalSamplesPerChannel += pFrame->nb_samples;
                 HandleFrame(pCodecContext, pFrame);
             }
@@ -205,12 +195,10 @@ namespace decord {
                 break;
             }
         }
-        // Drain the decoder
         DrainDecoder(pCodecContext, pFrame);
-        // clean up
+        FlushSWR();
         av_frame_free(&pFrame);
         av_packet_free(&pPacket);
-        avcodec_close(pCodecContext);
         swr_close(swr);
         swr_free(&swr);
         avcodec_free_context(&pCodecContext);
@@ -218,7 +206,6 @@ namespace decord {
     }
 
     void AudioReader::HandleFrame(AVCodecContext *pCodecContext, AVFrame *pFrame) {
-        // Add padding if necessary
         if (padding == -1.0) {
             padding = 0.0;
             if ((pFrame->pts * timeBase) > 0) {
@@ -226,30 +213,23 @@ namespace decord {
             }
         }
         int ret = 0;
-        // allocate resample buffer
         float** outBuffer;
         int outLinesize = 0;
-        int outNumChannels = av_get_channel_layout_nb_channels(mono ? AV_CH_LAYOUT_MONO : pFrame->channel_layout);
+        int outNumChannels = mono ? 1 : pFrame->ch_layout.nb_channels;
         numChannels = outNumChannels;
-        int outNumSamples = av_rescale_rnd(pFrame->nb_samples,
+        int64_t delay = swr_get_delay(this->swr, pFrame->sample_rate);
+        int outNumSamples = av_rescale_rnd(delay + pFrame->nb_samples,
                                            this->targetSampleRate, pFrame->sample_rate, AV_ROUND_UP);
         if ((ret = av_samples_alloc_array_and_samples((uint8_t***)&outBuffer, &outLinesize, outNumChannels, outNumSamples,
                                                       AV_SAMPLE_FMT_FLTP, 0)) < 0)
         {
             LOG(FATAL) << "ERROR Failed to allocate resample buffer";
         }
-        int gotSamples = 0;
-        gotSamples = swr_convert(this->swr, (uint8_t**)outBuffer, outNumSamples, (const uint8_t**)pFrame->extended_data, pFrame->nb_samples);
-        totalConvertedSamplesPerChannel += gotSamples;
+        int gotSamples = swr_convert(this->swr, (uint8_t**)outBuffer, outNumSamples,
+                                     (const uint8_t**)pFrame->extended_data, pFrame->nb_samples);
         CHECK_GE(gotSamples, 0) << "ERROR Failed to resample samples";
+        totalConvertedSamplesPerChannel += gotSamples;
         SaveToVector(outBuffer, outNumChannels, gotSamples);
-        while (gotSamples > 0) {
-            // flush buffer
-            gotSamples = swr_convert(this->swr, (uint8_t**)outBuffer, outNumSamples, NULL, 0);
-            CHECK_GE(gotSamples, 0) << "ERROR Failed to flush resample buffer";
-            totalConvertedSamplesPerChannel += gotSamples;
-            SaveToVector(outBuffer, outNumChannels, gotSamples);
-        }
         if (outBuffer) {
             av_freep(&outBuffer[0]);
         }
@@ -274,6 +254,31 @@ namespace decord {
         }
     }
 
+    void AudioReader::FlushSWR() {
+        if (!this->swr || numChannels <= 0) return;
+        int outNumSamples = av_rescale_rnd(swr_get_delay(this->swr, this->targetSampleRate),
+                                           this->targetSampleRate, this->targetSampleRate, AV_ROUND_UP);
+        if (outNumSamples <= 0) return;
+        float** outBuffer;
+        int outLinesize = 0;
+        int ret = av_samples_alloc_array_and_samples((uint8_t***)&outBuffer, &outLinesize,
+                                                     numChannels, outNumSamples,
+                                                     AV_SAMPLE_FMT_FLTP, 0);
+        if (ret < 0) {
+            LOG(WARNING) << "Failed to allocate buffer for SWR flush";
+            return;
+        }
+        int gotSamples = 0;
+        while ((gotSamples = swr_convert(this->swr, (uint8_t**)outBuffer, outNumSamples, NULL, 0)) > 0) {
+            totalConvertedSamplesPerChannel += gotSamples;
+            SaveToVector(outBuffer, numChannels, gotSamples);
+        }
+        if (outBuffer) {
+            av_freep(&outBuffer[0]);
+        }
+        av_freep(&outBuffer);
+    }
+
     void AudioReader::InitSWR(AVCodecContext *pCodecContext) {
         int ret = 0;
         // Set resample ctx
@@ -281,11 +286,16 @@ namespace decord {
         if (!this->swr) {
             LOG(FATAL) << "ERROR Failed to allocate resample context";
         }
-        if (pCodecContext->channel_layout == 0) {
-            pCodecContext->channel_layout = av_get_default_channel_layout( pCodecContext->channels );
+        // FFmpeg 7.x uses ch_layout instead of channel_layout
+        AVChannelLayout out_ch_layout;
+        if (mono) {
+            av_channel_layout_default(&out_ch_layout, 1);
+        } else {
+            av_channel_layout_copy(&out_ch_layout, &pCodecContext->ch_layout);
         }
-        av_opt_set_channel_layout(this->swr, "in_channel_layout",  pCodecContext->channel_layout, 0);
-        av_opt_set_channel_layout(this->swr, "out_channel_layout", mono ? AV_CH_LAYOUT_MONO : pCodecContext->channel_layout,  0);
+
+        av_opt_set_chlayout(this->swr, "in_chlayout",  &pCodecContext->ch_layout, 0);
+        av_opt_set_chlayout(this->swr, "out_chlayout", &out_ch_layout, 0);
         av_opt_set_int(this->swr, "in_sample_rate",     pCodecContext->sample_rate,                0);
         av_opt_set_int(this->swr, "out_sample_rate",    this->targetSampleRate,                0);
         av_opt_set_sample_fmt(this->swr, "in_sample_fmt",  pCodecContext->sample_fmt, 0);
@@ -293,18 +303,18 @@ namespace decord {
         if ((ret = swr_init(this->swr)) < 0) {
             LOG(FATAL) << "ERROR Failed to initialize resample context";
         }
+
+        av_channel_layout_uninit(&out_ch_layout);
     }
 
     void AudioReader::ToNDArray() {
         if (outputVector.empty()) return;
-        // Create the big NDArray
         int totalNumSamplesPerChannel = outputVector[0].size();
         std::vector<int64_t> shape {numChannels, totalNumSamplesPerChannel};
         output = NDArray::Empty(shape, kFloat32, ctx);
-        // Create NDArray for each channel
         std::vector<int64_t> channelShape {totalNumSamplesPerChannel};
+        uint64_t offset = 0;
         for (int c = 0; c < numChannels; c++) {
-            uint64_t offset = c * totalNumSamplesPerChannel;
             NDArray channelOutput = NDArray::Empty(channelShape, kFloat32, ctx);
             channelOutput.CopyFrom(outputVector[c], channelShape);
             auto view = output.CreateOffsetView(channelShape, channelOutput.data_->dl_tensor.dtype, &offset);

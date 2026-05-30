@@ -1,0 +1,86 @@
+name: Auto-tag on version bump
+
+on:
+  workflow_run:
+    workflows: ["CI", "Build and Publish to PyPI"]
+    types: [completed]
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Check all required workflows passed
+        id: check
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const sha = context.payload.workflow_run.head_sha;
+            const required = ['CI', 'Build and Publish to PyPI'];
+
+            const { data: { workflow_runs } } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head_sha: sha,
+              status: 'success',
+            });
+
+            const succeeded = new Set(workflow_runs.map(r => r.name));
+            const missing = required.filter(name => !succeeded.has(name));
+
+            if (missing.length > 0) {
+              core.info(`Still waiting on: ${missing.join(', ')}`);
+              return;
+            }
+
+            core.info('All required workflows passed');
+            core.setOutput('ready', 'true');
+
+      - uses: actions/checkout@v6
+        if: steps.check.outputs.ready == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+
+      - name: Detect version change
+        if: steps.check.outputs.ready == 'true'
+        id: version
+        run: |
+          CURRENT=$(grep -oP '(?<=__version__ = ")[^"]+' python/decord/_ffi/libinfo.py)
+          PREVIOUS=$(git show HEAD~1:python/decord/_ffi/libinfo.py 2>/dev/null \
+            | grep -oP '(?<=__version__ = ")[^"]+' || echo "")
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create tag
+        if: steps.check.outputs.ready == 'true' && steps.version.outputs.changed == 'true'
+        run: |
+          TAG="v${{ steps.version.outputs.current }}"
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Trigger publish workflow
+        if: steps.check.outputs.ready == 'true' && steps.version.outputs.changed == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'pypi.yml',
+              ref: `v${{ steps.version.outputs.current }}`,
+            });

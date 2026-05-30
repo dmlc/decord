@@ -4,6 +4,7 @@
 #include <chrono>
 #include <vector>
 #include <algorithm>
+#include <random>
 // #include <dmlc/io.h>
 // #include <gtest/gtest.h>
 
@@ -35,7 +36,8 @@ int main(int argc, const char **argv) {
 
 	std::vector<int> indices(vr->GetFrameCount());
 	std::iota(std::begin(indices), std::end(indices), 0);
-	std::random_shuffle(std::begin(indices), std::end(indices));
+	std::mt19937 rng(std::random_device{}());
+	std::shuffle(std::begin(indices), std::end(indices), rng);
 
 	start = getTimeStamp();
 	cnt = 0;

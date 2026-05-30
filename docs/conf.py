@@ -20,13 +20,13 @@
 # -- Project information -----------------------------------------------------
 
 project = 'decord'
-copyright = '2019, Decord Contributors'
+copyright = '2025, Decord Contributors'
 author = 'Decord Contributors'
 
 # The short X.Y version
-version = '0.3.1'
+version = '0.2.0'
 # The full version, including alpha/beta/rc tags
-release = '0.3.1.beta'
+release = '0.2.0'
 
 
 # -- General configuration ---------------------------------------------------

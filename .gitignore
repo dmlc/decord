@@ -43,3 +43,6 @@ __pycache__
 python/build/
 python/*egg-info/
 python/dist/
+
+.idea/
+.vscode/

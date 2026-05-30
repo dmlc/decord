@@ -7,6 +7,7 @@
 #include "random_file_order_sampler.h"
 
 #include <algorithm>
+#include <random>
 
 #include <dmlc/logging.h>
 
@@ -46,7 +47,8 @@ RandomFileOrderSampler::RandomFileOrderSampler(std::vector<int64_t> lens, std::v
 
 void RandomFileOrderSampler::Reset() {
     // shuffle orders
-    std::random_shuffle(visit_order_.begin(), visit_order_.end());
+    std::mt19937 rng(std::random_device{}());
+    std::shuffle(visit_order_.begin(), visit_order_.end(), rng);
     // reset visit idx
     visit_idx_ = 0;
     // clear and reset status to begin indices
