@@ -43,40 +43,59 @@ def _preload_cuda_libs():
     the default loader search path. Expose them here, before the native library
     is loaded, so its CUDA dependencies resolve.
 
-    This is purely additive and silent: if the ``nvidia`` packages are not
-    installed (CPU build, or the user relies on a system CUDA install), nothing
-    happens and the previous behaviour is preserved. ``nvcuvid`` / the CUDA
-    driver API are always provided by the GPU driver, not by these packages.
+    This is purely additive and silent: if nothing is installed (CPU build, or
+    the user relies on a system CUDA install) nothing happens and the previous
+    behaviour is preserved. ``nvcuvid`` / the CUDA driver API are provided by
+    the GPU driver, not by the pip packages.
     """
     import glob
     import importlib.util
 
+    if sys.platform.startswith("win32"):
+        # Windows resolves DLLs via the search path; decord.dll imports
+        # nvcuda.dll / nvcuvid.dll which the driver installs in System32, so the
+        # only thing we may need is to expose the pip-provided CUDA runtime DLLs
+        # (nvidia/<component>/bin).
+        try:
+            spec = importlib.util.find_spec("nvidia")
+        except Exception:  # pylint: disable=broad-except
+            spec = None
+        if spec is not None and getattr(spec, "submodule_search_locations", None):
+            for root in list(spec.submodule_search_locations):
+                for dll_dir in glob.glob(os.path.join(root, "*", "bin")):
+                    try:
+                        os.add_dll_directory(dll_dir)
+                    except (OSError, AttributeError):
+                        pass
+                    os.environ["PATH"] = dll_dir + os.pathsep + os.environ.get("PATH", "")
+        return
+
+    if not sys.platform.startswith("linux"):
+        return  # macOS: no CUDA.
+
+    # POSIX (Linux): dlopen the relevant CUDA shared objects with RTLD_GLOBAL so
+    # the native library's undefined cu*/cuvid*/cudart* symbols resolve from the
+    # already-loaded modules, even when they are not on the default search path.
+
+    # 1) Driver-provided libraries (CUDA Driver API + NVDEC). These are NEEDED
+    #    by libdecord.so but live with the driver; preloading them guarantees
+    #    resolution regardless of DT_NEEDED. No-op on driverless/CPU hosts.
+    for driver_lib in ("libcuda.so.1", "libnvcuvid.so.1"):
+        try:
+            ctypes.CDLL(driver_lib, mode=ctypes.RTLD_GLOBAL)
+        except OSError:
+            pass
+
+    # 2) CUDA runtime from the nvidia-* pip packages (decord2[cu13]), if present.
+    #    Several passes resolve inter-library ordering (e.g. cublas needs cudart).
     try:
         spec = importlib.util.find_spec("nvidia")
     except Exception:  # pylint: disable=broad-except
         spec = None
     if spec is None or not getattr(spec, "submodule_search_locations", None):
         return
-
-    roots = list(spec.submodule_search_locations)
-
-    if sys.platform.startswith("win32"):
-        # Windows resolves DLLs via the search path, not RPATH. The NVIDIA
-        # wheels place their DLLs under ``nvidia/<component>/bin``.
-        for root in roots:
-            for dll_dir in glob.glob(os.path.join(root, "*", "bin")):
-                try:
-                    os.add_dll_directory(dll_dir)
-                except (OSError, AttributeError):
-                    pass
-                os.environ["PATH"] = dll_dir + os.pathsep + os.environ.get("PATH", "")
-        return
-
-    # POSIX: dlopen the shared objects with RTLD_GLOBAL so the native library's
-    # NEEDED CUDA dependencies are satisfied from the already-loaded modules.
-    # Several passes resolve inter-library ordering (e.g. cublas needs cudart).
     candidates = []
-    for root in roots:
+    for root in list(spec.submodule_search_locations):
         candidates.extend(glob.glob(os.path.join(root, "*", "lib", "*.so*")))
     remaining = list(candidates)
     for _ in range(3):

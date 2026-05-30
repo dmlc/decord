@@ -428,7 +428,7 @@ jobs:
           # search path only so delvewheel can resolve (and then exclude) them.
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --analyze-existing --add-path "C:/vendor/bin;%CUDA_PATH%/bin"
-            --exclude "cudart64_13.dll;nvrtc64_130_0.dll;nvrtc-builtins64_133.dll;cublas64_13.dll;cublasLt64_13.dll;nvml.dll;nvcuvid.dll;nvencodeapi64.dll"
+            --exclude "nvcuda.dll;cudart64_13.dll;nvrtc64_130_0.dll;nvrtc-builtins64_133.dll;cublas64_13.dll;cublasLt64_13.dll;nvml.dll;nvcuvid.dll;nvencodeapi64.dll"
             -w {dest_dir} {wheel}
 
       - uses: actions/upload-artifact@v7

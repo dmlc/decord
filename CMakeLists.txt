@@ -116,15 +116,25 @@ if(USE_CUDA)
           CUDA::nvml
   )
 
-  if(WIN32)
-    # The MSVC linker rejects unresolved symbols in a DLL, so the CUDA Driver
-    # API (cuInit / cuCtx* / cuModule* / cuLaunchKernel / cuMemset*) and NVDEC
-    # (cuvid*) import libraries must be linked explicitly. On Linux these stay
-    # undefined and resolve from the driver at load time (the long-standing
-    # behaviour) - linking the libcuda stub there would make auditwheel bundle
-    # it, so we deliberately add them only on Windows.
+  # CUDA Driver API (cuInit / cuCtx* / cuModule* / cuLaunchKernel / cuMemset*).
+  # MUST be linked, otherwise libdecord.so/decord.dll ends up with undefined
+  # cu* symbols and `import decord` fails (e.g. "undefined symbol:
+  # cuModuleLoadData"). We link the toolkit's driver STUB, which records the
+  # right SONAME in DT_NEEDED (libcuda.so.1 on Linux, imports nvcuda.dll via
+  # cuda.lib on Windows) WITHOUT bundling the real driver. auditwheel/delvewheel
+  # exclude libcuda/nvcuda so the host driver provides it at runtime.
+  if(TARGET CUDA::cuda_driver)
     target_link_libraries(decord PRIVATE CUDA::cuda_driver)
+  endif()
 
+  # NVDEC (cuvid*) lives in libnvcuvid.so.1 / nvcuvid.dll, shipped with the
+  # DRIVER (not the toolkit). Link it so DT_NEEDED carries libnvcuvid.so.1 /
+  # nvcuvid.dll; auditwheel/delvewheel exclude it, so it resolves from the
+  # host driver at runtime. The runtime preloader in decord/_ffi/base.py is a
+  # belt-and-suspenders fallback when the lib is absent at build time.
+  if(WIN32)
+    # On Windows nvcuvid.lib is not in the toolkit; the workflow synthesizes an
+    # import library from scripts/nvcuvid.def and passes -DCUDA_NVCUVID_LIBRARY.
     find_library(CUDA_NVCUVID_LIBRARY nvcuvid
             HINTS
             ${CUDAToolkit_LIBRARY_DIR}
@@ -135,6 +145,21 @@ if(USE_CUDA)
       target_link_libraries(decord PRIVATE ${CUDA_NVCUVID_LIBRARY})
     else()
       message(FATAL_ERROR "nvcuvid.lib not found; it is required to link NVDEC on Windows")
+    endif()
+  elseif(NOT APPLE)
+    # Link by exact soname so DT_NEEDED records libnvcuvid.so.1 without needing
+    # a (non-existent) toolkit dev symlink. The driver lib is present in the
+    # manylinux build container (installed in CIBW_BEFORE_ALL_LINUX).
+    file(GLOB _DECORD_NVCUVID_SO
+            /usr/lib64/libnvcuvid.so.1
+            /usr/lib/x86_64-linux-gnu/libnvcuvid.so.1
+            /usr/lib/aarch64-linux-gnu/libnvcuvid.so.1
+            /usr/local/cuda/lib64/libnvcuvid.so.1)
+    if(_DECORD_NVCUVID_SO)
+      message(STATUS "Linking NVDEC via -l:libnvcuvid.so.1")
+      target_link_libraries(decord PRIVATE "-l:libnvcuvid.so.1")
+    else()
+      message(STATUS "libnvcuvid.so.1 not found at build time; NVDEC will be resolved at runtime by the decord/_ffi/base.py preloader")
     endif()
   endif()
 
