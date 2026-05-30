@@ -1,7 +1,7 @@
 import os
 
 # Base package version
-_BASE_VERSION = "3.3.0"
+_BASE_VERSION = "3.4.0"
 
 # Optional PEP 440 local version segment, e.g. "+cu132" for CUDA wheels.
 # This is read at build time by setuptools (via pyproject dynamic version)
