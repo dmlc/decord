@@ -20,6 +20,17 @@ maintainers = [
     {name = "Johnny Núñez", email = "johnnynunez@ub.edu"},
 ]
 
+# Plug & play CUDA 13 runtime for the +cu133 wheels. These NVIDIA pip packages
+# ship libcudart/libnvrtc/libcublas (Linux x86_64/aarch64 + Windows); decord2
+# preloads them at import time (see decord/_ffi/base.py). nvcuvid and the CUDA
+# driver API are always provided by the installed GPU driver.
+[project.optional-dependencies]
+cu13 = [
+    "nvidia-cuda-runtime>=13,<14",
+    "nvidia-cuda-nvrtc>=13,<14",
+    "nvidia-cublas>=13,<14",
+]
+
 [tool.cibuildwheel]
 archs = "auto64"
 build-verbosity = 1

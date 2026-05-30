@@ -32,9 +32,72 @@ class DECORDLimitReachedError(Exception):
     """Limit Reached Error thrown by DECORD function"""
     pass  # pylint: disable=unnecessary-pass
 
+def _preload_cuda_libs():
+    """Best-effort: make pip-installed CUDA runtime libraries discoverable.
+
+    The CUDA builds of decord2 (``+cuXXX`` wheels) do NOT bundle the CUDA
+    runtime (libcudart / libnvrtc / libcublas, ...). When the user installs it
+    via the NVIDIA pip packages (e.g. ``pip install decord2[cu13]`` which pulls
+    ``nvidia-cuda-runtime`` / ``nvidia-cuda-nvrtc`` / ``nvidia-cublas``), those
+    libraries live under ``site-packages/nvidia/<component>/`` and are not on
+    the default loader search path. Expose them here, before the native library
+    is loaded, so its CUDA dependencies resolve.
+
+    This is purely additive and silent: if the ``nvidia`` packages are not
+    installed (CPU build, or the user relies on a system CUDA install), nothing
+    happens and the previous behaviour is preserved. ``nvcuvid`` / the CUDA
+    driver API are always provided by the GPU driver, not by these packages.
+    """
+    import glob
+    import importlib.util
+
+    try:
+        spec = importlib.util.find_spec("nvidia")
+    except Exception:  # pylint: disable=broad-except
+        spec = None
+    if spec is None or not getattr(spec, "submodule_search_locations", None):
+        return
+
+    roots = list(spec.submodule_search_locations)
+
+    if sys.platform.startswith("win32"):
+        # Windows resolves DLLs via the search path, not RPATH. The NVIDIA
+        # wheels place their DLLs under ``nvidia/<component>/bin``.
+        for root in roots:
+            for dll_dir in glob.glob(os.path.join(root, "*", "bin")):
+                try:
+                    os.add_dll_directory(dll_dir)
+                except (OSError, AttributeError):
+                    pass
+                os.environ["PATH"] = dll_dir + os.pathsep + os.environ.get("PATH", "")
+        return
+
+    # POSIX: dlopen the shared objects with RTLD_GLOBAL so the native library's
+    # NEEDED CUDA dependencies are satisfied from the already-loaded modules.
+    # Several passes resolve inter-library ordering (e.g. cublas needs cudart).
+    candidates = []
+    for root in roots:
+        candidates.extend(glob.glob(os.path.join(root, "*", "lib", "*.so*")))
+    remaining = list(candidates)
+    for _ in range(3):
+        if not remaining:
+            break
+        still_failing = []
+        for so_path in remaining:
+            try:
+                ctypes.CDLL(so_path, mode=ctypes.RTLD_GLOBAL)
+            except OSError:
+                still_failing.append(so_path)
+        if len(still_failing) == len(remaining):
+            break  # no progress in this pass; give up
+        remaining = still_failing
+
+
 def _load_lib():
     """Load libary by searching possible path."""
     lib_path = libinfo.find_lib_path()
+    # Make pip-provided CUDA runtime libs (decord2[cuXXX]) loadable first.
+    _preload_cuda_libs()
     os.environ['PATH'] += os.pathsep + os.path.dirname(lib_path[0])
     lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_GLOBAL)
     # DMatrix functions

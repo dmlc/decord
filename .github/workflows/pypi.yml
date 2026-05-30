@@ -182,6 +182,24 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_TEST_SKIP: "*"
+          # Keep the CUDA wheels compact WITHOUT losing GPU acceleration:
+          # bundle FFmpeg (like the CPU wheels) but leave the CUDA runtime +
+          # driver libraries EXTERNAL, mirroring the Windows policy. By default
+          # auditwheel vendors libcudart/libnvrtc/libcublas(Lt)/cuDNN into every
+          # wheel (~500 MB); excluding them drops the wheel to ~30 MB. NVDEC
+          # still works because GPU users already provide CUDA at runtime (a
+          # system CUDA install, the nvidia-*-cu13 pip packages, or a framework
+          # such as PyTorch). The driver libs (libcuda/libnvcuvid/libnvidia-ml)
+          # are never bundleable anyway. auditwheel still retags to manylinux.
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            auditwheel repair
+            --exclude 'libcuda.so*' --exclude 'libcudart.so*'
+            --exclude 'libnvrtc.so*' --exclude 'libnvrtc-builtins.so*'
+            --exclude 'libnvJitLink.so*'
+            --exclude 'libcublas.so*' --exclude 'libcublasLt.so*'
+            --exclude 'libnvcuvid.so*' --exclude 'libnvidia-ml.so*'
+            --exclude 'libcudnn*.so*'
+            -w {dest_dir} {wheel}
           # BEFORE_ALL runs once per container.
           CIBW_BEFORE_ALL_LINUX: |
             set -ex
