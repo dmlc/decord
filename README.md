@@ -154,7 +154,7 @@ python3 setup.py install --user
 For windows, you will need CMake and Visual Studio for C++ compilation.
 
 -   First, install `git`, `cmake`, `ffmpeg` and `python`. You can use [Chocolatey](https://chocolatey.org/) to manage packages similar to Linux/Mac OS.
--   Second, install [`Visual Studio 2017 Community`](https://visualstudio.microsoft.com/), this my take some time.
+-   Second, install [`Visual Studio 2017 Community`](https://visualstudio.microsoft.com/), this may take some time.
 
 When dependencies are ready, open command line prompt:
 
